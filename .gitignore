@@ -1,0 +1,33 @@
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+bin/
+dist/
+node_modules/
+
+# IDE specific
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Project specific
+configs/*.local.yaml
+configs/*.local.json
+configs/*.local.toml
+tmp/
+logs/
+
+# Build artifacts
+*.log

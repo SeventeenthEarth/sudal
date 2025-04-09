@@ -9,11 +9,14 @@ Sudal is a modern social quiz platform that allows users to create, share, and p
 
 ## Architecture Summary
 
-The project follows a clean architecture approach with the following components:
+The project follows a clean architecture approach with a feature-centric structure. Each feature is organized with the following components:
 
 - **Domain:** Core business entities and rules.
 - **Application:** Use cases orchestrating the flow of data.
 - **Interfaces:** Adapters connecting the application to external elements (Handlers, Repository Interfaces).
+
+The following components are independent from features:
+
 - **Infrastructure:** Concrete implementations for databases, external services, logging, configuration, etc.
 - **API:** Defined using Protocol Buffers (`.proto`) and served via connect-go.
 

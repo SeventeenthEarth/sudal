@@ -31,3 +31,9 @@ logs/
 
 # Build artifacts
 *.log
+
+# Test coverage
+coverage.html
+coverage.xml
+coverage-all.out
+profile.out

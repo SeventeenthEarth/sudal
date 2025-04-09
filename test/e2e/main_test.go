@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"encoding/json"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,16 +52,62 @@ func TestAppExecution(t *testing.T) {
 
 // TestHealthCheck is a basic test that checks the application's health endpoint
 func TestHealthCheck(t *testing.T) {
-	// Skip this test by default since the application is not fully implemented yet
+	// Skip this test by default since it requires the server to be running
 	// Only run if E2E_TEST environment variable is set
 	if os.Getenv("E2E_TEST") == "" {
 		t.Skip("Skipping end-to-end test; set E2E_TEST=1 to run")
 	}
 
-	// This is a placeholder for a real health check test
-	// In a real project, we would start the server and make HTTP requests to it
-	t.Log("Health check test would go here")
+	// Define the server URL
+	serverURL := "http://localhost:8080"
 
-	// For now, we'll just mark this as skipped since we don't have a real server yet
-	t.Skip("Health check test not implemented yet")
+	// Test the ping endpoint
+	t.Run("Ping", func(t *testing.T) {
+		resp, err := http.Get(serverURL + "/ping")
+		if err != nil {
+			t.Fatalf("Failed to make request to ping endpoint: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// Check the status code
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+		}
+
+		// Parse the response body
+		var status map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+			t.Fatalf("Failed to decode response body: %v", err)
+		}
+
+		// Check the status
+		if status["status"] != "ok" {
+			t.Errorf("Expected status %s, got %s", "ok", status["status"])
+		}
+	})
+
+	// Test the health endpoint
+	t.Run("Health", func(t *testing.T) {
+		resp, err := http.Get(serverURL + "/healthz")
+		if err != nil {
+			t.Fatalf("Failed to make request to health endpoint: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// Check the status code
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+		}
+
+		// Parse the response body
+		var status map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+			t.Fatalf("Failed to decode response body: %v", err)
+		}
+
+		// Check the status
+		if status["status"] != "healthy" {
+			t.Errorf("Expected status %s, got %s", "healthy", status["status"])
+		}
+	})
 }

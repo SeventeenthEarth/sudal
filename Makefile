@@ -1,4 +1,4 @@
-.PHONY: help init build test clean lint proto-gen run
+.PHONY: help init build test test-coverage clean lint proto-gen run
 
 # Variables
 BINARY_NAME=sudal-server
@@ -80,8 +80,15 @@ build: ## Build the application binary
 
 test: ## Run unit tests
 	@echo "--- Running tests ---"
-	go test -v -race -cover ./...
+	go test -v -race -cover `go list ./... | grep -v "/mocks" | grep -v "^github.com/seventeenthearth/sudal/cmd"`
 	@echo "--- Tests finished ---"
+
+test-coverage: ## Run tests with coverage report
+	@echo "--- Running tests with coverage report ---"
+	go test -coverprofile=coverage.out `go list ./... | grep -v "/mocks" | grep -v "^github.com/seventeenthearth/sudal/cmd"` && \
+	go tool cover -func=coverage.out && \
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated at coverage.html"
 
 clean: ## Clean build artifacts and caches
 	@echo "--- Cleaning ---"

@@ -37,3 +37,6 @@ coverage.html
 coverage.xml
 coverage-all.out
 profile.out
+
+# Ginkgo generated files
+*_suite_test.go

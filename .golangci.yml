@@ -1,0 +1,12 @@
+# golangci-lint configuration
+version: 2
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell

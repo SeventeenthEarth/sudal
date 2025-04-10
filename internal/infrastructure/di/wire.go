@@ -1,5 +1,5 @@
 //go:build wireinjec
-// +build wireinject
+// +build wireinjec
 
 package di
 

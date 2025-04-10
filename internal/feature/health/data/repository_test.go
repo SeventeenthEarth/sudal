@@ -2,39 +2,45 @@ package data_test
 
 import (
 	"context"
-	"testing"
 
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 )
 
-func TestNewRepository(t *testing.T) {
-	// Act
-	repo := data.NewRepository()
+var _ = ginkgo.Describe("Repository", func() {
+	ginkgo.Describe("NewRepository", func() {
+		ginkgo.It("should create a new repository", func() {
+			// Act
+			repo := data.NewRepository()
 
-	// Assert
-	if repo == nil {
-		t.Fatal("Expected repository to not be nil")
-	}
-}
+			// Assert
+			gomega.Expect(repo).NotTo(gomega.BeNil())
+		})
+	})
 
-func TestRepository_GetStatus(t *testing.T) {
-	// Arrange
-	repo := data.NewRepository()
-	ctx := context.Background()
+	ginkgo.Describe("GetStatus", func() {
+		var (
+			repo   *data.Repository
+			ctx    context.Context
+			status *domain.Status
+			err    error
+		)
 
-	// Act
-	status, err := repo.GetStatus(ctx)
+		ginkgo.BeforeEach(func() {
+			repo = data.NewRepository()
+			ctx = context.Background()
+		})
 
-	// Assert
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
+		ginkgo.JustBeforeEach(func() {
+			status, err = repo.GetStatus(ctx)
+		})
 
-	if status == nil {
-		t.Fatal("Expected status to not be nil")
-	}
-
-	if status.Status != "healthy" {
-		t.Errorf("Expected status to be 'healthy', got %s", status.Status)
-	}
-}
+		ginkgo.It("should return a healthy status without error", func() {
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(status).NotTo(gomega.BeNil())
+			gomega.Expect(status.Status).To(gomega.Equal("healthy"))
+		})
+	})
+})

@@ -1,52 +1,45 @@
 package domain_test
 
 import (
-	"testing"
-
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 )
 
-func TestNewStatus(t *testing.T) {
-	// Arrange
-	expectedStatus := "test-status"
+var _ = ginkgo.Describe("Status", func() {
+	ginkgo.Describe("NewStatus", func() {
+		ginkgo.It("should create a new status with the given status string", func() {
+			// Arrange
+			expectedStatus := "test-status"
 
-	// Act
-	status := domain.NewStatus(expectedStatus)
+			// Act
+			status := domain.NewStatus(expectedStatus)
 
-	// Assert
-	if status == nil {
-		t.Fatal("Expected status to not be nil")
-	}
+			// Assert
+			gomega.Expect(status).NotTo(gomega.BeNil())
+			gomega.Expect(status.Status).To(gomega.Equal(expectedStatus))
+		})
+	})
 
-	if status.Status != expectedStatus {
-		t.Errorf("Expected status to be %s, got %s", expectedStatus, status.Status)
-	}
-}
+	ginkgo.Describe("HealthyStatus", func() {
+		ginkgo.It("should create a status with 'healthy' status", func() {
+			// Act
+			status := domain.HealthyStatus()
 
-func TestHealthyStatus(t *testing.T) {
-	// Act
-	status := domain.HealthyStatus()
+			// Assert
+			gomega.Expect(status).NotTo(gomega.BeNil())
+			gomega.Expect(status.Status).To(gomega.Equal("healthy"))
+		})
+	})
 
-	// Assert
-	if status == nil {
-		t.Fatal("Expected status to not be nil")
-	}
+	ginkgo.Describe("OkStatus", func() {
+		ginkgo.It("should create a status with 'ok' status", func() {
+			// Act
+			status := domain.OkStatus()
 
-	if status.Status != "healthy" {
-		t.Errorf("Expected status to be 'healthy', got %s", status.Status)
-	}
-}
-
-func TestOkStatus(t *testing.T) {
-	// Act
-	status := domain.OkStatus()
-
-	// Assert
-	if status == nil {
-		t.Fatal("Expected status to not be nil")
-	}
-
-	if status.Status != "ok" {
-		t.Errorf("Expected status to be 'ok', got %s", status.Status)
-	}
-}
+			// Assert
+			gomega.Expect(status).NotTo(gomega.BeNil())
+			gomega.Expect(status.Status).To(gomega.Equal("ok"))
+		})
+	})
+})

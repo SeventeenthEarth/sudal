@@ -5,169 +5,141 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"testing"
+
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	interfaces "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	"go.uber.org/mock/gomock"
 )
 
-func TestNewHandler(t *testing.T) {
-	// Arrange
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+var _ = ginkgo.Describe("Handler", func() {
+	var (
+		ctrl        *gomock.Controller
+		mockService *mocks.MockService
+	)
 
-	mockService := mocks.NewMockService(ctrl)
-
-	// Act
-	handler := interfaces.NewHandler(mockService)
-
-	// Assert
-	if handler == nil {
-		t.Fatal("Expected handler to not be nil")
-	}
-}
-
-func TestHandler_Ping(t *testing.T) {
-	// Success case
-	t.Run("Success", func(t *testing.T) {
-		// Arrange
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		expectedStatus := domain.NewStatus("test-ok")
-		mockService := mocks.NewMockService(ctrl)
-		mockService.EXPECT().Ping(gomock.Any()).Return(expectedStatus, nil)
-
-		handler := interfaces.NewHandler(mockService)
-		req := httptest.NewRequest("GET", "/ping", nil)
-		recorder := httptest.NewRecorder()
-
-		// Act
-		handler.Ping(recorder, req)
-
-		// Assert
-		if recorder.Code != http.StatusOK {
-			t.Errorf("Expected status code %d, got %d", http.StatusOK, recorder.Code)
-		}
-
-		contentType := recorder.Header().Get("Content-Type")
-		if contentType != "application/json" {
-			t.Errorf("Expected Content-Type %s, got %s", "application/json", contentType)
-		}
-
-		var status domain.Status
-		err := json.NewDecoder(recorder.Body).Decode(&status)
-		if err != nil {
-			t.Fatalf("Failed to decode response body: %v", err)
-		}
-
-		if status.Status != expectedStatus.Status {
-			t.Errorf("Expected status to be '%s', got '%s'", expectedStatus.Status, status.Status)
-		}
+	ginkgo.BeforeEach(func() {
+		ctrl = gomock.NewController(ginkgo.GinkgoT())
+		mockService = mocks.NewMockService(ctrl)
 	})
 
-	// Error case
-	t.Run("Error", func(t *testing.T) {
-		// Arrange
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		expectedError := fmt.Errorf("service error")
-		mockService := mocks.NewMockService(ctrl)
-		mockService.EXPECT().Ping(gomock.Any()).Return(nil, expectedError)
-
-		handler := interfaces.NewHandler(mockService)
-		req := httptest.NewRequest("GET", "/ping", nil)
-		recorder := httptest.NewRecorder()
-
-		// Act
-		handler.Ping(recorder, req)
-
-		// Assert
-		if recorder.Code != http.StatusInternalServerError {
-			t.Errorf("Expected status code %d, got %d", http.StatusInternalServerError, recorder.Code)
-		}
-	})
-}
-
-func TestHandler_Health(t *testing.T) {
-	// Success case
-	t.Run("Success", func(t *testing.T) {
-		// Arrange
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		expectedStatus := domain.NewStatus("test-healthy")
-		mockService := mocks.NewMockService(ctrl)
-		mockService.EXPECT().Check(gomock.Any()).Return(expectedStatus, nil)
-
-		handler := interfaces.NewHandler(mockService)
-		req := httptest.NewRequest("GET", "/healthz", nil)
-		recorder := httptest.NewRecorder()
-
-		// Act
-		handler.Health(recorder, req)
-
-		// Assert
-		if recorder.Code != http.StatusOK {
-			t.Errorf("Expected status code %d, got %d", http.StatusOK, recorder.Code)
-		}
-
-		contentType := recorder.Header().Get("Content-Type")
-		if contentType != "application/json" {
-			t.Errorf("Expected Content-Type %s, got %s", "application/json", contentType)
-		}
-
-		var status domain.Status
-		err := json.NewDecoder(recorder.Body).Decode(&status)
-		if err != nil {
-			t.Fatalf("Failed to decode response body: %v", err)
-		}
-
-		if status.Status != expectedStatus.Status {
-			t.Errorf("Expected status to be '%s', got '%s'", expectedStatus.Status, status.Status)
-		}
+	ginkgo.AfterEach(func() {
+		ctrl.Finish()
 	})
 
-	// Error case
-	t.Run("Error", func(t *testing.T) {
-		// Arrange
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
+	ginkgo.Describe("NewHandler", func() {
+		ginkgo.It("should create a new handler", func() {
+			// Act
+			handler := interfaces.NewHandler(mockService)
 
-		expectedError := fmt.Errorf("service error")
-		mockService := mocks.NewMockService(ctrl)
-		mockService.EXPECT().Check(gomock.Any()).Return(nil, expectedError)
-
-		handler := interfaces.NewHandler(mockService)
-		req := httptest.NewRequest("GET", "/healthz", nil)
-		recorder := httptest.NewRecorder()
-
-		// Act
-		handler.Health(recorder, req)
-
-		// Assert
-		if recorder.Code != http.StatusInternalServerError {
-			t.Errorf("Expected status code %d, got %d", http.StatusInternalServerError, recorder.Code)
-		}
+			// Assert
+			gomega.Expect(handler).NotTo(gomega.BeNil())
+		})
 	})
-}
 
-func TestHandler_RegisterRoutes(t *testing.T) {
-	// Arrange
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	ginkgo.Describe("Ping", func() {
+		var (
+			handler  *interfaces.Handler
+			req      *http.Request
+			recorder *httptest.ResponseRecorder
+		)
 
-	mockService := mocks.NewMockService(ctrl)
+		ginkgo.JustBeforeEach(func() {
+			handler = interfaces.NewHandler(mockService)
+			req = httptest.NewRequest("GET", "/ping", nil)
+			recorder = httptest.NewRecorder()
+			handler.Ping(recorder, req)
+		})
 
-	handler := interfaces.NewHandler(mockService)
-	mux := http.NewServeMux()
+		ginkgo.Context("when the service returns a status successfully", func() {
+			var expectedStatus *domain.Status
 
-	// Act - This should not panic
-	handler.RegisterRoutes(mux)
+			ginkgo.BeforeEach(func() {
+				expectedStatus = domain.NewStatus("test-ok")
+				mockService.EXPECT().Ping(gomock.Any()).Return(expectedStatus, nil)
+			})
 
-	// Assert - We can't easily test the routes are registered correctly without making HTTP requests
-	// This is more of a smoke test to ensure the method doesn't panic
-}
+			ginkgo.It("should return a 200 OK with the correct status", func() {
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
+
+				var status domain.Status
+				err := json.NewDecoder(recorder.Body).Decode(&status)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(status.Status).To(gomega.Equal(expectedStatus.Status))
+			})
+		})
+
+		ginkgo.Context("when the service returns an error", func() {
+			ginkgo.BeforeEach(func() {
+				expectedError := fmt.Errorf("service error")
+				mockService.EXPECT().Ping(gomock.Any()).Return(nil, expectedError)
+			})
+
+			ginkgo.It("should return a 500 Internal Server Error", func() {
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusInternalServerError))
+			})
+		})
+	})
+
+	ginkgo.Describe("Health", func() {
+		var (
+			handler  *interfaces.Handler
+			req      *http.Request
+			recorder *httptest.ResponseRecorder
+		)
+
+		ginkgo.JustBeforeEach(func() {
+			handler = interfaces.NewHandler(mockService)
+			req = httptest.NewRequest("GET", "/healthz", nil)
+			recorder = httptest.NewRecorder()
+			handler.Health(recorder, req)
+		})
+
+		ginkgo.Context("when the service returns a status successfully", func() {
+			var expectedStatus *domain.Status
+
+			ginkgo.BeforeEach(func() {
+				expectedStatus = domain.NewStatus("test-healthy")
+				mockService.EXPECT().Check(gomock.Any()).Return(expectedStatus, nil)
+			})
+
+			ginkgo.It("should return a 200 OK with the correct status", func() {
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
+
+				var status domain.Status
+				err := json.NewDecoder(recorder.Body).Decode(&status)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(status.Status).To(gomega.Equal(expectedStatus.Status))
+			})
+		})
+
+		ginkgo.Context("when the service returns an error", func() {
+			ginkgo.BeforeEach(func() {
+				expectedError := fmt.Errorf("service error")
+				mockService.EXPECT().Check(gomock.Any()).Return(nil, expectedError)
+			})
+
+			ginkgo.It("should return a 500 Internal Server Error", func() {
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusInternalServerError))
+			})
+		})
+	})
+
+	ginkgo.Describe("RegisterRoutes", func() {
+		ginkgo.It("should register routes without panicking", func() {
+			// Arrange
+			handler := interfaces.NewHandler(mockService)
+			mux := http.NewServeMux()
+
+			// Act & Assert - This should not panic
+			gomega.Expect(func() {
+				handler.RegisterRoutes(mux)
+			}).NotTo(gomega.Panic())
+		})
+	})
+})

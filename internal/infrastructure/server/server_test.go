@@ -2,59 +2,79 @@ package server_test
 
 import (
 	"net"
-	"testing"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/server"
 )
 
-func TestNewServer(t *testing.T) {
-	// Test with empty port
-	srv1 := server.NewServer("")
-	if srv1 == nil {
-		t.Fatal("Expected server to not be nil when port is empty")
-	}
+var _ = ginkgo.Describe("Server", func() {
+	ginkgo.Describe("NewServer", func() {
+		ginkgo.Context("when creating a server with empty port", func() {
+			ginkgo.It("should return a non-nil server", func() {
+				// Act
+				srv := server.NewServer("")
 
-	// Test with specific port
-	srv2 := server.NewServer("9090")
-	if srv2 == nil {
-		t.Fatal("Expected server to not be nil when port is specified")
-	}
-}
+				// Assert
+				gomega.Expect(srv).NotTo(gomega.BeNil())
+			})
+		})
 
-func TestServer_Start(t *testing.T) {
-	// Test server error handling
-	t.Run("ServerError", func(t *testing.T) {
-		// Arrange - create a server with a port that's already in use
-		// First, start a server on port 9092
-		listener, err := net.Listen("tcp", ":9092")
-		if err != nil {
-			t.Fatalf("Failed to create listener: %v", err)
-		}
-		defer func() {
-			if err := listener.Close(); err != nil {
-				t.Logf("Failed to close listener: %v", err)
-			}
-		}()
+		ginkgo.Context("when creating a server with specific port", func() {
+			ginkgo.It("should return a non-nil server", func() {
+				// Act
+				srv := server.NewServer("9090")
 
-		// Now create our test server on the same port
-		srv := server.NewServer("9092")
-
-		// Start the server and expect an error
-		errCh := make(chan error, 1)
-		go func() {
-			errCh <- srv.Start()
-		}()
-
-		// Wait for the error
-		select {
-		case err := <-errCh:
-			// We expect an error since the port is already in use
-			if err == nil {
-				t.Error("Expected an error when starting server on an in-use port")
-			}
-		case <-time.After(2 * time.Second):
-			t.Error("Timeout waiting for server error")
-		}
+				// Assert
+				gomega.Expect(srv).NotTo(gomega.BeNil())
+			})
+		})
 	})
-}
+
+	ginkgo.Describe("Start", func() {
+		ginkgo.Context("when the port is already in use", func() {
+			var (
+				listener net.Listener
+				srv      *server.Server
+				errCh    chan error
+			)
+
+			ginkgo.BeforeEach(func() {
+				// Arrange - create a server with a port that's already in use
+				// First, start a server on port 9092
+				var err error
+				listener, err = net.Listen("tcp", ":9092")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+				// Now create our test server on the same port
+				srv = server.NewServer("9092")
+				errCh = make(chan error, 1)
+
+				// Start the server and expect an error
+				go func() {
+					errCh <- srv.Start()
+				}()
+			})
+
+			ginkgo.AfterEach(func() {
+				if listener != nil {
+					_ = listener.Close()
+				}
+			})
+
+			ginkgo.It("should return an error", func() {
+				// Wait for the error
+				var err error
+				gomega.Eventually(func() error {
+					select {
+					case err = <-errCh:
+						return err
+					default:
+						return nil
+					}
+				}).WithTimeout(2 * time.Second).ShouldNot(gomega.BeNil())
+			})
+		})
+	})
+})

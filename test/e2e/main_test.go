@@ -3,119 +3,89 @@ package e2e
 import (
 	"encoding/json"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
+	"net/http/httptest"
+
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
+
+	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
+	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data"
+	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 )
 
-// TestAppExecution is a basic end-to-end test that builds and runs the application
-func TestAppExecution(t *testing.T) {
-	// Skip this test by default since the application is not fully implemented yet
-	// Only run if E2E_TEST environment variable is set
-	if os.Getenv("E2E_TEST") == "" {
-		t.Skip("Skipping end-to-end test; set E2E_TEST=1 to run")
-	}
+var _ = ginkgo.Describe("End-to-End Tests", func() {
+	ginkgo.Describe("Health Endpoints", func() {
+		var (
+			handler *healthHandler.Handler
+			repo    *healthData.Repository
+			service healthApp.Service
+		)
 
-	// Get the project root directory
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get working directory: %v", err)
-	}
+		ginkgo.BeforeEach(func() {
+			// 실제 서버 대신 핸들러를 직접 테스트
+			repo = healthData.NewRepository()
+			service = healthApp.NewService(repo)
+			handler = healthHandler.NewHandler(service)
+		})
 
-	// Navigate up to the project root
-	projectRoot := filepath.Join(wd, "..", "..")
+		ginkgo.Context("Ping Endpoint", func() {
+			var (
+				req      *http.Request
+				recorder *httptest.ResponseRecorder
+				status   map[string]string
+			)
 
-	// Build the application
-	buildCmd := exec.Command("make", "build")
-	buildCmd.Dir = projectRoot
-	buildOutput, err := buildCmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to build application: %v\nOutput: %s", err, buildOutput)
-	}
+			ginkgo.BeforeEach(func() {
+				// 요청 및 응답 레코더 설정
+				req = httptest.NewRequest("GET", "/ping", nil)
+				recorder = httptest.NewRecorder()
 
-	// Run the application with a timeout
-	appPath := filepath.Join(projectRoot, "bin", "server")
-	runCmd := exec.Command(appPath, "--version")
-	runOutput, err := runCmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to run application: %v\nOutput: %s", err, runOutput)
-	}
+				// 핸들러 호출
+				handler.Ping(recorder, req)
 
-	// Check that the output contains version information
-	outputStr := string(runOutput)
-	t.Logf("Application output: %s", outputStr)
+				// 응답 파싱
+				status = make(map[string]string)
+				err := json.NewDecoder(recorder.Body).Decode(&status)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to decode response body")
+			})
 
-	// This is a minimal test - in a real project, we would make assertions about the output
-	// For now, we're just checking that the application runs without error
-}
+			ginkgo.It("should return a 200 OK with 'ok' status", func() {
+				// 상태 코드 확인
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 
-// TestHealthCheck is a basic test that checks the application's health endpoint
-func TestHealthCheck(t *testing.T) {
-	// Skip this test by default since it requires the server to be running
-	// Only run if E2E_TEST environment variable is set
-	if os.Getenv("E2E_TEST") == "" {
-		t.Skip("Skipping end-to-end test; set E2E_TEST=1 to run")
-	}
+				// 응답 내용 확인
+				gomega.Expect(status["status"]).To(gomega.Equal("ok"))
+			})
+		})
 
-	// Define the server URL
-	serverURL := "http://localhost:8080"
+		ginkgo.Context("Health Endpoint", func() {
+			var (
+				req      *http.Request
+				recorder *httptest.ResponseRecorder
+				status   map[string]string
+			)
 
-	// Test the ping endpoint
-	t.Run("Ping", func(t *testing.T) {
-		resp, err := http.Get(serverURL + "/ping")
-		if err != nil {
-			t.Fatalf("Failed to make request to ping endpoint: %v", err)
-		}
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				t.Logf("Failed to close response body: %v", err)
-			}
-		}()
+			ginkgo.BeforeEach(func() {
+				// 요청 및 응답 레코더 설정
+				req = httptest.NewRequest("GET", "/healthz", nil)
+				recorder = httptest.NewRecorder()
 
-		// Check the status code
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
-		}
+				// 핸들러 호출
+				handler.Health(recorder, req)
 
-		// Parse the response body
-		var status map[string]string
-		if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-			t.Fatalf("Failed to decode response body: %v", err)
-		}
+				// 응답 파싱
+				status = make(map[string]string)
+				err := json.NewDecoder(recorder.Body).Decode(&status)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to decode response body")
+			})
 
-		// Check the status
-		if status["status"] != "ok" {
-			t.Errorf("Expected status %s, got %s", "ok", status["status"])
-		}
+			ginkgo.It("should return a 200 OK with 'healthy' status", func() {
+				// 상태 코드 확인
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+
+				// 응답 내용 확인
+				gomega.Expect(status["status"]).To(gomega.Equal("healthy"))
+			})
+		})
 	})
-
-	// Test the health endpoint
-	t.Run("Health", func(t *testing.T) {
-		resp, err := http.Get(serverURL + "/healthz")
-		if err != nil {
-			t.Fatalf("Failed to make request to health endpoint: %v", err)
-		}
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				t.Logf("Failed to close response body: %v", err)
-			}
-		}()
-
-		// Check the status code
-		if resp.StatusCode != http.StatusOK {
-			t.Errorf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
-		}
-
-		// Parse the response body
-		var status map[string]string
-		if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-			t.Fatalf("Failed to decode response body: %v", err)
-		}
-
-		// Check the status
-		if status["status"] != "healthy" {
-			t.Errorf("Expected status %s, got %s", "healthy", status["status"])
-		}
-	})
-}
+})

@@ -2,39 +2,51 @@ package application_test
 
 import (
 	"context"
-	"testing"
 
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 )
 
-func TestNewPingUseCase(t *testing.T) {
-	// Act
-	useCase := application.NewPingUseCase()
+var _ = ginkgo.Describe("PingUseCase", func() {
+	var (
+		useCase application.PingUseCase
+		ctx     context.Context
+	)
 
-	// Assert
-	if useCase == nil {
-		t.Fatal("Expected use case to not be nil")
-	}
-}
+	ginkgo.BeforeEach(func() {
+		ctx = context.Background()
+	})
 
-func TestPingUseCase_Execute(t *testing.T) {
-	// Arrange
-	useCase := application.NewPingUseCase()
-	ctx := context.Background()
+	ginkgo.Describe("NewPingUseCase", func() {
+		ginkgo.It("should create a new ping use case", func() {
+			// Act
+			useCase = application.NewPingUseCase()
 
-	// Act
-	status, err := useCase.Execute(ctx)
+			// Assert
+			gomega.Expect(useCase).NotTo(gomega.BeNil())
+		})
+	})
 
-	// Assert
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
+	ginkgo.Describe("Execute", func() {
+		var (
+			result *domain.Status
+			err    error
+		)
 
-	if status == nil {
-		t.Fatal("Expected status to not be nil")
-	}
+		ginkgo.BeforeEach(func() {
+			useCase = application.NewPingUseCase()
+		})
 
-	if status.Status != "ok" {
-		t.Errorf("Expected status to be 'ok', got %s", status.Status)
-	}
-}
+		ginkgo.JustBeforeEach(func() {
+			result, err = useCase.Execute(ctx)
+		})
+
+		ginkgo.It("should return an 'ok' status without error", func() {
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(result).NotTo(gomega.BeNil())
+			gomega.Expect(result.Status).To(gomega.Equal("ok"))
+		})
+	})
+})

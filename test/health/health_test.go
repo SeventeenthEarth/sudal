@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"testing"
+
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
 	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data"
@@ -12,88 +14,85 @@ import (
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 )
 
-func TestPingEndpoint(t *testing.T) {
-	// Create a new health repository
-	repo := healthData.NewRepository()
+var _ = ginkgo.Describe("Health Endpoints", func() {
+	var (
+		repo     *healthData.Repository
+		service  healthApp.Service
+		handler  *healthHandler.Handler
+		recorder *httptest.ResponseRecorder
+	)
 
-	// Create a new health service
-	service := healthApp.NewService(repo)
+	ginkgo.BeforeEach(func() {
+		// Create a new health repository
+		repo = healthData.NewRepository()
 
-	// Create a new health handler
-	handler := healthHandler.NewHandler(service)
+		// Create a new health service
+		service = healthApp.NewService(repo)
 
-	// Create a new HTTP request
-	req := httptest.NewRequest("GET", "/ping", nil)
+		// Create a new health handler
+		handler = healthHandler.NewHandler(service)
 
-	// Create a new recorder to capture the response
-	recorder := httptest.NewRecorder()
+		// Create a new recorder to capture the response
+		recorder = httptest.NewRecorder()
+	})
 
-	// Call the ping handler
-	handler.Ping(recorder, req)
+	ginkgo.Describe("Ping Endpoint", func() {
+		var req *http.Request
 
-	// Check the status code
-	if recorder.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, recorder.Code)
-	}
+		ginkgo.BeforeEach(func() {
+			// Create a new HTTP request
+			req = httptest.NewRequest("GET", "/ping", nil)
+		})
 
-	// Check the content type
-	contentType := recorder.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Errorf("Expected Content-Type %s, got %s", "application/json", contentType)
-	}
+		ginkgo.JustBeforeEach(func() {
+			// Call the ping handler
+			handler.Ping(recorder, req)
+		})
 
-	// Parse the response body
-	var status domain.Status
-	err := json.NewDecoder(recorder.Body).Decode(&status)
-	if err != nil {
-		t.Fatalf("Failed to decode response body: %v", err)
-	}
+		ginkgo.It("should return a 200 OK with 'ok' status", func() {
+			// Check the status code
+			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 
-	// Check the status
-	if status.Status != "ok" {
-		t.Errorf("Expected status %s, got %s", "ok", status.Status)
-	}
-}
+			// Check the content type
+			gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
-func TestHealthEndpoint(t *testing.T) {
-	// Create a new health repository
-	repo := healthData.NewRepository()
+			// Parse the response body
+			var status domain.Status
+			err := json.NewDecoder(recorder.Body).Decode(&status)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	// Create a new health service
-	service := healthApp.NewService(repo)
+			// Check the status
+			gomega.Expect(status.Status).To(gomega.Equal("ok"))
+		})
+	})
 
-	// Create a new health handler
-	handler := healthHandler.NewHandler(service)
+	ginkgo.Describe("Health Endpoint", func() {
+		var req *http.Request
 
-	// Create a new HTTP request
-	req := httptest.NewRequest("GET", "/healthz", nil)
+		ginkgo.BeforeEach(func() {
+			// Create a new HTTP request
+			req = httptest.NewRequest("GET", "/healthz", nil)
+		})
 
-	// Create a new recorder to capture the response
-	recorder := httptest.NewRecorder()
+		ginkgo.JustBeforeEach(func() {
+			// Call the health handler
+			handler.Health(recorder, req)
+		})
 
-	// Call the health handler
-	handler.Health(recorder, req)
+		ginkgo.It("should return a 200 OK with 'healthy' status", func() {
+			// Check the status code
+			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 
-	// Check the status code
-	if recorder.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, recorder.Code)
-	}
+			// Check the content type
+			gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
-	// Check the content type
-	contentType := recorder.Header().Get("Content-Type")
-	if contentType != "application/json" {
-		t.Errorf("Expected Content-Type %s, got %s", "application/json", contentType)
-	}
+			// Parse the response body
+			var status domain.Status
+			err := json.NewDecoder(recorder.Body).Decode(&status)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	// Parse the response body
-	var status domain.Status
-	err := json.NewDecoder(recorder.Body).Decode(&status)
-	if err != nil {
-		t.Fatalf("Failed to decode response body: %v", err)
-	}
-
-	// Check the status
-	if status.Status != "healthy" {
-		t.Errorf("Expected status %s, got %s", "healthy", status.Status)
-	}
-}
+			// Check the status
+			gomega.Expect(status.Status).To(gomega.Equal("healthy"))
+		})
+	})
+})

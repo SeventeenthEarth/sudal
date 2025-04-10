@@ -70,13 +70,13 @@ test: fmt vet lint generate ## Run unit tests with Ginkgo and generate coverage 
 	@echo "--- Running tests with coverage ---"
 ifeq ($(GINKGO),)
 	@echo "Ginkgo not found. Running tests with 'go test'..."
-	go test -v -race -coverprofile=coverage.out `go list ./... | grep -v "/mocks" | grep -v "^github.com/seventeenthearth/sudal/cmd"` && \
-	go tool cover -func=coverage.out && \
+	go test -v -race -coverprofile=coverage.out `go list ./... | grep -v "/mocks" | grep -v "^github.com/seventeenthearth/sudal/cmd"` || { echo "Tests failed"; exit 1; }
+	go tool cover -func=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 else
 	@echo "Running tests with Ginkgo..."
-	$(GINKGO) -r -v -race -cover --coverprofile=coverage.out --trace --fail-on-pending --randomize-all ./... && \
-	go tool cover -func=coverage.out && \
+	$(GINKGO) -r -v -race -cover --coverprofile=coverage.out --trace --fail-on-pending --randomize-all --keep-going=false ./... || { echo "Tests failed"; exit 1; }
+	go tool cover -func=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 endif
 	@echo "--- Tests finished ---"
@@ -180,5 +180,5 @@ ifeq ($(MOCKGEN),)
 	@exit 1
 endif
 	@echo "Running go generate to create mocks..."
-	go generate ./... || echo "Warning: Some mock generation commands failed, but continuing..."
+	go generate ./... || { echo "ERROR: Mock generation failed"; exit 1; }
 	@echo "--- Mocks generated ---"

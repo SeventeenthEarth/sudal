@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	"github.com/seventeenthearth/sudal/internal/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewService(t *testing.T) {

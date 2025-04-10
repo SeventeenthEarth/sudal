@@ -6,7 +6,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 )
 
-//go:generate mockgen -destination=../../../mocks/mock_ping_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application PingUseCase
+//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_ping_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application PingUseCase
 
 // PingUseCase defines the interface for the ping functionality
 type PingUseCase interface {

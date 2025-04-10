@@ -6,7 +6,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 )
 
-//go:generate mockgen -destination=../../../mocks/mock_health_check_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application HealthCheckUseCase
+//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_health_check_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application HealthCheckUseCase
 
 // HealthCheckUseCase defines the interface for the health check functionality
 type HealthCheckUseCase interface {

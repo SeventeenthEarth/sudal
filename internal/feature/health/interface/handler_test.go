@@ -7,10 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	interfaces "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewHandler(t *testing.T) {

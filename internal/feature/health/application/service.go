@@ -6,7 +6,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 )
 
-//go:generate mockgen -destination=../../../mocks/mock_health_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application Service
+//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_health_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application Service
 
 // Service defines the health check service interface
 type Service interface {

@@ -31,7 +31,11 @@ func TestServer_Start(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to create listener: %v", err)
 		}
-		defer listener.Close()
+		defer func() {
+			if err := listener.Close(); err != nil {
+				t.Logf("Failed to close listener: %v", err)
+			}
+		}()
 
 		// Now create our test server on the same port
 		srv := server.NewServer("9092")

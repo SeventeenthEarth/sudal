@@ -79,7 +79,10 @@ func (s *Server) Start() error {
 		err := s.server.Shutdown(ctx)
 		if err != nil {
 			// Force shutdown if graceful shutdown fails
-			s.server.Close()
+			closeErr := s.server.Close()
+			if closeErr != nil {
+				return fmt.Errorf("could not stop server gracefully: %w, and failed to close: %w", err, closeErr)
+			}
 			return fmt.Errorf("could not stop server gracefully: %w", err)
 		}
 	}

@@ -9,6 +9,12 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
+)
+
+// ConfigSet is a Wire provider set for configuration
+var ConfigSet = wire.NewSet(
+	ProvideConfig,
 )
 
 // HealthSet is a Wire provider set for health-related dependencies
@@ -20,6 +26,11 @@ var HealthSet = wire.NewSet(
 	application.NewService,
 	healthInterface.NewHandler,
 )
+
+// ProvideConfig provides the application configuration
+func ProvideConfig() *config.Config {
+	return config.GetConfig()
+}
 
 // InitializeHealthHandler initializes and returns a health handler with all its dependencies
 func InitializeHealthHandler() *healthInterface.Handler {

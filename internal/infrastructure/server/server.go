@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -17,6 +18,10 @@ import (
 type Server struct {
 	server *http.Server
 	port   string
+	// For testing purposes
+	shutdownSignal chan os.Signal
+	// Mutex to protect concurrent access to shutdownSignal
+	mutex sync.Mutex
 }
 
 // NewServer creates a new HTTP server
@@ -27,6 +32,20 @@ func NewServer(port string) *Server {
 
 	return &Server{
 		port: port,
+	}
+}
+
+// SetHTTPServer allows setting a custom HTTP server for testing
+func (s *Server) SetHTTPServer(server *http.Server) {
+	s.server = server
+}
+
+// TriggerShutdown triggers a shutdown signal for testing
+func (s *Server) TriggerShutdown() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	if s.shutdownSignal != nil {
+		s.shutdownSignal <- syscall.SIGINT
 	}
 }
 
@@ -60,7 +79,12 @@ func (s *Server) Start() error {
 	}()
 
 	// Channel to listen for interrupt signals
-	shutdown := make(chan os.Signal, 1)
+	s.mutex.Lock()
+	if s.shutdownSignal == nil {
+		s.shutdownSignal = make(chan os.Signal, 1)
+	}
+	shutdown := s.shutdownSignal
+	s.mutex.Unlock()
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
 	// Block until we receive a signal or an error

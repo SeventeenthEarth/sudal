@@ -160,3 +160,37 @@ Interfaces are mocked using `mockgen` to isolate the component being tested:
 ```go
 //go:generate mockgen -destination=../mocks/mock_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/example Service
 ```
+
+## Configuration
+
+Sudal uses a flexible configuration system that supports different environments through environment variables and configuration files.
+
+### Quick Start for Local Development
+
+1. **Create a `.env` file** in the project root (copy from `.env.example`):
+   ```
+   SERVER_PORT=8080
+   LOG_LEVEL=debug
+   ENVIRONMENT=development
+   # See .env.example for all available options
+   ```
+
+2. **Run with Docker Compose** (recommended):
+   ```bash
+   docker-compose up
+   ```
+
+3. **Or run directly** with the configuration file:
+   ```bash
+   ./bin/server --config=./configs/config.yaml
+   ```
+
+### Documentation
+
+For detailed configuration instructions, including:
+- Environment-specific configuration guides
+- Required parameters and their descriptions
+- Cloud Run deployment examples
+- Secret management
+
+See the [Configuration Documentation](docs/configuration/configuration).

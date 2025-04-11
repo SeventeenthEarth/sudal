@@ -6,6 +6,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/server"
 )
 
@@ -33,6 +34,22 @@ var _ = ginkgo.Describe("Server", func() {
 	})
 
 	ginkgo.Describe("Start", func() {
+		// Setup for all Start tests
+		ginkgo.BeforeEach(func() {
+			// Ensure we have a valid config for dependency injection
+			cfg := &config.Config{
+				ServerPort:  "8080",
+				LogLevel:    "info",
+				Environment: "test",
+			}
+			config.SetConfig(cfg)
+		})
+
+		ginkgo.AfterEach(func() {
+			// Reset config after tests
+			config.SetConfig(nil)
+		})
+
 		ginkgo.Context("when the port is already in use", func() {
 			var (
 				listener net.Listener
@@ -75,6 +92,58 @@ var _ = ginkgo.Describe("Server", func() {
 					}
 				}).WithTimeout(2 * time.Second).ShouldNot(gomega.BeNil())
 			})
+		})
+
+		ginkgo.Context("when receiving a shutdown signal", func() {
+			var (
+				srv    *server.Server
+				errCh  chan error
+				doneCh chan struct{}
+			)
+
+			ginkgo.BeforeEach(func() {
+				// Create a server on a random available port
+				srv = server.NewServer("0") // Port 0 means a random available port
+				errCh = make(chan error, 1)
+				doneCh = make(chan struct{})
+
+				// Start the server in a goroutine
+				go func() {
+					errCh <- srv.Start()
+					close(doneCh)
+				}()
+
+				// Give the server a moment to start
+				time.Sleep(100 * time.Millisecond)
+			})
+
+			ginkgo.It("should shut down gracefully when receiving an interrupt signal", func() {
+				// Use the TriggerShutdown method to simulate a shutdown signal
+				// This will send a signal to the internal shutdown channel
+				srv.TriggerShutdown()
+
+				// Wait for the server to shut down
+				gomega.Eventually(doneCh).WithTimeout(3 * time.Second).Should(gomega.BeClosed())
+
+				// Check that no error was returned
+				var serverErr error
+				select {
+				case serverErr = <-errCh:
+					// Got an error or nil
+				default:
+					// No error yet, which is unexpected
+					ginkgo.Fail("Expected server to return after shutdown")
+				}
+
+				// Server should have shut down gracefully with no error
+				gomega.Expect(serverErr).NotTo(gomega.HaveOccurred())
+			})
+		})
+
+		ginkgo.Context("when shutdown fails", func() {
+			// Since we can't easily mock the http.Server's Shutdown method, we'll remove this test
+			// A better approach would be to refactor the server to use an interface for the HTTP server
+			// that could be easily mocked for testing
 		})
 	})
 })

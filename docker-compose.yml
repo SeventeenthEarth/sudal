@@ -10,23 +10,18 @@ services:
       - "8080:8080"
     volumes:
       - .:/app  # Mount the current directory to /app in the container
+    env_file:
+      - .env
     environment:
-      - PORT=8080
+      # These values override .env file for container-specific settings
       - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=user
-      - DB_PASSWORD=password
-      - DB_NAME=quizapp_db
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
       - PATH=/go/bin:$PATH
     depends_on:
       - db
       - redis
     # Use CompileDaemon for hot reloading
     command: CompileDaemon --build="go build -o ./tmp/server ./cmd/server/main.go" --command="./tmp/server"
-    # For production, use this command instead:
-    # command: /app/server
 
   db:
     image: postgres:15-alpine

@@ -12,6 +12,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	"github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 )
 
 // Injectors from wire.go:
@@ -26,5 +27,15 @@ func InitializeHealthHandler() *interfaces.Handler {
 
 // wire.go:
 
+// ConfigSet is a Wire provider set for configuration
+var ConfigSet = wire.NewSet(
+	ProvideConfig,
+)
+
 // HealthSet is a Wire provider set for health-related dependencies
 var HealthSet = wire.NewSet(data.NewRepository, wire.Bind(new(domain.Repository), new(*data.Repository)), application.NewPingUseCase, application.NewHealthCheckUseCase, application.NewService, interfaces.NewHandler)
+
+// ProvideConfig provides the application configuration
+func ProvideConfig() *config.Config {
+	return config.GetConfig()
+}

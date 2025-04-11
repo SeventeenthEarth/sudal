@@ -1,0 +1,20 @@
+# Server Configuration
+server_port: 8080
+log_level: info  # Options: debug, info, warn, error
+
+# Database Configuration
+postgres_dsn: postgres://user:password@localhost:5432/quizapp_db?sslmode=disable
+
+# Redis Configuration
+redis_addr: localhost:6379
+redis_password: ""  # Optional
+
+# Firebase Configuration
+firebase_project_id: your-firebase-project-id
+firebase_credentials_json: ./configs/firebase-credentials.json
+
+# JWT Configuration
+jwt_secret_key: your-jwt-secret-key
+
+# Application Settings
+environment: development  # Options: development, staging, production

@@ -194,3 +194,45 @@ For detailed configuration instructions, including:
 - Secret management
 
 See the [Configuration Documentation](docs/configuration/configuration.md).
+
+## Logging
+
+Sudal uses structured JSON logging via the `zap` library for optimal performance and observability.
+
+### Log Format
+
+All logs are output in JSON format with the following standard fields:
+
+- `timestamp`: ISO8601-formatted timestamp of the log event
+- `level`: Log severity level (`debug`, `info`, `warn`, `error`)
+- `message`: The log message
+- `caller`: File and line number where the log was called
+- `trace_id`: Unique identifier for request tracing (automatically generated for each request)
+- `user_id`: User identifier (when available in authenticated contexts)
+
+For error-level logs, a `stacktrace` field is automatically included with the full call stack.
+
+### Configuration
+
+The log level can be configured using the `LOG_LEVEL` environment variable or in the configuration file:
+
+```yaml
+log_level: debug  # Options: debug, info, warn, error
+```
+
+The default log level is `info` if not specified.
+
+### Usage in Code
+
+The logging package provides context-aware logging functions:
+
+```go
+// Standard logging
+log.Debug("Debug message", zap.String("key", "value"))
+log.Info("Info message", zap.Int("count", 42))
+log.Error("Error occurred", zap.Error(err))
+
+// Context-aware logging (preferred)
+log.InfoContext(ctx, "Processing request", zap.String("item_id", id))
+log.ErrorContext(ctx, "Failed to process request", zap.Error(err))
+```

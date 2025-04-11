@@ -2,15 +2,22 @@ package server_test
 
 import (
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/server"
 )
 
 var _ = ginkgo.Describe("Server", func() {
+	// Initialize logger before all tests to avoid race conditions
+	ginkgo.BeforeEach(func() {
+		// Initialize the logger with info level
+		log.Init(log.InfoLevel)
+	})
 	ginkgo.Describe("NewServer", func() {
 		ginkgo.Context("when creating a server with empty port", func() {
 			ginkgo.It("should return a non-nil server", func() {
@@ -144,6 +151,55 @@ var _ = ginkgo.Describe("Server", func() {
 			// Since we can't easily mock the http.Server's Shutdown method, we'll remove this test
 			// A better approach would be to refactor the server to use an interface for the HTTP server
 			// that could be easily mocked for testing
+		})
+	})
+
+	ginkgo.Describe("SetHTTPServer", func() {
+		ginkgo.It("should set the HTTP server", func() {
+			// Arrange
+			srv := server.NewServer("8080")
+			customServer := &http.Server{
+				Addr:         ":9999",
+				ReadTimeout:  30 * time.Second,
+				WriteTimeout: 30 * time.Second,
+			}
+
+			// Act
+			srv.SetHTTPServer(customServer)
+
+			// Assert - We can't directly access the server field as it's private
+			// Instead, we'll test the behavior indirectly by triggering a shutdown
+			// and verifying the server shuts down correctly
+			errCh := make(chan error, 1)
+			doneCh := make(chan struct{})
+
+			// Start the server in a goroutine
+			go func() {
+				errCh <- srv.Start()
+				close(doneCh)
+			}()
+
+			// Give the server a moment to start
+			time.Sleep(100 * time.Millisecond)
+
+			// Trigger shutdown
+			srv.TriggerShutdown()
+
+			// Wait for the server to shut down
+			gomega.Eventually(doneCh).WithTimeout(3 * time.Second).Should(gomega.BeClosed())
+
+			// Check that no error was returned
+			var serverErr error
+			select {
+			case serverErr = <-errCh:
+				// Got an error or nil
+			default:
+				// No error yet, which is unexpected
+				ginkgo.Fail("Expected server to return after shutdown")
+			}
+
+			// Server should have shut down gracefully with no error
+			gomega.Expect(serverErr).NotTo(gomega.HaveOccurred())
 		})
 	})
 })

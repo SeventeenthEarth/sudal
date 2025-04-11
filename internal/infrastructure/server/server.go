@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +11,9 @@ import (
 	"time"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
+	"go.uber.org/zap"
 )
 
 // Server represents the HTTP server
@@ -60,10 +62,13 @@ func (s *Server) Start() error {
 	// Register routes
 	healthHandler.RegisterRoutes(mux)
 
+	// Apply middleware
+	handler := middleware.RequestLogger(mux)
+
 	// Create the HTTP server
 	s.server = &http.Server{
 		Addr:         ":" + s.port,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -74,7 +79,7 @@ func (s *Server) Start() error {
 
 	// Start the server in a goroutine
 	go func() {
-		log.Printf("Server listening on port %s", s.port)
+		log.Info("Server listening", zap.String("port", s.port))
 		serverErrors <- s.server.ListenAndServe()
 	}()
 
@@ -93,7 +98,7 @@ func (s *Server) Start() error {
 		return fmt.Errorf("error starting server: %w", err)
 
 	case <-shutdown:
-		log.Println("Server is shutting down...")
+		log.Info("Server is shutting down...")
 
 		// Create a deadline for the shutdown
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

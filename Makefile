@@ -132,7 +132,7 @@ endif
 	@echo "Integration test coverage report generated at coverage.int.html"
 
 # End-to-end tests with preparation steps
-test.e2e: test.prepare test.e2e.only ## Run end-to-end tests with preparation steps
+test.e2e: test.e2e.only ## Run end-to-end tests with preparation steps
 
 # End-to-end tests only (without preparation steps)
 test.e2e.only: ## Run only end-to-end tests without preparation steps

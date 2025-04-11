@@ -73,27 +73,27 @@ func FromContext(ctx context.Context) *zap.Logger {
 	return logger
 }
 
-// Debug logs a debug message with context
+// DebugContext logs a debug message with context
 func DebugContext(ctx context.Context, msg string, fields ...zap.Field) {
 	FromContext(ctx).Debug(msg, fields...)
 }
 
-// Info logs an info message with context
+// InfoContext logs an info message with context
 func InfoContext(ctx context.Context, msg string, fields ...zap.Field) {
 	FromContext(ctx).Info(msg, fields...)
 }
 
-// Warn logs a warning message with context
+// WarnContext logs a warning message with context
 func WarnContext(ctx context.Context, msg string, fields ...zap.Field) {
 	FromContext(ctx).Warn(msg, fields...)
 }
 
-// Error logs an error message with context
+// ErrorContext logs an error message with context
 func ErrorContext(ctx context.Context, msg string, fields ...zap.Field) {
 	FromContext(ctx).Error(msg, fields...)
 }
 
-// Fatal logs a fatal message with context and exits
+// FatalContext logs a fatal message with context and exits
 func FatalContext(ctx context.Context, msg string, fields ...zap.Field) {
 	FromContext(ctx).Fatal(msg, fields...)
 }

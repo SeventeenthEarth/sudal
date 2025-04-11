@@ -85,7 +85,14 @@ The following `make` commands are available for development:
 - `make fmt`: Format Go code using `go fmt`.
 - `make vet`: Run static analysis with `go vet`.
 - `make lint`: Run the `golangci-lint` checks.
-- `make test`: Run all unit and integration tests using Ginkgo and generate coverage report (automatically runs fmt, vet, lint, ginkgo-bootstrap, and generate-mocks first).
+- `make test.prepare`: Prepare for running tests (format, vet, lint, generate code).
+- `make test`: Run all unit and integration tests (runs preparation steps only once).
+- `make test.unit`: Run unit tests with preparation steps.
+- `make test.unit.only`: Run only unit tests without preparation steps.
+- `make test.int`: Run integration tests with preparation steps.
+- `make test.int.only`: Run only integration tests without preparation steps.
+- `make test.e2e`: Run end-to-end tests with preparation steps.
+- `make test.e2e.only`: Run only end-to-end tests without preparation steps.
 - `make clean`: Remove build artifacts and caches.
 - `make generate`: Run all code generation tasks (mocks, test suites, proto).
 - `make generate-mocks`: Generate mock implementations using mockgen.
@@ -97,26 +104,78 @@ The following `make` commands are available for development:
 
 ### Running Tests
 
-To run all tests and generate a coverage report:
+The project has three types of tests:
+
+1. **Unit Tests**: Test individual components in isolation
+2. **Integration Tests**: Test interactions between components
+3. **End-to-End Tests**: Test the entire system with a running server
+
+#### Running All Tests
+
+To run both unit and integration tests (with preparation steps run only once):
 
 ```bash
 make test
 ```
 
-This will:
-1. Format the code with `go fmt`
-2. Run static analysis with `go vet`
-3. Run linter checks with `golangci-lint`
-4. Run all code generation tasks via `make generate`:
-   - Generate Ginkgo test suites
-   - Generate mock implementations
-   - Generate code from Protocol Buffers (when implemented)
-5. Run all tests with Ginkgo
-6. Generate a coverage report (both console summary and HTML report)
+#### Running Specific Test Types
 
-After running tests, you can view the detailed coverage report by opening `coverage.html` in your browser.
+To run only unit tests (with preparation steps):
 
-To run specific tests:
+```bash
+make test.unit
+```
+
+To run only unit tests (without preparation steps):
+
+```bash
+make test.unit.only
+```
+
+To run only integration tests (with preparation steps):
+
+```bash
+make test.int
+```
+
+To run only integration tests (without preparation steps):
+
+```bash
+make test.int.only
+```
+
+To run end-to-end tests (with preparation steps):
+
+```bash
+make test.e2e
+```
+
+To run end-to-end tests (without preparation steps):
+
+```bash
+make test.e2e.only
+```
+
+#### What Each Test Command Does
+
+Each test command first runs `make test.prepare`, which:
+1. Formats the code with `go fmt`
+2. Runs static analysis with `go vet`
+3. Runs linter checks with `golangci-lint`
+4. Runs all code generation tasks via `make generate`
+
+Then, the test command:
+1. Runs the specified tests with Ginkgo
+2. Generates a coverage report (both console summary and HTML report)
+
+After running tests, you can view the detailed coverage reports:
+- Unit tests: `coverage.unit.html`
+- Integration tests: `coverage.int.html`
+- End-to-end tests: `coverage.e2e.html`
+
+Note: Integration and E2E tests measure coverage of the internal packages using the `-coverpkg` flag.
+
+To run specific tests manually:
 
 ```bash
 go test ./path/to/package -v
@@ -134,9 +193,9 @@ The project follows a Behavior-Driven Development (BDD) approach to testing usin
 
 ### Test Structure
 
-- Unit tests are located alongside the code they test
-- Integration tests are in the `/test` directory
-- End-to-end tests are in the `/test/e2e` directory
+- **Unit Tests**: Located alongside the code they test in the `/internal` directory
+- **Integration Tests**: Located in the `/test/integration` directory
+- **End-to-End Tests**: Located in the `/test/e2e` directory
 
 ### Writing BDD Tests
 

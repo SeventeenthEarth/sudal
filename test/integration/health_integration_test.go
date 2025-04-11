@@ -1,4 +1,4 @@
-package e2e
+package integration
 
 import (
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 )
 
-var _ = ginkgo.Describe("End-to-End Tests", func() {
+var _ = ginkgo.Describe("Integration Tests", func() {
 	ginkgo.Describe("Health Endpoints", func() {
 		var (
 			handler *healthHandler.Handler

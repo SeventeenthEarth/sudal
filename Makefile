@@ -1,4 +1,4 @@
-.PHONY: help init build test clean lint fmt vet proto-gen run install-tools generate-mocks ginkgo-bootstrap generate
+.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean lint fmt vet proto-gen run install-tools generate-mocks ginkgo-bootstrap generate
 
 # Variables
 BINARY_NAME=sudal-server
@@ -66,27 +66,79 @@ build: ## Build the application binary
 	go build -ldflags="-s -w" -o $(OUTPUT_DIR)/$(BINARY_NAME) $(CMD_PATH)/main.go
 	@echo "Binary available at $(OUTPUT_DIR)/$(BINARY_NAME)"
 
-test: fmt vet lint generate ## Run unit tests with Ginkgo and generate coverage report
-	@echo "--- Running tests with coverage ---"
+# Common test preparation steps
+test.prepare: fmt vet lint generate ## Prepare for running tests (format, vet, lint, generate)
+	@echo "--- Test preparation completed ---"
+
+# Run all tests (unit and integration)
+test: test.prepare test.unit.only test.int.only ## Run all tests (unit and integration)
+	@echo "--- All tests completed ---"
+
+# Unit tests with preparation steps
+test.unit: test.prepare test.unit.only ## Run unit tests with preparation steps
+
+# Unit tests only (without preparation steps)
+test.unit.only: ## Run only unit tests without preparation steps
+	@echo "--- Running unit tests ---"
 ifeq ($(GINKGO),)
 	@echo "Ginkgo not found. Running tests with 'go test'..."
-	go test -v -race -coverprofile=coverage.out `go list ./... | grep -v "/mocks" | grep -v "^github.com/seventeenthearth/sudal/cmd"` || { echo "Tests failed"; exit 1; }
-	go tool cover -func=coverage.out
-	go tool cover -html=coverage.out -o coverage.html
+	go test -v -race -coverprofile=coverage.unit.out `go list ./internal/... | grep -v "/mocks"` || { echo "Unit tests failed"; exit 1; }
+	go tool cover -func=coverage.unit.out
+	go tool cover -html=coverage.unit.out -o coverage.unit.html
 else
-	@echo "Running tests with Ginkgo..."
-	$(GINKGO) -r -v -race -cover --coverprofile=coverage.out --trace --fail-on-pending --randomize-all --keep-going=false ./... || { echo "Tests failed"; exit 1; }
-	go tool cover -func=coverage.out
-	go tool cover -html=coverage.out -o coverage.html
+	@echo "Running unit tests with Ginkgo..."
+	$(GINKGO) -v -race -cover --coverprofile=coverage.unit.out --trace --fail-on-pending --randomize-all ./internal/... || { echo "Unit tests failed"; exit 1; }
+	go tool cover -func=coverage.unit.out
+	go tool cover -html=coverage.unit.out -o coverage.unit.html
 endif
-	@echo "--- Tests finished ---"
-	@echo "Coverage report generated at coverage.html"
+	@echo "--- Unit tests finished ---"
+	@echo "Unit test coverage report generated at coverage.unit.html"
+
+# Integration tests with preparation steps
+test.int: test.prepare test.int.only ## Run integration tests with preparation steps
+
+# Integration tests only (without preparation steps)
+test.int.only: ## Run only integration tests without preparation steps
+	@echo "--- Running integration tests ---"
+ifeq ($(GINKGO),)
+	@echo "Ginkgo not found. Running tests with 'go test'..."
+	go test -v -race -coverprofile=coverage.int.out -coverpkg=github.com/seventeenthearth/sudal/internal/... ./test/integration || { echo "Integration tests failed"; exit 1; }
+	go tool cover -func=coverage.int.out
+	go tool cover -html=coverage.int.out -o coverage.int.html
+else
+	@echo "Running integration tests with Ginkgo..."
+	$(GINKGO) -v -race -cover -coverpkg=github.com/seventeenthearth/sudal/internal/... --coverprofile=coverage.int.out --trace --fail-on-pending --randomize-all ./test/integration || { echo "Integration tests failed"; exit 1; }
+	go tool cover -func=coverage.int.out
+	go tool cover -html=coverage.int.out -o coverage.int.html
+endif
+	@echo "--- Integration tests finished ---"
+	@echo "Integration test coverage report generated at coverage.int.html"
+
+# End-to-end tests with preparation steps
+test.e2e: test.prepare test.e2e.only ## Run end-to-end tests with preparation steps
+
+# End-to-end tests only (without preparation steps)
+test.e2e.only: ## Run only end-to-end tests without preparation steps
+	@echo "--- Running end-to-end tests ---"
+ifeq ($(GINKGO),)
+	@echo "Ginkgo not found. Running tests with 'go test'..."
+	go test -v -coverprofile=coverage.e2e.out -coverpkg=github.com/seventeenthearth/sudal/internal/... ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
+	go tool cover -func=coverage.e2e.out
+	go tool cover -html=coverage.e2e.out -o coverage.e2e.html
+else
+	@echo "Running end-to-end tests with Ginkgo..."
+	$(GINKGO) -v -cover -coverpkg=github.com/seventeenthearth/sudal/internal/... --coverprofile=coverage.e2e.out --trace --fail-on-pending ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
+	go tool cover -func=coverage.e2e.out
+	go tool cover -html=coverage.e2e.out -o coverage.e2e.html
+endif
+	@echo "--- End-to-end tests finished ---"
+	@echo "End-to-end test coverage report generated at coverage.e2e.html"
 
 clean: ## Clean build artifacts, test files, mocks, and caches
 	@echo "--- Cleaning ---"
 	rm -rf $(OUTPUT_DIR)
 	# Remove test coverage files
-	rm -f coverage.out coverage.html coverprofile.out
+	rm -f coverage*.out coverage*.html coverprofile.out
 	# Remove Ginkgo suite test files
 	find . -name "*_suite_test.go" -delete
 	# Remove mock files

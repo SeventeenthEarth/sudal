@@ -36,6 +36,9 @@ logs/
 *.log
 
 # Test coverage
+coverage.e2e.html
+coverage.int.html
+coverage.unit.html
 coverage.html
 coverage.xml
 coverage-all.out

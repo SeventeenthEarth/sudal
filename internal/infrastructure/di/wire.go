@@ -5,7 +5,6 @@ package di
 
 import (
 	"github.com/google/wire"
-	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
@@ -37,7 +36,6 @@ var HealthConnectSet = wire.NewSet(
 	application.NewHealthCheckUseCase,
 	application.NewService,
 	healthConnect.NewHealthServiceHandler,
-	wire.Bind(new(healthv1connect.HealthServiceHandler), new(*healthConnect.HealthServiceHandler)),
 )
 
 // ProvideConfig provides the application configuration
@@ -52,7 +50,7 @@ func InitializeHealthHandler() *healthInterface.Handler {
 }
 
 // InitializeHealthConnectHandler initializes and returns a Connect-go health service handler
-func InitializeHealthConnectHandler() healthv1connect.HealthServiceHandler {
+func InitializeHealthConnectHandler() *healthConnect.HealthServiceHandler {
 	wire.Build(HealthConnectSet)
 	return nil // Wire will fill this in
 }

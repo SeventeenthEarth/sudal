@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"github.com/seventeenthearth/sudal/gen/health/v1"
+	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"go.uber.org/zap"
@@ -40,11 +40,11 @@ func (h *HealthServiceHandler) Check(
 	var protoStatus healthv1.ServingStatus
 	switch status.Status {
 	case "healthy":
-		protoStatus = healthv1.ServingStatus_SERVING
+		protoStatus = healthv1.ServingStatus_SERVING_STATUS_SERVING
 	case "unhealthy":
-		protoStatus = healthv1.ServingStatus_NOT_SERVING
+		protoStatus = healthv1.ServingStatus_SERVING_STATUS_NOT_SERVING
 	default:
-		protoStatus = healthv1.ServingStatus_UNKNOWN
+		protoStatus = healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED
 	}
 
 	// Create and return the response

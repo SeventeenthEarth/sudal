@@ -23,12 +23,12 @@ message CheckResponse {
 
 // ServingStatus represents the possible health states of the service
 enum ServingStatus {
-  // UNKNOWN indicates the status is unknown
-  UNKNOWN = 0;
-  
-  // SERVING indicates the service is serving requests
-  SERVING = 1;
-  
-  // NOT_SERVING indicates the service is not serving requests
-  NOT_SERVING = 2;
+  // SERVING_STATUS_UNKNOWN_UNSPECIFIED indicates the status is unknown
+  SERVING_STATUS_UNKNOWN_UNSPECIFIED = 0;
+
+  // SERVING_STATUS_SERVING indicates the service is serving requests
+  SERVING_STATUS_SERVING = 1;
+
+  // SERVING_STATUS_NOT_SERVING indicates the service is not serving requests
+  SERVING_STATUS_NOT_SERVING = 2;
 }

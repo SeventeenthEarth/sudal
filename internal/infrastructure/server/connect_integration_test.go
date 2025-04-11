@@ -9,7 +9,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	"github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
@@ -82,7 +82,7 @@ var _ = ginkgo.Describe("Connect Integration", func() {
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 				// Check the status
-				gomega.Expect(response.Status).To(gomega.Equal("SERVING"))
+				gomega.Expect(response.Status).To(gomega.Equal("SERVING_STATUS_SERVING"))
 			})
 		})
 

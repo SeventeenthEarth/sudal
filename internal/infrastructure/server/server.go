@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"

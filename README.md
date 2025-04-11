@@ -35,6 +35,16 @@ The codebase is organized into the following directories:
 
 The backend uses Connect-go framework for API development, which supports both gRPC and HTTP/JSON protocols with a single implementation. APIs are defined using Protocol Buffers (`.proto` files) and served via Connect-go handlers.
 
+### Protocol Buffers and JSON Serialization
+
+When using Protocol Buffers with Connect-go, be aware of the following JSON serialization behaviors:
+
+- **Enum Values**: Protobuf enum values are serialized to JSON using their full enum name. For example, an enum value defined as `SERVING_STATUS_SERVING` in the `.proto` file will appear as the string `"SERVING_STATUS_SERVING"` in JSON responses, not as a shortened form like `"SERVING"`.
+- **Field Names**: Protobuf field names are converted to camelCase in JSON (e.g., `user_id` becomes `userId`).
+- **Default Values**: Fields with default values are typically omitted from JSON output unless explicitly configured otherwise.
+
+These behaviors should be considered when writing client code that consumes the API or when writing tests that verify API responses.
+
 ## Quick Start
 
 ### Prerequisites

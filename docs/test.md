@@ -140,3 +140,29 @@ Interfaces are mocked using `mockgen` to isolate the component being tested:
 ```go
 //go:generate mockgen -destination=../mocks/mock_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/example Service
 ```
+
+## Testing Protocol Buffer APIs
+
+### JSON Serialization in Tests
+
+When testing APIs that use Protocol Buffers with Connect-go, be aware of how protobuf types are serialized to JSON:
+
+1. **Enum Values**: Protobuf enum values are serialized to JSON using their full enum name. For example:
+
+```go
+// In your .proto file
+enum ServingStatus {
+    SERVING_STATUS_UNKNOWN_UNSPECIFIED = 0;
+    SERVING_STATUS_SERVING = 1;
+    SERVING_STATUS_NOT_SERVING = 2;
+}
+
+// In your test, expect the full enum name in JSON responses
+Expect(response.Status).To(Equal("SERVING_STATUS_SERVING"))
+```
+
+2. **Field Names**: Protobuf field names use camelCase in JSON (e.g., `user_id` becomes `userId`).
+
+3. **Default Values**: Fields with default values are typically omitted from JSON output.
+
+These behaviors are important to consider when writing tests that verify API responses, especially in end-to-end tests that make HTTP/JSON requests to the server.

@@ -1,0 +1,23 @@
+version: v1
+plugins:
+  # Generate Go structs from Protocol Buffers
+  - plugin: go
+    out: ../gen/go
+    opt:
+      - paths=source_relative
+      - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
+
+  # Generate Connect-go service interfaces, clients, and handlers
+  - plugin: connect-go
+    out: ../gen/go
+    opt:
+      - paths=source_relative
+      - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
+
+  # Generate OpenAPI v2 specifications from Protocol Buffers
+  - plugin: openapiv2
+    out: ../gen/openapi
+    opt:
+      - output_format=yaml
+      - allow_merge=true
+      - merge_file_name=api

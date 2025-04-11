@@ -1,4 +1,4 @@
-.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean clean-all lint fmt vet proto-clean proto-gen run install-tools generate-mocks mock-clean ginkgo-bootstrap ginkgo-clean tmp-clean wire-gen wire-clean generate
+.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean clean-all lint fmt vet proto-clean buf-generate buf-lint buf-breaking run install-tools generate-mocks mock-clean ginkgo-bootstrap ginkgo-clean tmp-clean wire-gen wire-clean generate
 
 # Variables
 BINARY_NAME=sudal-server
@@ -15,6 +15,8 @@ GIT_USER_EMAIL="17thearth@gmail.com"
 GOLANGCILINT=$(shell command -v golangci-lint 2> /dev/null)
 PROTOC_GEN_GO=$(shell command -v protoc-gen-go 2> /dev/null)
 PROTOC_GEN_CONNECT_GO=$(shell command -v protoc-gen-connect-go 2> /dev/null)
+PROTOC_GEN_OPENAPIV2=$(shell command -v protoc-gen-openapiv2 2> /dev/null)
+BUF=$(shell command -v buf 2> /dev/null)
 GINKGO=$(shell command -v ginkgo 2> /dev/null)
 MOCKGEN=$(shell command -v mockgen 2> /dev/null)
 
@@ -37,6 +39,21 @@ init: install-tools ## Initialize development environment (install tools)
 	@echo "Checking/Installing protoc-gen-connect-go..."
 	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
 	@echo "protoc-gen-connect-go installed/updated."
+
+	# Install protoc-gen-openapiv2
+	@echo "Checking/Installing protoc-gen-openapiv2..."
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+	@echo "protoc-gen-openapiv2 installed/updated."
+
+	# Install buf
+	@echo "Checking/Installing buf..."
+	@if [ -z "$(BUF)" ]; then \
+		echo "buf not found. Installing..."; \
+		go install github.com/bufbuild/buf/cmd/buf@latest; \
+		@echo "buf installed successfully."; \
+	else \
+		echo "buf already installed."; \
+	fi
 
 	@echo "Checking Git remote 'origin'..."
 	@if ! git remote | grep -q '^origin$$'; then \
@@ -187,7 +204,7 @@ endif
 	$(GOLANGCILINT) run ./... || echo "Warning: Linter found issues, but continuing..."
 	@echo "--- Linter finished ---"
 
-generate: ginkgo-bootstrap proto-gen wire-gen generate-mocks ## Generate all code (mocks, test suites, proto, wire)
+generate: ginkgo-bootstrap buf-generate wire-gen generate-mocks ## Generate all code (test suites, proto, wire, mocks)
 	@echo "--- All code generation completed ---"
 
 proto-clean: ## Clean generated Protocol Buffer files
@@ -198,9 +215,13 @@ proto-clean: ## Clean generated Protocol Buffer files
 	find ./proto -path "*/*/healthv1connect" -type d -exec rm -rf {} \; 2>/dev/null || true
 	@echo "--- Protocol Buffer files cleaned ---"
 
-proto-gen: proto-clean ## Generate code from Protobuf definitions
-	@echo "--- Generating code from Proto definitions ---"
-	@echo "Checking for protoc-gen-go and protoc-gen-connect-go..."
+buf-generate: proto-clean buf-lint ## Generate code from Protobuf definitions using Buf
+	@echo "--- Generating code from Proto definitions using Buf ---"
+	@echo "Checking for buf and required plugins..."
+	@if [ -z "$(BUF)" ]; then \
+		echo "buf not found. Installing..."; \
+		go install github.com/bufbuild/buf/cmd/buf@latest; \
+	fi
 	@if [ -z "$(PROTOC_GEN_GO)" ]; then \
 		echo "protoc-gen-go not found. Installing..."; \
 		go install google.golang.org/protobuf/cmd/protoc-gen-go@latest; \
@@ -209,17 +230,89 @@ proto-gen: proto-clean ## Generate code from Protobuf definitions
 		echo "protoc-gen-connect-go not found. Installing..."; \
 		go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest; \
 	fi
-	@echo "Generating code from proto files..."
-	@mkdir -p gen/health/v1/healthv1connect
-	@protoc --go_out=. --go_opt=paths=source_relative \
-		--connect-go_out=. --connect-go_opt=paths=source_relative \
-		proto/health/v1/health.proto
-	@echo "Moving generated files to gen directory..."
-	@cp -f proto/health/v1/health.pb.go gen/health/v1/ 2>/dev/null || :
-	@cp -f proto/health/v1/healthv1connect/health.connect.go gen/health/v1/healthv1connect/ 2>/dev/null || :
-	@echo "Proto code generation completed."
+	@if [ -z "$(PROTOC_GEN_OPENAPIV2)" ]; then \
+		echo "protoc-gen-openapiv2 not found. Installing..."; \
+		go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest; \
+	fi
+	@echo "Running buf generate..."
+	@if [ ! -f "buf.work.yaml" ]; then \
+		echo "Creating buf.work.yaml..."; \
+		echo "version: v1\ndirectories:\n  - proto" > buf.work.yaml; \
+	fi
+	@if [ ! -f "proto/buf.yaml" ]; then \
+		echo "Creating proto/buf.yaml..."; \
+		mkdir -p proto; \
+		echo "version: v1\nname: github.com/seventeenthearth/sudal\ndeps:\n  - buf.build/googleapis/googleapis\n  - buf.build/grpc-ecosystem/grpc-gateway\nlint:\n  use:\n    - STANDARD\nbreaking:\n  use:\n    - FILE" > proto/buf.yaml; \
+	fi
+	@if [ ! -f "proto/buf.gen.yaml" ]; then \
+		echo "Creating proto/buf.gen.yaml..."; \
+		echo "version: v1\nplugins:\n  # Generate Go structs from Protocol Buffers\n  - plugin: go\n    out: ../gen/go\n    opt: paths=source_relative\n  \n  # Generate Connect-go service interfaces, clients, and handlers\n  - plugin: connect-go\n    out: ../gen/go\n    opt: paths=source_relative\n  \n  # Generate OpenAPI v2 specifications from Protocol Buffers\n  - plugin: openapiv2\n    out: ../gen/openapi\n    opt:\n      - output_format=yaml\n      - allow_merge=true\n      - merge_file_name=api" > proto/buf.gen.yaml; \
+	fi
+	@cd proto && buf generate
+	@echo "Buf code generation completed."
 
-run: test.prepare ## Run the application using Docker Compose
+buf-lint: ## Lint Protocol Buffer definitions using Buf
+	@echo "--- Linting Protocol Buffer definitions using Buf ---"
+	@if [ -z "$(BUF)" ]; then \
+		echo "buf not found. Installing..."; \
+		go install github.com/bufbuild/buf/cmd/buf@latest; \
+	fi
+	@echo "Running buf lint..."
+	@if [ ! -f "buf.work.yaml" ]; then \
+		echo "Creating buf.work.yaml..."; \
+		echo "version: v1\ndirectories:\n  - proto" > buf.work.yaml; \
+	fi
+	@if [ ! -f "proto/buf.yaml" ]; then \
+		echo "Creating proto/buf.yaml..."; \
+		mkdir -p proto; \
+		echo "version: v1\nname: github.com/seventeenthearth/sudal\ndeps:\n  - buf.build/googleapis/googleapis\n  - buf.build/grpc-ecosystem/grpc-gateway\nlint:\n  use:\n    - STANDARD\nbreaking:\n  use:\n    - FILE" > proto/buf.yaml; \
+	fi
+	@if [ ! -f "proto/buf.gen.yaml" ]; then \
+		echo "Creating proto/buf.gen.yaml..."; \
+		echo "version: v1\nplugins:\n  # Generate Go structs from Protocol Buffers\n  - plugin: go\n    out: ../gen/go\n    opt: paths=source_relative\n  \n  # Generate Connect-go service interfaces, clients, and handlers\n  - plugin: connect-go\n    out: ../gen/go\n    opt: paths=source_relative\n  \n  # Generate OpenAPI v2 specifications from Protocol Buffers\n  - plugin: openapiv2\n    out: ../gen/openapi\n    opt:\n      - output_format=yaml\n      - allow_merge=true\n      - merge_file_name=api" > proto/buf.gen.yaml; \
+	fi
+	@cd proto && buf lint
+	@echo "Buf linting completed."
+
+buf-breaking: ## Check for breaking changes in Protocol Buffer definitions using Buf
+	@echo "--- Checking for breaking changes in Protocol Buffer definitions using Buf ---"
+	@if [ -z "$(BUF)" ]; then \
+		echo "buf not found. Installing..."; \
+		go install github.com/bufbuild/buf/cmd/buf@latest; \
+	fi
+	@echo "Running buf breaking check..."
+	@if [ ! -d "./.git" ]; then \
+		echo "Error: Not a git repository. Cannot check for breaking changes."; \
+		exit 0; \
+	fi
+	@if ! git ls-files --error-unmatch proto > /dev/null 2>&1; then \
+		echo "Warning: No proto files tracked in git. Skipping breaking change check."; \
+		exit 0; \
+	fi
+	@if [ ! -f "buf.work.yaml" ]; then \
+		echo "Creating buf.work.yaml..."; \
+		echo "version: v1\ndirectories:\n  - proto" > buf.work.yaml; \
+	fi
+	@if [ ! -f "proto/buf.yaml" ]; then \
+		echo "Creating proto/buf.yaml..."; \
+		mkdir -p proto; \
+		echo "version: v1\nname: github.com/seventeenthearth/sudal\ndeps:\n  - buf.build/googleapis/googleapis\n  - buf.build/grpc-ecosystem/grpc-gateway\nlint:\n  use:\n    - STANDARD\nbreaking:\n  use:\n    - FILE" > proto/buf.yaml; \
+	fi
+	@if [ ! -f "proto/buf.gen.yaml" ]; then \
+		echo "Creating proto/buf.gen.yaml..."; \
+		echo "version: v1\nplugins:\n  # Generate Go structs from Protocol Buffers\n  - plugin: go\n    out: ../gen/go\n    opt: paths=source_relative\n  \n  # Generate Connect-go service interfaces, clients, and handlers\n  - plugin: connect-go\n    out: ../gen/go\n    opt: paths=source_relative\n  \n  # Generate OpenAPI v2 specifications from Protocol Buffers\n  - plugin: openapiv2\n    out: ../gen/openapi\n    opt:\n      - output_format=yaml\n      - allow_merge=true\n      - merge_file_name=api" > proto/buf.gen.yaml; \
+	fi
+	@if ! git show-ref --verify --quiet refs/heads/main; then \
+		echo "Warning: Main branch not found. Using current branch as reference."; \
+		GIT_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+		cd proto && buf breaking --against "../.git#branch=$$GIT_BRANCH"; \
+	else \
+		echo "Checking against main branch..."; \
+		cd proto && buf breaking --against '../.git#branch=main'; \
+	fi
+	@echo "Buf breaking change check completed."
+
+run: ## Run the application using Docker Compose
 	@echo "--- Running application with Docker Compose ---"
 	docker-compose up --build
 

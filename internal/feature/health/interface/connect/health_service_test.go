@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/gen/health/v1"
+	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	connectImpl "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
@@ -53,7 +53,7 @@ var _ = Describe("HealthServiceHandler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.Msg).NotTo(BeNil())
-				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING))
+				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING_STATUS_SERVING))
 			})
 		})
 
@@ -75,7 +75,7 @@ var _ = Describe("HealthServiceHandler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.Msg).NotTo(BeNil())
-				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_NOT_SERVING))
+				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING_STATUS_NOT_SERVING))
 			})
 		})
 
@@ -97,7 +97,7 @@ var _ = Describe("HealthServiceHandler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.Msg).NotTo(BeNil())
-				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_UNKNOWN))
+				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED))
 			})
 		})
 

@@ -13,8 +13,8 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/gen/health/v1"
-	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 )
 
 // E2E tests for Connect-Go service running in Docker
@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("Connect-Go E2E Tests", func() {
 				gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Connect client request failed")
 				gomega.Expect(resp).NotTo(gomega.BeNil(), "Response should not be nil")
 				gomega.Expect(resp.Msg).NotTo(gomega.BeNil(), "Response message should not be nil")
-				gomega.Expect(resp.Msg.Status).To(gomega.Equal(healthv1.ServingStatus_SERVING),
+				gomega.Expect(resp.Msg.Status).To(gomega.Equal(healthv1.ServingStatus_SERVING_STATUS_SERVING),
 					"Health service should return SERVING status")
 			})
 		})
@@ -119,7 +119,7 @@ var _ = ginkgo.Describe("Connect-Go E2E Tests", func() {
 
 				err = json.NewDecoder(resp.Body).Decode(&response)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to decode JSON response")
-				gomega.Expect(response.Status).To(gomega.Equal("SERVING"), "Health service should return SERVING status")
+				gomega.Expect(response.Status).To(gomega.Equal("SERVING_STATUS_SERVING"), "Health service should return SERVING_STATUS_SERVING status")
 
 				// Close the response body
 				defer func() {

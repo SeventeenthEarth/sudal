@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/gen/health/v1"
-	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
@@ -102,7 +102,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.Msg).NotTo(BeNil())
-				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING))
+				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING_STATUS_SERVING))
 			})
 		})
 
@@ -123,7 +123,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.Msg).NotTo(BeNil())
-				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_NOT_SERVING))
+				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING_STATUS_NOT_SERVING))
 			})
 		})
 
@@ -144,7 +144,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.Msg).NotTo(BeNil())
-				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_UNKNOWN))
+				Expect(resp.Msg.Status).To(Equal(healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED))
 			})
 		})
 

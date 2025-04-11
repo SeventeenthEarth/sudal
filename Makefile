@@ -1,4 +1,4 @@
-.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean lint fmt vet proto-gen run install-tools generate-mocks ginkgo-bootstrap generate
+.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean lint fmt vet proto-clean proto-gen run install-tools generate-mocks ginkgo-bootstrap generate
 
 # Variables
 BINARY_NAME=sudal-server
@@ -136,7 +136,7 @@ else
 endif
 	@echo "--- End-to-end tests finished ---"
 
-clean: ## Clean build artifacts, test files, mocks, and caches
+clean: proto-clean ## Clean build artifacts, test files, mocks, and caches
 	@echo "--- Cleaning ---"
 	rm -rf $(OUTPUT_DIR)
 	# Remove test coverage files
@@ -171,11 +171,34 @@ endif
 generate: ginkgo-bootstrap generate-mocks proto-gen ## Generate all code (mocks, test suites, proto)
 	@echo "--- All code generation completed ---"
 
-proto-gen: ## Generate code from Protobuf definitions (implement when needed)
+proto-clean: ## Clean generated Protocol Buffer files
+	@echo "--- Cleaning generated Protocol Buffer files ---"
+	rm -rf ./gen
+	find ./proto -name "*.pb.go" -delete
+	find ./proto -name "*.connect.go" -delete
+	find ./proto -path "*/*/healthv1connect" -type d -exec rm -rf {} \; 2>/dev/null || true
+	@echo "--- Protocol Buffer files cleaned ---"
+
+proto-gen: proto-clean ## Generate code from Protobuf definitions
 	@echo "--- Generating code from Proto definitions ---"
-	# Example command using buf (add buf installation to 'init' if used)
-	# buf generate api/protobuf
-	@echo "Implement proto generation command here" # Placeholder
+	@echo "Checking for protoc-gen-go and protoc-gen-connect-go..."
+	@if [ -z "$(PROTOC_GEN_GO)" ]; then \
+		echo "protoc-gen-go not found. Installing..."; \
+		go install google.golang.org/protobuf/cmd/protoc-gen-go@latest; \
+	fi
+	@if [ -z "$(PROTOC_GEN_CONNECT_GO)" ]; then \
+		echo "protoc-gen-connect-go not found. Installing..."; \
+		go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest; \
+	fi
+	@echo "Generating code from proto files..."
+	@mkdir -p gen/health/v1/healthv1connect
+	@protoc --go_out=. --go_opt=paths=source_relative \
+		--connect-go_out=. --connect-go_opt=paths=source_relative \
+		proto/health/v1/health.proto
+	@echo "Moving generated files to gen directory..."
+	@cp -f proto/health/v1/health.pb.go gen/health/v1/ 2>/dev/null || :
+	@cp -f proto/health/v1/healthv1connect/health.connect.go gen/health/v1/healthv1connect/ 2>/dev/null || :
+	@echo "Proto code generation completed."
 
 run: test.prepare ## Run the application using Docker Compose
 	@echo "--- Running application with Docker Compose ---"

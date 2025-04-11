@@ -157,9 +157,10 @@ var _ = ginkgo.Describe("Server", func() {
 	ginkgo.Describe("SetHTTPServer", func() {
 		ginkgo.It("should set the HTTP server", func() {
 			// Arrange
-			srv := server.NewServer("8080")
+			// Use a random available port to avoid conflicts
+			srv := server.NewServer("0")
 			customServer := &http.Server{
-				Addr:         ":9999",
+				Addr:         ":0", // Use port 0 to let the OS assign a free port
 				ReadTimeout:  30 * time.Second,
 				WriteTimeout: 30 * time.Second,
 			}

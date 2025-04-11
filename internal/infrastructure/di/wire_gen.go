@@ -8,10 +8,12 @@ package di
 
 import (
 	"github.com/google/wire"
+	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	"github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	"github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 )
 
@@ -25,6 +27,14 @@ func InitializeHealthHandler() *interfaces.Handler {
 	return handler
 }
 
+// InitializeHealthConnectHandler initializes and returns a Connect-go health service handler
+func InitializeHealthConnectHandler() healthv1connect.HealthServiceHandler {
+	repository := data.NewRepository()
+	service := application.NewService(repository)
+	healthServiceHandler := connect.NewHealthServiceHandler(service)
+	return healthServiceHandler
+}
+
 // wire.go:
 
 // ConfigSet is a Wire provider set for configuration
@@ -34,6 +44,9 @@ var ConfigSet = wire.NewSet(
 
 // HealthSet is a Wire provider set for health-related dependencies
 var HealthSet = wire.NewSet(data.NewRepository, wire.Bind(new(domain.Repository), new(*data.Repository)), application.NewPingUseCase, application.NewHealthCheckUseCase, application.NewService, interfaces.NewHandler)
+
+// HealthConnectSet is a Wire provider set for Connect-go health service
+var HealthConnectSet = wire.NewSet(data.NewRepository, wire.Bind(new(domain.Repository), new(*data.Repository)), application.NewPingUseCase, application.NewHealthCheckUseCase, application.NewService, connect.NewHealthServiceHandler, wire.Bind(new(healthv1connect.HealthServiceHandler), new(*connect.HealthServiceHandler)))
 
 // ProvideConfig provides the application configuration
 func ProvideConfig() *config.Config {

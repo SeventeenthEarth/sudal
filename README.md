@@ -31,6 +31,10 @@ The codebase is organized into the following directories:
 - `/docs`: Documentation files
 - `/test`: Additional test utilities
 
+## API Framework
+
+The backend uses Connect-go framework for API development, which supports both gRPC and HTTP/JSON protocols with a single implementation. APIs are defined using Protocol Buffers (`.proto` files) and served via Connect-go handlers.
+
 ## Quick Start
 
 ### Prerequisites
@@ -155,13 +159,6 @@ All logs are output in JSON format with the following standard fields:
 
 For error-level logs, a `stacktrace` field is automatically included with the full call stack.
 
-### Configuration
-
-The log level can be configured using the `LOG_LEVEL` environment variable or in the configuration file:
-
-```yaml
-log_level: debug  # Options: debug, info, warn, error
-```
 
 The default log level is `info` if not specified.
 

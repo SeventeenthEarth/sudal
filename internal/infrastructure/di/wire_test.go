@@ -18,6 +18,16 @@ var _ = ginkgo.Describe("DI", func() {
 		})
 	})
 
+	ginkgo.Describe("InitializeHealthConnectHandler", func() {
+		ginkgo.It("should return a non-nil Connect handler", func() {
+			// Act
+			handler := di.InitializeHealthConnectHandler()
+
+			// Assert
+			gomega.Expect(handler).NotTo(gomega.BeNil())
+		})
+	})
+
 	ginkgo.Describe("ProvideConfig", func() {
 		ginkgo.Context("when config is loaded", func() {
 			var cfg *config.Config

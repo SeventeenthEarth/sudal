@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/seventeenthearth/sudal/gen/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
@@ -58,17 +59,24 @@ func (s *Server) Start() error {
 
 	// Initialize handlers using dependency injection
 	healthHandler := di.InitializeHealthHandler()
+	// Initialize Connect-go health service handler
+	healthConnectHandler := di.InitializeHealthConnectHandler()
 
-	// Register routes
+	// Register REST routes
 	healthHandler.RegisterRoutes(mux)
 
+	// Register Connect-go routes
+	// This path pattern will handle both gRPC and HTTP/JSON requests
+	path, handler := healthv1connect.NewHealthServiceHandler(healthConnectHandler)
+	mux.Handle(path, handler)
+
 	// Apply middleware
-	handler := middleware.RequestLogger(mux)
+	httpHandler := middleware.RequestLogger(mux)
 
 	// Create the HTTP server
 	s.server = &http.Server{
 		Addr:         ":" + s.port,
-		Handler:      handler,
+		Handler:      httpHandler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

@@ -46,3 +46,10 @@ profile.out
 
 # Ginkgo generated files
 *_suite_test.go
+
+# Generated Protocol Buffer files
+*.pb.go
+*.connect.go
+gen/
+proto/**/*.pb.go
+proto/**/*.connect.go

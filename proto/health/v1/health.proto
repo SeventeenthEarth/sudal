@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package health.v1;
+
+option go_package = "github.com/seventeenthearth/sudal/gen/health/v1;healthv1";
+
+// HealthService provides health checking functionality
+service HealthService {
+  // Check returns the current health status of the service
+  rpc Check(CheckRequest) returns (CheckResponse) {}
+}
+
+// CheckRequest is the request message for the Check method
+message CheckRequest {
+  // Empty for now, can be extended in the future
+}
+
+// CheckResponse is the response message for the Check method
+message CheckResponse {
+  // ServingStatus represents the current serving status
+  ServingStatus status = 1;
+}
+
+// ServingStatus represents the possible health states of the service
+enum ServingStatus {
+  // UNKNOWN indicates the status is unknown
+  UNKNOWN = 0;
+  
+  // SERVING indicates the service is serving requests
+  SERVING = 1;
+  
+  // NOT_SERVING indicates the service is not serving requests
+  NOT_SERVING = 2;
+}

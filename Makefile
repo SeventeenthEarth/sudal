@@ -82,9 +82,16 @@ endif
 	@echo "--- Tests finished ---"
 	@echo "Coverage report generated at coverage.html"
 
-clean: ## Clean build artifacts and caches
+clean: ## Clean build artifacts, test files, mocks, and caches
 	@echo "--- Cleaning ---"
 	rm -rf $(OUTPUT_DIR)
+	# Remove test coverage files
+	rm -f coverage.out coverage.html coverprofile.out
+	# Remove Ginkgo suite test files
+	find . -name "*_suite_test.go" -delete
+	# Remove mock files
+	rm -rf ./internal/mocks
+	# Clean Go test and module caches
 	go clean -testcache -modcache
 	@echo "--- Clean finished ---"
 
@@ -180,5 +187,11 @@ ifeq ($(MOCKGEN),)
 	@exit 1
 endif
 	@echo "Running go generate to create mocks..."
-	go generate ./... || { echo "ERROR: Mock generation failed"; exit 1; }
+	@go generate ./...
+	$(eval GENERATE_STATUS=$(shell echo $$?))
+	@if [ $(GENERATE_STATUS) -ne 0 ]; then \
+		echo "ERROR: Mock generation failed"; \
+		exit 1; \
+	fi
+	@echo "Mock generation completed successfully"
 	@echo "--- Mocks generated ---"

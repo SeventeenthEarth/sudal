@@ -193,4 +193,4 @@ For detailed configuration instructions, including:
 - Cloud Run deployment examples
 - Secret management
 
-See the [Configuration Documentation](docs/configuration/configuration).
+See the [Configuration Documentation](docs/configuration/configuration.md).

@@ -67,7 +67,7 @@ build: ## Build the application binary
 	@echo "Binary available at $(OUTPUT_DIR)/$(BINARY_NAME)"
 
 # Common test preparation steps
-test.prepare: fmt vet lint generate ## Prepare for running tests (format, vet, lint, generate)
+test.prepare: generate fmt vet lint ## Prepare for running tests (format, vet, lint, generate)
 	@echo "--- Test preparation completed ---"
 
 # Run all tests (unit and integration)

@@ -175,9 +175,9 @@ proto-gen: ## Generate code from Protobuf definitions (implement when needed)
 	# buf generate api/protobuf
 	@echo "Implement proto generation command here" # Placeholder
 
-run: build ## Build and run the application
-	@echo "--- Running application ---"
-	$(OUTPUT_DIR)/$(BINARY_NAME) --config=$(CONFIG_FILE)
+run: ## Run the application using Docker Compose
+	@echo "--- Running application with Docker Compose ---"
+	docker-compose up --build
 
 # Add placeholder main.go to make build work initially
 $(CMD_PATH)/main.go:

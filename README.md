@@ -56,9 +56,9 @@ The codebase is organized into the following directories:
    make build
    ```
 
-4. Run the application:
+4. Run the application using Docker Compose:
    ```bash
-   ./bin/server
+   make run
    ```
 
 ## Development Setup
@@ -82,23 +82,15 @@ The following `make` commands are available for development:
 - `make init`: Initialize the development environment (e.g., install tools).
 - `make install-tools`: Install development tools (golangci-lint, ginkgo, mockgen).
 - `make build`: Compile the main server application into the `./bin/` directory.
-- `make fmt`: Format Go code using `go fmt`.
-- `make vet`: Run static analysis with `go vet`.
 - `make lint`: Run the `golangci-lint` checks.
-- `make test.prepare`: Prepare for running tests (format, vet, lint, generate code).
 - `make test`: Run all unit and integration tests (runs preparation steps only once).
+- `make test.prepare`: Prepare for running tests (format, vet, lint, generate code).
 - `make test.unit`: Run unit tests with preparation steps.
-- `make test.unit.only`: Run only unit tests without preparation steps.
 - `make test.int`: Run integration tests with preparation steps.
-- `make test.int.only`: Run only integration tests without preparation steps.
 - `make test.e2e`: Run end-to-end tests with preparation steps.
-- `make test.e2e.only`: Run only end-to-end tests without preparation steps.
 - `make clean`: Remove build artifacts and caches.
 - `make generate`: Run all code generation tasks (mocks, test suites, proto).
-- `make generate-mocks`: Generate mock implementations using mockgen.
-- `make ginkgo-bootstrap`: Bootstrap Ginkgo test suites in all packages with tests.
-- `make proto-gen`: Generate Go code from Protobuf definitions (will be added later).
-- `make run`: Build and run the application (convenience target - will be added later).
+- `make run`: Run the application using Docker Compose with `docker-compose up --build`.
 
 ## Testing
 

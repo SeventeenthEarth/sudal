@@ -120,19 +120,21 @@ test.e2e: test.prepare test.e2e.only ## Run end-to-end tests with preparation st
 # End-to-end tests only (without preparation steps)
 test.e2e.only: ## Run only end-to-end tests without preparation steps
 	@echo "--- Running end-to-end tests ---"
+	@echo "Checking if server is running in Docker..."
+	@if ! docker ps | grep -q sudal-app; then \
+		echo "Warning: The server doesn't appear to be running in Docker."; \
+		echo "Run 'make run' in a separate terminal before running e2e tests."; \
+	fi
+	@echo "Note: Coverage data cannot be collected from the server running in Docker."
+	@echo "      Only test execution results will be reported."
 ifeq ($(GINKGO),)
 	@echo "Ginkgo not found. Running tests with 'go test'..."
-	go test -v -coverprofile=coverage.e2e.out -coverpkg=github.com/seventeenthearth/sudal/internal/... ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
-	go tool cover -func=coverage.e2e.out
-	go tool cover -html=coverage.e2e.out -o coverage.e2e.html
+	go test -v ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
 else
 	@echo "Running end-to-end tests with Ginkgo..."
-	$(GINKGO) -v -cover -coverpkg=github.com/seventeenthearth/sudal/internal/... --coverprofile=coverage.e2e.out --trace --fail-on-pending ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
-	go tool cover -func=coverage.e2e.out
-	go tool cover -html=coverage.e2e.out -o coverage.e2e.html
+	$(GINKGO) -v --trace --fail-on-pending ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
 endif
 	@echo "--- End-to-end tests finished ---"
-	@echo "End-to-end test coverage report generated at coverage.e2e.html"
 
 clean: ## Clean build artifacts, test files, mocks, and caches
 	@echo "--- Cleaning ---"
@@ -175,7 +177,7 @@ proto-gen: ## Generate code from Protobuf definitions (implement when needed)
 	# buf generate api/protobuf
 	@echo "Implement proto generation command here" # Placeholder
 
-run: ## Run the application using Docker Compose
+run: test.prepare ## Run the application using Docker Compose
 	@echo "--- Running application with Docker Compose ---"
 	docker-compose up --build
 

@@ -40,23 +40,12 @@ The codebase is organized into the following directories:
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone git@github.com:SeventeenthEarth/sudal.git
-   cd sudal
-   ```
-
-2. Initialize the development environment:
+1. Initialize the development environment:
    ```bash
    make init
    ```
 
-3. Build the application:
-   ```bash
-   make build
-   ```
-
-4. Run the application using Docker Compose:
+2. Run the application using Docker Compose:
    ```bash
    make run
    ```
@@ -94,123 +83,26 @@ The following `make` commands are available for development:
 
 ## Testing
 
-### Running Tests
-
 The project has three types of tests:
 
 1. **Unit Tests**: Test individual components in isolation
 2. **Integration Tests**: Test interactions between components
 3. **End-to-End Tests**: Test the entire system with a running server
 
-#### Running All Tests
-
-To run both unit and integration tests (with preparation steps run only once):
+To run all tests:
 
 ```bash
 make test
 ```
 
-#### Running Specific Test Types
+For detailed information about testing, including:
+- Running specific test types
+- Test structure and organization
+- Testing strategy and tools
+- Writing BDD tests with Ginkgo
+- End-to-end testing
 
-To run only unit tests (with preparation steps):
-
-```bash
-make test.unit
-```
-
-To run only unit tests (without preparation steps):
-
-```bash
-make test.unit.only
-```
-
-To run only integration tests (with preparation steps):
-
-```bash
-make test.int
-```
-
-To run only integration tests (without preparation steps):
-
-```bash
-make test.int.only
-```
-
-To run end-to-end tests (with preparation steps):
-
-```bash
-make test.e2e
-```
-
-To run end-to-end tests (without preparation steps):
-
-```bash
-make test.e2e.only
-```
-
-#### What Each Test Command Does
-
-Each test command first runs `make test.prepare`, which:
-1. Formats the code with `go fmt`
-2. Runs static analysis with `go vet`
-3. Runs linter checks with `golangci-lint`
-4. Runs all code generation tasks via `make generate`
-
-Then, the test command:
-1. Runs the specified tests with Ginkgo
-2. Generates a coverage report (both console summary and HTML report)
-
-After running tests, you can view the detailed coverage reports:
-- Unit tests: `coverage.unit.html`
-- Integration tests: `coverage.int.html`
-- End-to-end tests: `coverage.e2e.html`
-
-Note: Integration and E2E tests measure coverage of the internal packages using the `-coverpkg` flag.
-
-To run specific tests manually:
-
-```bash
-go test ./path/to/package -v
-```
-
-### Testing Strategy
-
-The project follows a Behavior-Driven Development (BDD) approach to testing using the following tools:
-
-- **Ginkgo**: A BDD-style testing framework for Go that provides a more expressive and readable syntax for writing tests.
-- **Gomega**: An assertion library that pairs with Ginkgo to provide a rich set of matchers for making assertions in tests.
-- **mockgen**: Used to generate mock implementations of interfaces for testing.
-- **httptest**: Standard library package for testing HTTP handlers and servers.
-- **go-sqlmock**: Used for mocking database interactions in tests.
-
-### Test Structure
-
-- **Unit Tests**: Located alongside the code they test in the `/internal` directory
-- **Integration Tests**: Located in the `/test/integration` directory
-- **End-to-End Tests**: Located in the `/test/e2e` directory
-
-### Writing BDD Tests
-
-Tests follow the BDD style using Ginkgo's `Describe`, `Context`, and `It` blocks to organize test cases:
-
-```go
-var _ = Describe("Handler", func() {
-    Context("when handling a valid request", func() {
-        It("should return a successful response", func() {
-            // Test code here
-            Expect(response.StatusCode).To(Equal(http.StatusOK))
-        })
-    })
-})
-```
-
-### Mocking Dependencies
-
-Interfaces are mocked using `mockgen` to isolate the component being tested:
-
-```go
-//go:generate mockgen -destination=../mocks/mock_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/example Service
-```
+See the [Testing Documentation](docs/test.md).
 
 ## Configuration
 
@@ -244,7 +136,7 @@ For detailed configuration instructions, including:
 - Cloud Run deployment examples
 - Secret management
 
-See the [Configuration Documentation](docs/configuration/configuration.md).
+See the [Configuration Documentation](docs/configuration.md).
 
 ## Logging
 

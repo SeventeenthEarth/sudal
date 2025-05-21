@@ -15,6 +15,7 @@ services:
     environment:
       # These values override .env file for container-specific settings
       - DB_HOST=db
+      - DB_PORT=5432
       - REDIS_HOST=redis
       - PATH=/go/bin:$PATH
     depends_on:
@@ -34,6 +35,7 @@ services:
       - POSTGRES_DB=quizapp_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d quizapp_db"]
       interval: 5s

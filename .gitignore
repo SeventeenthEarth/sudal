@@ -24,8 +24,8 @@ Thumbs.db
 
 # Project specific
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.template
 configs/*.local.yaml
 configs/*.local.json
 configs/*.local.toml

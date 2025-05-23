@@ -122,25 +122,94 @@ See the [Testing Documentation](docs/test.md).
 
 Sudal uses a flexible configuration system that supports different environments through environment variables and configuration files.
 
+### Environment Setup
+
+The application supports three distinct environments:
+- **dev**: Development environment (default)
+- **canary**: Canary/staging environment
+- **production**: Production environment
+
+#### Setting Up Environment Configuration
+
+1. **Create environment-specific files**:
+   - Copy `.env.template` to create your environment-specific files:
+     - `.env` - For local development (default)
+     - `.env.canary` - For canary/staging environment
+     - `.env.production` - For production environment
+
+   ```bash
+   # For local development
+   cp .env.template .env
+
+   # For canary environment
+   cp .env.template .env.canary
+
+   # For production environment
+   cp .env.template .env.production
+   ```
+
+2. **Configure environment variables**:
+   - Edit each file to set the appropriate values for that environment
+   - Required variables are marked with `[REQUIRED]` in the template
+   - Environment-specific required variables are marked with `[ENV:xxx]`
+   - Variables with `[OPTIONAL]` have sensible defaults if not specified
+
+3. **Set the APP_ENV variable**:
+   - The `APP_ENV` variable determines which environment configuration to use
+   - Default is `dev` if not specified
+   - Set to `canary` or `production` to use those environments:
+
+   ```bash
+   # For local development (default)
+   APP_ENV=dev
+
+   # For canary environment
+   APP_ENV=canary
+
+   # For production environment
+   APP_ENV=production
+   ```
+
+4. **Database Configuration**:
+   - You can configure the database connection in two ways:
+     - Set `POSTGRES_DSN` directly with a full connection string
+     - Or set individual components: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`
+   - In production, database configuration is required
+
 ### Quick Start for Local Development
 
-1. **Create a `.env` file** in the project root (copy from `.env.example`):
-   ```
-   SERVER_PORT=8080
-   LOG_LEVEL=debug
-   ENVIRONMENT=development
-   # See .env.example for all available options
+1. **Create a `.env` file** in the project root:
+   ```bash
+   cp .env.template .env
    ```
 
-2. **Run with Docker Compose** (recommended):
+2. **Edit the `.env` file** with your local development settings:
+   ```
+   APP_ENV=dev
+   SERVER_PORT=8080
+   LOG_LEVEL=debug
+   DB_HOST=localhost
+   DB_USER=user
+   DB_PASSWORD=password
+   DB_NAME=quizapp_db
+   ```
+
+3. **Run with Docker Compose** (recommended):
    ```bash
    docker-compose up
    ```
 
-3. **Or run directly** with the configuration file:
+4. **Or run directly** with the configuration file:
    ```bash
    ./bin/server --config=./configs/config.yaml
    ```
+
+### Important Notes
+
+- **Never commit** your actual `.env`, `.env.canary`, or `.env.production` files to version control
+- Only the `.env.template` file should be committed
+- The application will automatically load the appropriate `.env` file based on the `APP_ENV` value
+- Environment variables set in the system take precedence over those in the `.env` files
 
 ### Documentation
 

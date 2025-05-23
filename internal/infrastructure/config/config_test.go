@@ -27,10 +27,12 @@ var _ = ginkgo.Describe("LoadConfig", func() {
 # Server Configuration
 server_port: 9999
 log_level: debug
+app_env: test
 environment: test
 
 # Database Configuration
-postgres_dsn: postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable
+db:
+  dsn: postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable
 
 # Redis Configuration
 redis_addr: localhost:6379
@@ -56,8 +58,9 @@ redis_password: "testpassword"
 			// Verify values from the config file
 			gomega.Expect(cfg.ServerPort).To(gomega.Equal("9999"))
 			gomega.Expect(cfg.LogLevel).To(gomega.Equal("debug"))
+			gomega.Expect(cfg.AppEnv).To(gomega.Equal("test"))
 			gomega.Expect(cfg.Environment).To(gomega.Equal("test"))
-			gomega.Expect(cfg.PostgresDSN).To(gomega.Equal("postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"))
+			gomega.Expect(cfg.DB.DSN).To(gomega.Equal("postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"))
 			gomega.Expect(cfg.RedisAddr).To(gomega.Equal("localhost:6379"))
 			gomega.Expect(cfg.RedisPassword).To(gomega.Equal("testpassword"))
 		})
@@ -106,6 +109,9 @@ redis_password: "testpassword"
 			err = os.Setenv("LOG_LEVEL", "debug")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+			err = os.Setenv("APP_ENV", "test")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 			err = os.Setenv("ENVIRONMENT", "test")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
@@ -116,6 +122,9 @@ redis_password: "testpassword"
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			err = os.Unsetenv("LOG_LEVEL")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			err = os.Unsetenv("APP_ENV")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			err = os.Unsetenv("ENVIRONMENT")
@@ -130,6 +139,7 @@ redis_password: "testpassword"
 			// Verify values
 			gomega.Expect(cfg.ServerPort).To(gomega.Equal("9090"))
 			gomega.Expect(cfg.LogLevel).To(gomega.Equal("debug"))
+			gomega.Expect(cfg.AppEnv).To(gomega.Equal("test"))
 			gomega.Expect(cfg.Environment).To(gomega.Equal("test"))
 		})
 	})
@@ -146,6 +156,9 @@ redis_password: "testpassword"
 			err = os.Unsetenv("LOG_LEVEL")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+			err = os.Unsetenv("APP_ENV")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 			err = os.Unsetenv("ENVIRONMENT")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
@@ -158,7 +171,8 @@ redis_password: "testpassword"
 			// Verify default values
 			gomega.Expect(cfg.ServerPort).To(gomega.Equal("8080"))
 			gomega.Expect(cfg.LogLevel).To(gomega.Equal("info"))
-			gomega.Expect(cfg.Environment).To(gomega.Equal("development"))
+			gomega.Expect(cfg.AppEnv).To(gomega.Equal("dev"))
+			gomega.Expect(cfg.Environment).To(gomega.Equal("dev"))
 		})
 	})
 
@@ -169,6 +183,14 @@ redis_password: "testpassword"
 
 			// Make sure POSTGRES_DSN is not set
 			err := os.Unsetenv("POSTGRES_DSN")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Make sure DB_SSLMODE is set to default
+			err = os.Setenv("DB_SSLMODE", "disable")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Set APP_ENV to test
+			err = os.Setenv("APP_ENV", "test")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// Set environment variables for testing
@@ -204,6 +226,12 @@ redis_password: "testpassword"
 
 			err = os.Unsetenv("DB_NAME")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			err = os.Unsetenv("DB_SSLMODE")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			err = os.Unsetenv("APP_ENV")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
 		ginkgo.It("should construct PostgresDSN correctly from components", func() {
@@ -213,7 +241,7 @@ redis_password: "testpassword"
 
 			// Verify PostgresDSN was constructed correctly
 			expectedDSN := "postgres://testuser:testpass@testhost:5432/testdb?sslmode=disable"
-			gomega.Expect(cfg.PostgresDSN).To(gomega.Equal(expectedDSN))
+			gomega.Expect(cfg.DB.DSN).To(gomega.Equal(expectedDSN))
 		})
 	})
 
@@ -227,6 +255,9 @@ redis_password: "testpassword"
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// Set environment variables for testing
+			err = os.Setenv("APP_ENV", "test")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 			err = os.Setenv("REDIS_HOST", "redishost")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -240,6 +271,9 @@ redis_password: "testpassword"
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			err = os.Unsetenv("REDIS_PORT")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			err = os.Unsetenv("APP_ENV")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
@@ -259,13 +293,19 @@ redis_password: "testpassword"
 			// Reset Viper to clear any previous configuration
 			config.ResetViper()
 			// Set environment for production but missing required fields
-			err := os.Setenv("ENVIRONMENT", "production")
+			err := os.Setenv("APP_ENV", "production")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			err = os.Setenv("ENVIRONMENT", "production")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
 		ginkgo.AfterEach(func() {
 			// Clean up after test
-			err := os.Unsetenv("ENVIRONMENT")
+			err := os.Unsetenv("APP_ENV")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			err = os.Unsetenv("ENVIRONMENT")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
@@ -292,17 +332,17 @@ var _ = ginkgo.Describe("validateConfig", func() {
 			gomega.Expect(err.Error()).To(gomega.ContainSubstring("SERVER_PORT"))
 		})
 
-		ginkgo.It("should return an error for missing Environment", func() {
-			// Create a config with missing Environment
+		ginkgo.It("should return an error for missing AppEnv", func() {
+			// Create a config with missing AppEnv
 			cfg := &config.Config{
-				ServerPort:  "8080",
-				Environment: "", // Missing required field
+				ServerPort: "8080",
+				AppEnv:     "", // Missing required field
 			}
 
 			// Directly validate the config
 			err := config.ValidateConfig(cfg)
 			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Error()).To(gomega.ContainSubstring("ENVIRONMENT"))
+			gomega.Expect(err.Error()).To(gomega.ContainSubstring("APP_ENV"))
 		})
 	})
 
@@ -333,9 +373,12 @@ var _ = ginkgo.Describe("validateConfig", func() {
 		ginkgo.It("should return an error listing all missing required fields", func() {
 			// Create a config with missing production fields
 			cfg := &config.Config{
+				AppEnv:      "production",
 				Environment: "production",
 				ServerPort:  "8080",
-				PostgresDSN: "postgres://user:pass@localhost:5432/db",
+				DB: config.DBConfig{
+					DSN: "postgres://user:pass@localhost:5432/db",
+				},
 				// Missing: RedisAddr, FirebaseProjectID, JwtSecretKey
 			}
 
@@ -353,9 +396,12 @@ var _ = ginkgo.Describe("validateConfig", func() {
 		ginkgo.It("should pass validation when all required production fields are set", func() {
 			// Create a complete production config
 			cfg := &config.Config{
-				Environment:       "production",
-				ServerPort:        "8080",
-				PostgresDSN:       "postgres://user:pass@localhost:5432/db",
+				AppEnv:      "production",
+				Environment: "production",
+				ServerPort:  "8080",
+				DB: config.DBConfig{
+					DSN: "postgres://user:pass@localhost:5432/db",
+				},
 				RedisAddr:         "localhost:6379",
 				FirebaseProjectID: "test-project",
 				JwtSecretKey:      "test-secret-key",

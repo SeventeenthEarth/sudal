@@ -26,8 +26,15 @@ var _ = Describe("Configuration System Integration", func() {
 		envVars = map[string]string{
 			"SERVER_PORT":  os.Getenv("SERVER_PORT"),
 			"LOG_LEVEL":    os.Getenv("LOG_LEVEL"),
+			"APP_ENV":      os.Getenv("APP_ENV"),
 			"ENVIRONMENT":  os.Getenv("ENVIRONMENT"),
 			"POSTGRES_DSN": os.Getenv("POSTGRES_DSN"),
+			"DB_HOST":      os.Getenv("DB_HOST"),
+			"DB_PORT":      os.Getenv("DB_PORT"),
+			"DB_USER":      os.Getenv("DB_USER"),
+			"DB_PASSWORD":  os.Getenv("DB_PASSWORD"),
+			"DB_NAME":      os.Getenv("DB_NAME"),
+			"DB_SSLMODE":   os.Getenv("DB_SSLMODE"),
 			"REDIS_ADDR":   os.Getenv("REDIS_ADDR"),
 		}
 
@@ -59,6 +66,7 @@ var _ = Describe("Configuration System Integration", func() {
 				// Set environment variables
 				_ = os.Setenv("SERVER_PORT", "9090") // 오류 무시
 				_ = os.Setenv("LOG_LEVEL", "debug")  // 오류 무시
+				_ = os.Setenv("APP_ENV", "test")     // 오류 무시
 				_ = os.Setenv("ENVIRONMENT", "test") // 오류 무시
 
 				// Load config
@@ -69,6 +77,7 @@ var _ = Describe("Configuration System Integration", func() {
 				// Verify config values
 				Expect(cfg.ServerPort).To(Equal("9090"))
 				Expect(cfg.LogLevel).To(Equal("debug"))
+				Expect(cfg.AppEnv).To(Equal("test"))
 				Expect(cfg.Environment).To(Equal("test"))
 			})
 		})
@@ -79,7 +88,10 @@ var _ = Describe("Configuration System Integration", func() {
 				configContent := `
 server_port: "8888"
 log_level: "info"
-environment: "development"
+app_env: "dev"
+environment: "dev"
+db:
+  dsn: "postgres://user:pass@host:5432/db?sslmode=disable"
 `
 				configFile := filepath.Join(tempDir, "config.yaml")
 				err := os.WriteFile(configFile, []byte(configContent), 0644)
@@ -93,7 +105,9 @@ environment: "development"
 				// Verify config values
 				Expect(cfg.ServerPort).To(Equal("8888"))
 				Expect(cfg.LogLevel).To(Equal("info"))
-				Expect(cfg.Environment).To(Equal("development"))
+				Expect(cfg.AppEnv).To(Equal("dev"))
+				Expect(cfg.Environment).To(Equal("dev"))
+				Expect(cfg.DB.DSN).To(Equal("postgres://user:pass@host:5432/db?sslmode=disable"))
 			})
 
 			It("should return an error when the config file does not exist", func() {
@@ -113,7 +127,8 @@ environment: "development"
 				// Verify default values
 				Expect(cfg.ServerPort).To(Equal("8080"))
 				Expect(cfg.LogLevel).To(Equal("info"))
-				Expect(cfg.Environment).To(Equal("development"))
+				Expect(cfg.AppEnv).To(Equal("dev"))
+				Expect(cfg.Environment).To(Equal("dev"))
 			})
 		})
 
@@ -125,6 +140,7 @@ environment: "development"
 				_ = os.Setenv("DB_USER", "testuser")     // 오류 무시
 				_ = os.Setenv("DB_PASSWORD", "testpass") // 오류 무시
 				_ = os.Setenv("DB_NAME", "testdb")       // 오류 무시
+				_ = os.Setenv("DB_SSLMODE", "disable")   // 오류 무시
 
 				// Load config
 				cfg, err := config.LoadConfig("")
@@ -133,7 +149,7 @@ environment: "development"
 
 				// Verify PostgresDSN
 				expectedDSN := "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"
-				Expect(cfg.PostgresDSN).To(Equal(expectedDSN))
+				Expect(cfg.DB.DSN).To(Equal(expectedDSN))
 			})
 
 			It("should construct RedisAddr correctly from components", func() {
@@ -159,7 +175,8 @@ environment: "development"
 				// Create a config with missing ServerPort
 				cfg := &config.Config{
 					LogLevel:    "info",
-					Environment: "development",
+					AppEnv:      "dev",
+					Environment: "dev",
 				}
 
 				// Validate config
@@ -168,8 +185,8 @@ environment: "development"
 				Expect(err.Error()).To(ContainSubstring("SERVER_PORT"))
 			})
 
-			It("should return an error for missing Environment", func() {
-				// Create a config with missing Environment
+			It("should return an error for missing AppEnv", func() {
+				// Create a config with missing AppEnv
 				cfg := &config.Config{
 					ServerPort: "8080",
 					LogLevel:   "info",
@@ -178,7 +195,7 @@ environment: "development"
 				// Validate config
 				err := config.ValidateConfig(cfg)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("ENVIRONMENT"))
+				Expect(err.Error()).To(ContainSubstring("APP_ENV"))
 			})
 		})
 
@@ -188,8 +205,9 @@ environment: "development"
 				cfg := &config.Config{
 					ServerPort:  "8080",
 					LogLevel:    "info",
+					AppEnv:      "production",
 					Environment: "production",
-					// Missing PostgresDSN and RedisAddr
+					// Missing DB.DSN and RedisAddr
 				}
 
 				// Validate config
@@ -202,10 +220,13 @@ environment: "development"
 			It("should pass validation when all required production fields are set", func() {
 				// Create a complete production config
 				cfg := &config.Config{
-					ServerPort:        "8080",
-					LogLevel:          "info",
-					Environment:       "production",
-					PostgresDSN:       "postgres://user:pass@host:5432/db",
+					ServerPort:  "8080",
+					LogLevel:    "info",
+					AppEnv:      "production",
+					Environment: "production",
+					DB: config.DBConfig{
+						DSN: "postgres://user:pass@host:5432/db",
+					},
 					RedisAddr:         "host:6379",
 					FirebaseProjectID: "test-project",
 					JwtSecretKey:      "test-secret",
@@ -224,7 +245,8 @@ environment: "development"
 			cfg := &config.Config{
 				ServerPort:  "8080",
 				LogLevel:    "info",
-				Environment: "development",
+				AppEnv:      "dev",
+				Environment: "dev",
 			}
 
 			// Set the config

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/server"
@@ -14,9 +13,6 @@ import (
 
 func main() {
 	fmt.Println("Starting Sudal Server...")
-
-	// Load .env file if it exists (for local development)
-	_ = godotenv.Load()
 
 	// Parse command line flags
 	configPath := flag.String("config", "", "Path to configuration file")
@@ -38,7 +34,7 @@ func main() {
 
 	// Log configuration details
 	log.Info("Application starting",
-		zap.String("environment", cfg.Environment),
+		zap.String("app_env", cfg.AppEnv),
 		zap.String("server_port", cfg.ServerPort),
 		zap.String("log_level", string(logLevel)),
 	)

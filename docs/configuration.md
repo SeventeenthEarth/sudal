@@ -37,9 +37,9 @@ flowchart TD
 For local development, we recommend using a `.env` file with Docker Compose. However, you have several options:
 
 1. **Using .env file**:
-   - Create a `.env` file in the project root (based on `.env.example`)
+   - Create a `.env` file in the project root (based on `.env.template`)
    - The application will automatically load variables from this file
-   - Required variables are clearly marked in `.env.example` with `[REQUIRED]` tags
+   - Required variables are clearly marked in `.env.template` with `[REQUIRED]` tags
    - Optional variables are marked with `[OPTIONAL]` tags
    - Example:
      ```

@@ -61,9 +61,16 @@ func (s *Server) Start() error {
 	healthHandler := di.InitializeHealthHandler()
 	// Initialize Connect-go health service handler
 	healthConnectHandler := di.InitializeHealthConnectHandler()
+	// Initialize database health handler using DI
+	dbHealthHandler, err := di.InitializeDatabaseHealthHandler()
+	if err != nil {
+		return fmt.Errorf("failed to initialize database health handler: %w", err)
+	}
 
 	// Register REST routes
 	healthHandler.RegisterRoutes(mux)
+	// Register database health check route
+	mux.HandleFunc("/health/database", dbHealthHandler.HandleDatabaseHealth)
 
 	// Register Connect-go routes
 	// This path pattern will handle both gRPC and HTTP/JSON requests

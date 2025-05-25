@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/server"
 	"go.uber.org/zap"
@@ -38,6 +41,18 @@ func main() {
 		zap.String("server_port", cfg.ServerPort),
 		zap.String("log_level", string(logLevel)),
 	)
+
+	// Verify database connectivity at startup
+	log.Info("Verifying database connectivity...")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := database.VerifyDatabaseConnectivity(ctx, cfg); err != nil {
+		log.Error("Database connectivity verification failed", zap.Error(err))
+		os.Exit(1)
+	}
+
+	log.Info("Database connectivity verified successfully")
 
 	// Create and start the server
 	srv := server.NewServer(cfg.ServerPort)

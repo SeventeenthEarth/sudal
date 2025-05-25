@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -33,6 +34,18 @@ type DBConfig struct {
 	Password string `mapstructure:"DB_PASSWORD"`
 	Name     string `mapstructure:"DB_NAME"`
 	SSLMode  string `mapstructure:"DB_SSLMODE"`
+
+	// SSL/TLS Configuration
+	SSLCert     string `mapstructure:"DB_SSL_CERT"`
+	SSLKey      string `mapstructure:"DB_SSL_KEY"`
+	SSLRootCert string `mapstructure:"DB_SSL_ROOT_CERT"`
+
+	// Connection Pool Configuration
+	MaxOpenConns           int `mapstructure:"DB_MAX_OPEN_CONNS"`
+	MaxIdleConns           int `mapstructure:"DB_MAX_IDLE_CONNS"`
+	ConnMaxLifetimeSeconds int `mapstructure:"DB_CONN_MAX_LIFETIME_SECONDS"`
+	ConnMaxIdleTimeSeconds int `mapstructure:"DB_CONN_MAX_IDLE_TIME_SECONDS"`
+	ConnectTimeoutSeconds  int `mapstructure:"DB_CONNECT_TIMEOUT_SECONDS"`
 
 	// Full connection string (DSN)
 	DSN string `mapstructure:"POSTGRES_DSN"`
@@ -233,11 +246,91 @@ func processDatabaseConfig(config *Config) {
 		}
 	}
 
+	// SSL/TLS Configuration
+	if config.DB.SSLCert == "" {
+		config.DB.SSLCert = os.Getenv("DB_SSL_CERT")
+	}
+	if config.DB.SSLKey == "" {
+		config.DB.SSLKey = os.Getenv("DB_SSL_KEY")
+	}
+	if config.DB.SSLRootCert == "" {
+		config.DB.SSLRootCert = os.Getenv("DB_SSL_ROOT_CERT")
+	}
+
+	// Connection Pool Configuration with defaults
+	if config.DB.MaxOpenConns == 0 {
+		if maxOpenConns := os.Getenv("DB_MAX_OPEN_CONNS"); maxOpenConns != "" {
+			if val, err := strconv.Atoi(maxOpenConns); err == nil {
+				config.DB.MaxOpenConns = val
+			}
+		}
+		if config.DB.MaxOpenConns == 0 {
+			config.DB.MaxOpenConns = 25 // Default max open connections
+		}
+	}
+
+	if config.DB.MaxIdleConns == 0 {
+		if maxIdleConns := os.Getenv("DB_MAX_IDLE_CONNS"); maxIdleConns != "" {
+			if val, err := strconv.Atoi(maxIdleConns); err == nil {
+				config.DB.MaxIdleConns = val
+			}
+		}
+		if config.DB.MaxIdleConns == 0 {
+			config.DB.MaxIdleConns = 5 // Default max idle connections
+		}
+	}
+
+	if config.DB.ConnMaxLifetimeSeconds == 0 {
+		if connMaxLifetime := os.Getenv("DB_CONN_MAX_LIFETIME_SECONDS"); connMaxLifetime != "" {
+			if val, err := strconv.Atoi(connMaxLifetime); err == nil {
+				config.DB.ConnMaxLifetimeSeconds = val
+			}
+		}
+		if config.DB.ConnMaxLifetimeSeconds == 0 {
+			config.DB.ConnMaxLifetimeSeconds = 3600 // Default 1 hour
+		}
+	}
+
+	if config.DB.ConnMaxIdleTimeSeconds == 0 {
+		if connMaxIdleTime := os.Getenv("DB_CONN_MAX_IDLE_TIME_SECONDS"); connMaxIdleTime != "" {
+			if val, err := strconv.Atoi(connMaxIdleTime); err == nil {
+				config.DB.ConnMaxIdleTimeSeconds = val
+			}
+		}
+		if config.DB.ConnMaxIdleTimeSeconds == 0 {
+			config.DB.ConnMaxIdleTimeSeconds = 300 // Default 5 minutes
+		}
+	}
+
+	if config.DB.ConnectTimeoutSeconds == 0 {
+		if connectTimeout := os.Getenv("DB_CONNECT_TIMEOUT_SECONDS"); connectTimeout != "" {
+			if val, err := strconv.Atoi(connectTimeout); err == nil {
+				config.DB.ConnectTimeoutSeconds = val
+			}
+		}
+		if config.DB.ConnectTimeoutSeconds == 0 {
+			config.DB.ConnectTimeoutSeconds = 30 // Default 30 seconds
+		}
+	}
+
 	// If DSN is not set but individual components are, construct the DSN
 	if config.DB.DSN == "" && config.DB.Host != "" {
 		if config.DB.Host != "" && config.DB.User != "" && config.DB.Password != "" && config.DB.Name != "" {
-			config.DB.DSN = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 				config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name, config.DB.SSLMode)
+
+			// Add SSL certificate parameters if provided
+			if config.DB.SSLCert != "" {
+				dsn += "&sslcert=" + config.DB.SSLCert
+			}
+			if config.DB.SSLKey != "" {
+				dsn += "&sslkey=" + config.DB.SSLKey
+			}
+			if config.DB.SSLRootCert != "" {
+				dsn += "&sslrootcert=" + config.DB.SSLRootCert
+			}
+
+			config.DB.DSN = dsn
 		}
 	}
 }
@@ -255,23 +348,6 @@ func setDefaults() {
 	// Database defaults
 	viper.SetDefault("DB_PORT", "5432")
 	viper.SetDefault("DB_SSLMODE", "disable")
-
-	// Redis defaults
-	viper.SetDefault("REDIS_PORT", "6379")
-
-	// Construct RedisAddr from individual components if not provided directly
-	if os.Getenv("REDIS_ADDR") == "" && os.Getenv("REDIS_HOST") != "" {
-		host := os.Getenv("REDIS_HOST")
-		port := os.Getenv("REDIS_PORT")
-		if port == "" {
-			port = "6379" // Default Redis port
-		}
-
-		if host != "" {
-			addr := fmt.Sprintf("%s:%s", host, port)
-			viper.SetDefault("REDIS_ADDR", addr)
-		}
-	}
 
 	// Map PORT to SERVER_PORT for compatibility with Cloud Run and other platforms
 	if os.Getenv("PORT") != "" && os.Getenv("SERVER_PORT") == "" {
@@ -325,19 +401,6 @@ func ValidateConfig(config *Config) error {
 			if config.DB.Name == "" {
 				missingFields = append(missingFields, "DB_NAME")
 			}
-		}
-
-		// Other production requirements
-		if config.RedisAddr == "" {
-			missingFields = append(missingFields, "REDIS_ADDR")
-		}
-
-		if config.FirebaseProjectID == "" {
-			missingFields = append(missingFields, "FIREBASE_PROJECT_ID")
-		}
-
-		if config.JwtSecretKey == "" {
-			missingFields = append(missingFields, "JWT_SECRET_KEY")
 		}
 	}
 

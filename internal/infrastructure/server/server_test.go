@@ -3,6 +3,7 @@ package server_test
 import (
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -43,17 +44,38 @@ var _ = ginkgo.Describe("Server", func() {
 	ginkgo.Describe("Start", func() {
 		// Setup for all Start tests
 		ginkgo.BeforeEach(func() {
-			// Ensure we have a valid config for dependency injection
+			// Set environment variable to indicate test mode
+			err := os.Setenv("GINKGO_TEST", "1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Ensure we have a valid config for dependency injection with database configuration
 			cfg := &config.Config{
 				ServerPort:  "8080",
-				LogLevel:    "info",
+				LogLevel:    "debug",
 				Environment: "test",
+				AppEnv:      "test",
+				DB: config.DBConfig{
+					DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
+					Host:                   "localhost",
+					Port:                   "5432",
+					User:                   "test",
+					Password:               "test",
+					Name:                   "testdb",
+					SSLMode:                "disable",
+					MaxOpenConns:           25,
+					MaxIdleConns:           5,
+					ConnMaxLifetimeSeconds: 3600,
+					ConnMaxIdleTimeSeconds: 300,
+					ConnectTimeoutSeconds:  30,
+				},
 			}
 			config.SetConfig(cfg)
 		})
 
 		ginkgo.AfterEach(func() {
-			// Reset config after tests
+			// Reset environment variable and config after tests
+			err := os.Unsetenv("GINKGO_TEST")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			config.SetConfig(nil)
 		})
 
@@ -109,6 +131,33 @@ var _ = ginkgo.Describe("Server", func() {
 			)
 
 			ginkgo.BeforeEach(func() {
+				// Set environment variable to indicate test mode
+				err := os.Setenv("GINKGO_TEST", "1")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+				// Ensure we have a valid config for dependency injection with database configuration
+				cfg := &config.Config{
+					ServerPort:  "8080",
+					LogLevel:    "debug",
+					Environment: "test",
+					AppEnv:      "test",
+					DB: config.DBConfig{
+						DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
+						Host:                   "localhost",
+						Port:                   "5432",
+						User:                   "test",
+						Password:               "test",
+						Name:                   "testdb",
+						SSLMode:                "disable",
+						MaxOpenConns:           25,
+						MaxIdleConns:           5,
+						ConnMaxLifetimeSeconds: 3600,
+						ConnMaxIdleTimeSeconds: 300,
+						ConnectTimeoutSeconds:  30,
+					},
+				}
+				config.SetConfig(cfg)
+
 				// Create a server on a random available port
 				srv = server.NewServer("0") // Port 0 means a random available port
 				errCh = make(chan error, 1)
@@ -122,6 +171,13 @@ var _ = ginkgo.Describe("Server", func() {
 
 				// Give the server a moment to start
 				time.Sleep(100 * time.Millisecond)
+			})
+
+			ginkgo.AfterEach(func() {
+				// Reset environment variable and config after tests
+				err := os.Unsetenv("GINKGO_TEST")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				config.SetConfig(nil)
 			})
 
 			ginkgo.It("should shut down gracefully when receiving an interrupt signal", func() {
@@ -155,6 +211,42 @@ var _ = ginkgo.Describe("Server", func() {
 	})
 
 	ginkgo.Describe("SetHTTPServer", func() {
+		ginkgo.BeforeEach(func() {
+			// Set environment variable to indicate test mode
+			err := os.Setenv("GINKGO_TEST", "1")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Ensure we have a valid config for dependency injection with database configuration
+			cfg := &config.Config{
+				ServerPort:  "8080",
+				LogLevel:    "debug",
+				Environment: "test",
+				AppEnv:      "test",
+				DB: config.DBConfig{
+					DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
+					Host:                   "localhost",
+					Port:                   "5432",
+					User:                   "test",
+					Password:               "test",
+					Name:                   "testdb",
+					SSLMode:                "disable",
+					MaxOpenConns:           25,
+					MaxIdleConns:           5,
+					ConnMaxLifetimeSeconds: 3600,
+					ConnMaxIdleTimeSeconds: 300,
+					ConnectTimeoutSeconds:  30,
+				},
+			}
+			config.SetConfig(cfg)
+		})
+
+		ginkgo.AfterEach(func() {
+			// Reset environment variable and config after tests
+			err := os.Unsetenv("GINKGO_TEST")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			config.SetConfig(nil)
+		})
+
 		ginkgo.It("should set the HTTP server", func() {
 			// Arrange
 			// Use a random available port to avoid conflicts

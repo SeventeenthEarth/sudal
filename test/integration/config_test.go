@@ -24,18 +24,22 @@ var _ = Describe("Configuration System Integration", func() {
 
 		// Save original environment variables
 		envVars = map[string]string{
-			"SERVER_PORT":  os.Getenv("SERVER_PORT"),
-			"LOG_LEVEL":    os.Getenv("LOG_LEVEL"),
-			"APP_ENV":      os.Getenv("APP_ENV"),
-			"ENVIRONMENT":  os.Getenv("ENVIRONMENT"),
-			"POSTGRES_DSN": os.Getenv("POSTGRES_DSN"),
-			"DB_HOST":      os.Getenv("DB_HOST"),
-			"DB_PORT":      os.Getenv("DB_PORT"),
-			"DB_USER":      os.Getenv("DB_USER"),
-			"DB_PASSWORD":  os.Getenv("DB_PASSWORD"),
-			"DB_NAME":      os.Getenv("DB_NAME"),
-			"DB_SSLMODE":   os.Getenv("DB_SSLMODE"),
-			"REDIS_ADDR":   os.Getenv("REDIS_ADDR"),
+			"SERVER_PORT":                   os.Getenv("SERVER_PORT"),
+			"LOG_LEVEL":                     os.Getenv("LOG_LEVEL"),
+			"APP_ENV":                       os.Getenv("APP_ENV"),
+			"ENVIRONMENT":                   os.Getenv("ENVIRONMENT"),
+			"POSTGRES_DSN":                  os.Getenv("POSTGRES_DSN"),
+			"DB_HOST":                       os.Getenv("DB_HOST"),
+			"DB_PORT":                       os.Getenv("DB_PORT"),
+			"DB_USER":                       os.Getenv("DB_USER"),
+			"DB_PASSWORD":                   os.Getenv("DB_PASSWORD"),
+			"DB_NAME":                       os.Getenv("DB_NAME"),
+			"DB_SSLMODE":                    os.Getenv("DB_SSLMODE"),
+			"DB_MAX_OPEN_CONNS":             os.Getenv("DB_MAX_OPEN_CONNS"),
+			"DB_MAX_IDLE_CONNS":             os.Getenv("DB_MAX_IDLE_CONNS"),
+			"DB_CONN_MAX_LIFETIME_SECONDS":  os.Getenv("DB_CONN_MAX_LIFETIME_SECONDS"),
+			"DB_CONN_MAX_IDLE_TIME_SECONDS": os.Getenv("DB_CONN_MAX_IDLE_TIME_SECONDS"),
+			"DB_CONNECT_TIMEOUT_SECONDS":    os.Getenv("DB_CONNECT_TIMEOUT_SECONDS"),
 		}
 
 		// Reset config for each test
@@ -152,19 +156,31 @@ db:
 				Expect(cfg.DB.DSN).To(Equal(expectedDSN))
 			})
 
-			It("should construct RedisAddr correctly from components", func() {
-				// Set environment variables for Redis components
-				_ = os.Setenv("REDIS_HOST", "localhost") // 오류 무시
-				_ = os.Setenv("REDIS_PORT", "6379")      // 오류 무시
+			It("should load database connection pool configuration correctly", func() {
+				// Set environment variables for database pool configuration
+				_ = os.Setenv("DB_HOST", "localhost")                 // 오류 무시
+				_ = os.Setenv("DB_PORT", "5432")                      // 오류 무시
+				_ = os.Setenv("DB_USER", "testuser")                  // 오류 무시
+				_ = os.Setenv("DB_PASSWORD", "testpass")              // 오류 무시
+				_ = os.Setenv("DB_NAME", "testdb")                    // 오류 무시
+				_ = os.Setenv("DB_SSLMODE", "disable")                // 오류 무시
+				_ = os.Setenv("DB_MAX_OPEN_CONNS", "50")              // 오류 무시
+				_ = os.Setenv("DB_MAX_IDLE_CONNS", "10")              // 오류 무시
+				_ = os.Setenv("DB_CONN_MAX_LIFETIME_SECONDS", "7200") // 오류 무시
+				_ = os.Setenv("DB_CONN_MAX_IDLE_TIME_SECONDS", "600") // 오류 무시
+				_ = os.Setenv("DB_CONNECT_TIMEOUT_SECONDS", "60")     // 오류 무시
 
 				// Load config
 				cfg, err := config.LoadConfig("")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cfg).NotTo(BeNil())
 
-				// Verify RedisAddr
-				expectedAddr := "localhost:6379"
-				Expect(cfg.RedisAddr).To(Equal(expectedAddr))
+				// Verify database pool configuration
+				Expect(cfg.DB.MaxOpenConns).To(Equal(50))
+				Expect(cfg.DB.MaxIdleConns).To(Equal(10))
+				Expect(cfg.DB.ConnMaxLifetimeSeconds).To(Equal(7200))
+				Expect(cfg.DB.ConnMaxIdleTimeSeconds).To(Equal(600))
+				Expect(cfg.DB.ConnectTimeoutSeconds).To(Equal(60))
 			})
 		})
 	})
@@ -200,36 +216,65 @@ db:
 		})
 
 		Context("when validating in production environment", func() {
-			It("should fail validation when required fields are missing in production", func() {
-				// Create a production config with missing required fields
+			It("should fail validation when required database fields are missing in production", func() {
+				// Create a production config with missing database configuration
 				cfg := &config.Config{
 					ServerPort:  "8080",
 					LogLevel:    "info",
 					AppEnv:      "production",
 					Environment: "production",
-					// Missing DB.DSN and RedisAddr
+					// Missing DB.DSN
 				}
 
 				// Validate config
 				err := config.ValidateConfig(cfg)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("POSTGRES_DSN"))
-				Expect(err.Error()).To(ContainSubstring("REDIS_ADDR"))
+				Expect(err.Error()).To(ContainSubstring("DB_HOST or POSTGRES_DSN"))
 			})
 
-			It("should pass validation when all required production fields are set", func() {
-				// Create a complete production config
+			It("should pass validation when database configuration is provided in production", func() {
+				// Create a production config with database configuration
 				cfg := &config.Config{
 					ServerPort:  "8080",
 					LogLevel:    "info",
 					AppEnv:      "production",
 					Environment: "production",
 					DB: config.DBConfig{
-						DSN: "postgres://user:pass@host:5432/db",
+						DSN:                    "postgres://user:pass@host:5432/db",
+						MaxOpenConns:           25,
+						MaxIdleConns:           5,
+						ConnMaxLifetimeSeconds: 3600,
+						ConnMaxIdleTimeSeconds: 300,
+						ConnectTimeoutSeconds:  30,
 					},
-					RedisAddr:         "host:6379",
-					FirebaseProjectID: "test-project",
-					JwtSecretKey:      "test-secret",
+				}
+
+				// Validate config
+				err := config.ValidateConfig(cfg)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass validation when database components are provided in production", func() {
+				// Create a production config with database components
+				cfg := &config.Config{
+					ServerPort:  "8080",
+					LogLevel:    "info",
+					AppEnv:      "production",
+					Environment: "production",
+					DB: config.DBConfig{
+						Host:                   "localhost",
+						Port:                   "5432",
+						User:                   "user",
+						Password:               "password",
+						Name:                   "testdb",
+						SSLMode:                "require",
+						MaxOpenConns:           25,
+						MaxIdleConns:           5,
+						ConnMaxLifetimeSeconds: 3600,
+						ConnMaxIdleTimeSeconds: 300,
+						ConnectTimeoutSeconds:  30,
+						DSN:                    "postgres://user:password@localhost:5432/testdb?sslmode=require",
+					},
 				}
 
 				// Validate config

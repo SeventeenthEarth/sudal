@@ -132,24 +132,21 @@ endif
 	@echo "Integration test coverage report generated at coverage.int.html"
 
 # End-to-end tests with preparation steps
-test.e2e: test.e2e.only ## Run end-to-end tests with preparation steps
+test.e2e: test.prepare test.e2e.only ## Run end-to-end tests with preparation steps
 
 # End-to-end tests only (without preparation steps)
 test.e2e.only: ## Run only end-to-end tests without preparation steps
-	@echo "--- Running end-to-end tests (Python/pytest-bdd) ---"
+	@echo "--- Running end-to-end tests (Go/testify BDD) ---"
 	@echo "Checking if server is running..."
 	@if ! curl -s "http://localhost:8080/ping" > /dev/null; then \
 		echo "Warning: The server doesn't appear to be running on port 8080."; \
 		echo "Run 'make run' in a separate terminal before running e2e tests."; \
 	fi
-	@echo "Note: Coverage data cannot be collected from the server running in Docker."
-	@echo "      Only test execution results will be reported."
-	@echo "Running E2E tests with pytest and pytest-bdd..."
-	@if [ ! -d "venv" ]; then \
-		echo "Error: Virtual environment not found. Please create one with 'python3 -m venv venv'"; \
-		exit 1; \
-	fi
-	@cd test/e2e && source ../../venv/bin/activate && pip install -r requirements.txt && pytest -v --tb=short || { echo "End-to-end tests failed"; exit 1; }
+	@echo "Note: Coverage data cannot be collected from E2E tests as they test an external server."
+	@echo "      Use unit and integration tests for code coverage measurement."
+	@echo "Running Go E2E tests with testify BDD style..."
+	@echo "Running tests with 'go test'..."
+	go test -v -race ./test/e2e || { echo "End-to-end tests failed"; exit 1; }
 	@echo "--- End-to-end tests finished ---"
 
 mock-clean: ## Clean generated mock files
@@ -170,25 +167,7 @@ tmp-clean: ## Clean temporary files created by development tools
 	rm -f .compiledaemon.*
 	@echo "--- Temporary files cleaned ---"
 
-python-clean: ## Clean Python cache files and temporary files
-	@echo "--- Cleaning Python cache files ---"
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	find . -type f -name "*.pyo" -delete 2>/dev/null || true
-	find . -type f -name "*.pyd" -delete 2>/dev/null || true
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".tox" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name ".coverage" -delete 2>/dev/null || true
-	find . -type f -name "coverage.xml" -delete 2>/dev/null || true
-	find . -type f -name "*.cover" -delete 2>/dev/null || true
-	find . -type d -name ".hypothesis" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "nosetests.xml" -delete 2>/dev/null || true
-	@echo "--- Python cache files cleaned ---"
-
-clean: proto-clean mock-clean ginkgo-clean wire-clean tmp-clean python-clean ogen-clean ## Clean build artifacts, test files, mocks, wire, and caches
+clean: proto-clean mock-clean ginkgo-clean wire-clean tmp-clean ogen-clean ## Clean build artifacts, test files, mocks, wire, and caches
 	@echo "--- Cleaning ---"
 	rm -rf $(OUTPUT_DIR)
 	# Remove test coverage files
@@ -206,24 +185,6 @@ fmt: ## Format Go code
 	@echo "--- Formatting code ---"
 	go fmt ./...
 	@echo "--- Formatting finished ---"
-
-fmt-python: ## Format Python code using Black
-	@echo "--- Formatting Python code ---"
-	@if [ ! -d "venv" ]; then \
-		echo "Error: Virtual environment not found. Please create one with 'python3 -m venv venv'"; \
-		exit 1; \
-	fi
-	@cd test/e2e && ./format_code.sh
-	@echo "--- Python formatting finished ---"
-
-fmt-python-check: ## Check Python code formatting using Black
-	@echo "--- Checking Python code formatting ---"
-	@if [ ! -d "venv" ]; then \
-		echo "Error: Virtual environment not found. Please create one with 'python3 -m venv venv'"; \
-		exit 1; \
-	fi
-	@cd test/e2e && ./format_code.sh --check
-	@echo "--- Python formatting check finished ---"
 
 vet: ## Run Go vet
 	@echo "--- Running go vet ---"
@@ -411,7 +372,11 @@ wire-clean: ## Clean generated wire code
 
 wire-gen: wire-clean ## Generate dependency injection code using wire
 	@echo "--- Generating wire dependency injection code ---"
-	@cd internal/infrastructure/di && go run github.com/google/wire/cmd/wire
+	@if ! command -v wire >/dev/null 2>&1; then \
+		echo "wire not found. Installing..."; \
+		GOPROXY=direct go install github.com/google/wire/cmd/wire@latest; \
+	fi
+	@cd internal/infrastructure/di && wire
 	@echo "--- Wire code generation completed ---"
 
 generate-mocks: mock-clean ## Generate mocks using mockgen

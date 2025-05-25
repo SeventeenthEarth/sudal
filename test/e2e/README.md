@@ -1,198 +1,177 @@
 # E2E Tests
 
-This directory contains End-to-End (E2E) tests for the Social Quiz Platform backend, implemented using Python with pytest and pytest-bdd.
+This directory contains End-to-End (E2E) tests for the Social Quiz Platform backend, implemented using Go with testify in a BDD style.
 
 ## Overview
 
-The E2E tests verify the complete functionality of the service by making actual HTTP requests to a running server instance. These tests use Behavior Driven Development (BDD) approach with Gherkin feature files.
+The E2E tests verify the complete functionality of the service by making actual HTTP requests to a running server instance. These tests use Behavior Driven Development (BDD) approach with Given-When-Then structure.
 
 ## Test Structure
 
 ```
 test/e2e/
-├── features/                           # Gherkin feature files
-│   ├── connect/                        # Connect-Go protocol tests
-│   │   └── health_service.feature      # Health service via Connect-Go
-│   └── rest/                           # REST API tests
-│       ├── monitoring.feature          # Basic monitoring endpoints
-│       └── database_health.feature     # Database health monitoring
-├── test_connect_health_service.py      # Connect-Go health service tests
-├── test_rest_monitoring.py             # REST monitoring endpoint tests
-├── test_rest_database_health.py        # REST database health tests
-├── conftest.py                         # Pytest configuration and all step definitions
-├── pytest.ini                         # Pytest settings
-├── requirements.txt                    # Python dependencies
-├── run_tests.sh                       # Test runner script
-└── README.md                          # This file
+├── steps/                              # Reusable step functions
+│   ├── bdd_helpers.go                  # BDD framework and test context
+│   ├── common_steps.go                 # Common Given/When/Then steps
+│   ├── connect_steps.go                # Connect-Go specific steps
+│   └── database_steps.go               # Database health specific steps
+├── connect_health_service_test.go      # Connect-Go health service tests
+├── rest_database_health_test.go        # REST database health tests
+├── rest_monitoring_test.go             # REST monitoring endpoint tests
+└── run_go_tests.sh                     # Test execution script
 ```
 
 ## Prerequisites
 
-1. **Python Virtual Environment**: A virtual environment should be set up at the project root (`/venv`)
-2. **Running Server**: The server must be running on the specified port (default: 8080)
+1. **Running Server**: The server must be running on the specified port (default: 8080)
+2. **Go Dependencies**: Ensure testify is installed (`go mod tidy`)
 
 ## Setup
 
-1. **Install Dependencies**:
-   ```bash
-   source venv/bin/activate
-   pip install -r test/e2e/requirements.txt
-   ```
-
-2. **Start the Server**:
+1. **Start the Server**:
    ```bash
    # Option 1: Using Make
    make run
 
-   # Option 2: Using Docker Compose
-   docker-compose up
+   # Option 2: Using Docker Compose directly
+   docker-compose up --build
    ```
-
-## Code Formatting
-
-The project uses [Black](https://black.readthedocs.io/) for Python code formatting to ensure consistent code style.
-
-### Format Python Code
-
-```bash
-# Format all Python code in E2E tests
-make fmt-python
-
-# Or run directly
-./test/e2e/format_code.sh
-```
-
-### Check Code Formatting
-
-```bash
-# Check if Python code is properly formatted
-make fmt-python-check
-
-# Or run directly
-./test/e2e/format_code.sh --check
-```
-
-### Black Configuration
-
-Black is configured in `test/e2e/pyproject.toml` with the following settings:
-- Line length: 88 characters
-- Target Python versions: 3.8+
-- Excludes common directories like `.venv`, `.pytest_cache`, etc.
 
 ## Running Tests
 
-### Using the Test Runner Script (Recommended)
+### Using Make (Recommended)
 
 ```bash
 # Run all E2E tests
-./test/e2e/run_tests.sh
+make test.e2e
 
-# Run with custom server port
-SERVER_PORT=9090 ./test/e2e/run_tests.sh
+# Run only E2E tests (without preparation steps)
+make test.e2e.only
 ```
 
-### Using pytest Directly
+### Using go test directly
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate
+# Run all E2E tests
+go test -v ./test/e2e
 
-# Change to E2E test directory
-cd test/e2e
+# Run specific test
+go test -v ./test/e2e -run TestConnectGoHealthService
 
-# Run all tests
-pytest -v
+# Run with race detection
+go test -v -race ./test/e2e
 
-# Run specific test file
-pytest test_health_service.py -v
-
-# Run specific scenario
-pytest -k "Health check using Connect-Go client" -v
+# Run with coverage
+go test -v -coverprofile=coverage.out ./test/e2e
 ```
 
-## Test Scenarios
+### Using the test runner script
 
-### Connect-Go Protocol Tests (`features/connect/health_service.feature`)
+```bash
+# Make the script executable (first time only)
+chmod +x test/e2e/run_go_tests.sh
 
-1. **Health check using Connect-Go client**: Tests the health endpoint using Connect-Go protocol
-2. **Health check using HTTP/JSON over Connect-Go**: Tests the health endpoint using HTTP/JSON over Connect-Go
-3. **Invalid content type rejection for Connect-Go endpoint**: Verifies server rejects requests with invalid content types
-4. **Non-existent Connect-Go method returns 404**: Tests error handling for non-existent Connect-Go methods
-5. **Multiple concurrent Connect-Go health requests**: Tests server performance under concurrent Connect-Go load
-6. **Connect-Go health service error handling**: Tests proper Connect-Go headers and error handling
+# Run all tests
+./test/e2e/run_go_tests.sh
 
-### REST Monitoring Tests (`features/rest/monitoring.feature`)
+# Run specific test
+./test/e2e/run_go_tests.sh TestConnectGoHealthService
 
-1. **Server ping endpoint responds correctly**: Tests the `/ping` endpoint for basic server availability
-2. **Basic health endpoint responds correctly**: Tests the `/healthz` endpoint for simple health checks
-3. **Health endpoint provides simple status**: Verifies `/healthz` provides lightweight monitoring data
-4. **Multiple monitoring endpoints are accessible**: Tests accessibility of multiple monitoring endpoints
-
-### REST Database Health Tests (`features/rest/database_health.feature`)
-
-1. **Database health endpoint responds correctly**: Tests the `/health/database` endpoint
-2. **Database health endpoint includes timestamp**: Verifies timestamp inclusion in database health responses
-3. **Database connection pool status is healthy**: Tests database connection pool health validation
-4. **Database health provides detailed connection metrics**: Tests detailed database connection statistics
-5. **Database health endpoint performance**: Tests performance under concurrent database health requests
-
-## Environment Variables
-
-- `SERVER_PORT`: Port where the server is running (default: 8080)
+# Skip server check
+./test/e2e/run_go_tests.sh -s
+```
 
 ## Test Features
 
-- **BDD Style**: Tests are written in Gherkin syntax for better readability
-- **Concurrent Testing**: Includes tests for concurrent request handling
-- **Error Handling**: Tests various error scenarios
-- **Protocol Support**: Tests both Connect-Go and HTTP/JSON protocols
-- **Automatic Server Detection**: Automatically detects if server is running
-- **Detailed Reporting**: Provides detailed test output and error messages
+### BDD Style Testing
+
+Tests are organized using Given-When-Then structure for clear scenario definition.
+
+### Table-Driven Tests
+
+Support for parameterized test scenarios with multiple test cases.
+
+### Concurrent Testing
+
+Built-in support for testing concurrent requests and performance validation.
+
+## Test Categories
+
+### Connect-Go Health Service Tests
+- Health check using Connect-Go client
+- HTTP/JSON over Connect-Go
+- Invalid content type handling
+- Non-existent endpoint handling
+- Concurrent request testing
+
+### REST Database Health Tests
+- Database health endpoint validation
+- Connection statistics verification
+- Timestamp field validation
+- Connection pool health checks
+- Concurrent database health requests
+
+### REST Monitoring Tests
+- Server ping endpoint
+- Basic health endpoint
+- Lightweight response validation
+- Multiple endpoint accessibility
+- Performance characteristics
+
+## Available Step Functions
+
+### Common Steps
+- `GivenServerIsRunning(ctx)`: Server availability check
+- `WhenIMakeGETRequest(ctx, endpoint)`: HTTP GET requests
+- `WhenIMakePOSTRequest(ctx, endpoint, contentType, body)`: HTTP POST requests
+- `ThenHTTPStatusShouldBe(ctx, status)`: Status code validation
+- `ThenJSONResponseShouldContainStatus(ctx, status)`: JSON status validation
+
+### Connect-Go Steps
+- `WhenIMakeHealthCheckRequestUsingConnectGo(ctx)`: Connect-Go health check
+- `ThenResponseShouldIndicateServingStatus(ctx)`: SERVING status validation
+- `ThenResponseShouldContainProperConnectGoHeaders(ctx)`: Header validation
+
+### Database Steps
+- `ThenJSONResponseShouldContainDatabaseInformation(ctx)`: Database info validation
+- `ThenDatabaseConnectionPoolShouldBeHealthy(ctx)`: Pool health validation
+- `ThenConnectionStatisticsShouldBeValid(ctx)`: Statistics validation
 
 ## Troubleshooting
 
 ### Server Not Running
-```
-Error: Server is not running on port 8080
-```
+**Error**: Server is not running on port 8080
 **Solution**: Start the server using `make run` or `docker-compose up`
 
 ### Connection Refused
-```
-Failed to connect to server at http://localhost:8080
-```
+**Error**: Failed to connect to server at http://localhost:8080
 **Solution**:
 1. Check if the server is running
 2. Verify the correct port is being used
 3. Check firewall settings
 
-### Import Errors
-```
-ModuleNotFoundError: No module named 'pytest_bdd'
-```
-**Solution**: Install dependencies using `pip install -r test/e2e/requirements.txt`
+### Test Failures
+**Error**: Test failed: expected status 200, got 500
+**Solution**:
+1. Check server logs for errors
+2. Verify database connectivity
+3. Check environment configuration
 
 ## Adding New Tests
 
-1. **Add Feature File**: Create or update `.feature` files in the `features/` directory
-2. **Implement Steps**: Add step definitions in the `step_definitions/` directory
-3. **Create Test Runner**: Create a new `test_*.py` file that loads the scenarios
-4. **Update Documentation**: Update this README if needed
+1. **Create test functions** in appropriate `*_test.go` files
+2. **Use existing step functions** from the `steps/` package
+3. **Follow BDD structure** with Given-When-Then organization
+4. **Add new step functions** to appropriate `steps/*.go` files if needed
+5. **Use table-driven tests** for parameterized scenarios
 
-## Integration with CI/CD
+## Best Practices
 
-The tests can be integrated into CI/CD pipelines:
+1. **Reuse step functions** to maintain consistency
+2. **Use descriptive test names** that explain the scenario
+3. **Keep tests independent** - each test should be able to run in isolation
+4. **Use concurrent testing** for performance validation
+5. **Add proper error handling** in custom step functions
+6. **Follow Go testing conventions** for test organization
 
-```yaml
-# Example GitHub Actions step
-- name: Run E2E Tests
-  run: |
-    # Start server in background
-    make run &
-
-    # Wait for server to be ready
-    sleep 10
-
-    # Run E2E tests
-    ./test/e2e/run_tests.sh
-```
+For detailed information about the BDD framework and advanced usage, see [Go E2E Testing Documentation](../../docs/e2e-testing-go.md).

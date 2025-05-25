@@ -32,6 +32,12 @@ TEST_DIRS=$(find . -name "*.go" -not -path "*/\.*" -not -path "*/vendor/*" -not 
 
 # Create Ginkgo test suite for each directory
 for dir in $TEST_DIRS; do
+    # Skip test/e2e directory as it uses standard Go testing with testify BDD
+    if [[ "$dir" == "./test/e2e" ]]; then
+        echo "Skipping Ginkgo bootstrap for $dir (uses standard Go testing with testify BDD)"
+        continue
+    fi
+
     # Check if the directory contains _test.go files
     if ls $dir/*_test.go 1> /dev/null 2>&1; then
         echo "Bootstrapping Ginkgo test suite in $dir"

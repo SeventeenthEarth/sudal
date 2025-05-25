@@ -23,12 +23,12 @@ func NewOpenAPIHandler(healthService application.Service) *OpenAPIHandler {
 // Ping implements the ping operation
 func (h *OpenAPIHandler) Ping(ctx context.Context) (PingRes, error) {
 	log.InfoContext(ctx, "OpenAPI ping requested")
-	
+
 	// Simple ping response
 	response := &PingResponse{
 		Status: "ok",
 	}
-	
+
 	log.InfoContext(ctx, "OpenAPI ping completed", zap.String("status", response.Status))
 	return response, nil
 }
@@ -36,19 +36,19 @@ func (h *OpenAPIHandler) Ping(ctx context.Context) (PingRes, error) {
 // Health implements the health operation
 func (h *OpenAPIHandler) Health(ctx context.Context) (HealthRes, error) {
 	log.InfoContext(ctx, "OpenAPI health check requested")
-	
+
 	// Call the application service to perform the health check
 	status, err := h.healthService.Check(ctx)
 	if err != nil {
 		log.ErrorContext(ctx, "OpenAPI health check failed", zap.Error(err))
-		
+
 		// Return service unavailable response
 		response := &HealthServiceUnavailable{
 			Status: HealthResponseStatusUnhealthy,
 		}
 		return response, nil
 	}
-	
+
 	// Map the domain status to the OpenAPI status
 	var apiStatus HealthResponseStatus
 	switch status.Status {
@@ -59,7 +59,7 @@ func (h *OpenAPIHandler) Health(ctx context.Context) (HealthRes, error) {
 	default:
 		apiStatus = HealthResponseStatusUnhealthy
 	}
-	
+
 	// Determine response type based on status
 	if apiStatus == HealthResponseStatusHealthy {
 		response := &HealthOK{
@@ -79,12 +79,12 @@ func (h *OpenAPIHandler) Health(ctx context.Context) (HealthRes, error) {
 // DatabaseHealth implements the database health operation
 func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes, error) {
 	log.InfoContext(ctx, "OpenAPI database health check requested")
-	
+
 	// Call the application service to perform the health check
 	status, err := h.healthService.Check(ctx)
 	if err != nil {
 		log.ErrorContext(ctx, "OpenAPI database health check failed", zap.Error(err))
-		
+
 		// Return service unavailable response
 		response := &DatabaseHealthServiceUnavailable{
 			Status:   DatabaseHealthResponseStatusUnhealthy,
@@ -92,11 +92,11 @@ func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes,
 		}
 		return response, nil
 	}
-	
+
 	// Map the domain status to the OpenAPI status
 	var apiStatus DatabaseHealthResponseStatus
 	var dbStatus DatabaseHealthResponseDatabase
-	
+
 	switch status.Status {
 	case "healthy":
 		apiStatus = DatabaseHealthResponseStatusHealthy
@@ -108,14 +108,14 @@ func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes,
 		apiStatus = DatabaseHealthResponseStatusUnhealthy
 		dbStatus = DatabaseHealthResponseDatabaseDisconnected
 	}
-	
+
 	// Determine response type based on status
 	if apiStatus == DatabaseHealthResponseStatusHealthy {
 		response := &DatabaseHealthOK{
 			Status:   apiStatus,
 			Database: dbStatus,
 		}
-		log.InfoContext(ctx, "OpenAPI database health check completed", 
+		log.InfoContext(ctx, "OpenAPI database health check completed",
 			zap.String("status", string(apiStatus)),
 			zap.String("database", string(dbStatus)))
 		return response, nil
@@ -124,7 +124,7 @@ func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes,
 			Status:   apiStatus,
 			Database: dbStatus,
 		}
-		log.InfoContext(ctx, "OpenAPI database health check completed", 
+		log.InfoContext(ctx, "OpenAPI database health check completed",
 			zap.String("status", string(apiStatus)),
 			zap.String("database", string(dbStatus)))
 		return response, nil

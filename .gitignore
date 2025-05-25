@@ -75,20 +75,3 @@ internal/infrastructure/openapi/oas_*.go
 
 # CompileDaemon temporary files
 .compiledaemon.*
-
-# Python for E2E test
-venv/
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pyc

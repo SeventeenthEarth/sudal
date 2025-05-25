@@ -1,4 +1,0 @@
-pytest>=8.0.0
-pytest-bdd>=8.0.0
-requests>=2.25.0
-black>=24.0.0

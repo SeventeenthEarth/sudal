@@ -92,15 +92,13 @@ The following `make` commands are available for development:
 - `make install-tools`: Install development tools (golangci-lint, ginkgo, mockgen).
 - `make build`: Compile the main server application into the `./bin/` directory.
 - `make lint`: Run the `golangci-lint` checks.
-- `make fmt-python`: Format Python code using Black.
-- `make fmt-python-check`: Check Python code formatting.
+
 - `make test`: Run all unit and integration tests (runs preparation steps only once).
 - `make test.prepare`: Prepare for running tests (format, vet, lint, generate code).
 - `make test.unit`: Run unit tests with preparation steps.
 - `make test.int`: Run integration tests with preparation steps.
 - `make test.e2e`: Run end-to-end tests with preparation steps.
 - `make clean`: Remove build artifacts, generated files, and caches.
-- `make python-clean`: Clean Python cache files and temporary files.
 - `make generate`: Run all code generation tasks (mocks, test suites, proto, openapi).
 - `make ogen-generate`: Generate OpenAPI server code from specification.
 - `make ogen-clean`: Clean generated OpenAPI code.
@@ -112,7 +110,7 @@ The project has three types of tests:
 
 1. **Unit Tests**: Test individual components in isolation (Go + Ginkgo/Gomega)
 2. **Integration Tests**: Test interactions between components (Go + Ginkgo/Gomega)
-3. **End-to-End Tests**: Test the entire system with a running server (Python + pytest-bdd)
+3. **End-to-End Tests**: Test the entire system with a running server (Go + testify BDD style)
 
 To run all tests:
 
@@ -122,16 +120,20 @@ make test
 
 ### End-to-End Tests
 
-E2E tests are implemented using Python with pytest and pytest-bdd for a BDD (Behavior Driven Development) approach. These tests verify the complete functionality by making actual HTTP requests to a running server.
+E2E tests are implemented using Go with testify in a BDD (Behavior Driven Development) style. These tests verify the complete functionality by making actual HTTP requests to a running server.
+
+#### Go BDD Style E2E Tests (Current)
+
+The E2E tests use a custom BDD framework built on top of Go's standard testing package and testify:
+
+- **Given-When-Then Structure**: Clear BDD scenario organization
+- **Reusable Step Functions**: Located in `test/e2e/steps/` directory
+- **Table-Driven Tests**: Support for parameterized BDD scenarios
+- **Concurrent Testing**: Built-in support for testing concurrent requests
 
 #### Prerequisites for E2E Tests
 
-1. **Python Virtual Environment**: Create a virtual environment in the project root:
-   ```bash
-   python3 -m venv venv
-   ```
-
-2. **Running Server**: Start the server before running E2E tests:
+1. **Running Server**: Start the server before running E2E tests:
    ```bash
    make run
    ```
@@ -142,26 +144,28 @@ E2E tests are implemented using Python with pytest and pytest-bdd for a BDD (Beh
 # Run E2E tests using Make (recommended)
 make test.e2e
 
-# Or run directly with pytest
-cd test/e2e
-source ../../venv/bin/activate
-pip install -r requirements.txt
-pytest -v
+# Run only E2E tests without preparation steps
+make test.e2e.only
+
+# Or run directly with go test
+go test -v ./test/e2e
 ```
 
 #### E2E Test Features
 
-- **BDD Style**: Tests written in Gherkin syntax for better readability
+- **BDD Style**: Tests written with Given-When-Then structure for better readability
 - **Multiple Protocols**: Tests both Connect-Go and HTTP/JSON endpoints
 - **Concurrent Testing**: Includes performance tests with concurrent requests
 - **Error Handling**: Tests various error scenarios and edge cases
 - **Automatic Server Detection**: Verifies server availability before running tests
+- **Table-Driven Tests**: Support for parameterized test scenarios
+- **Reusable Steps**: Step functions organized in `test/e2e/steps/` for reusability
 
 For detailed information about testing, including:
 - Running specific test types
 - Test structure and organization
 - Testing strategy and tools
-- Writing BDD tests with Ginkgo (Go) and pytest-bdd (Python)
+- Writing BDD tests with Go testify
 - End-to-end testing setup and usage
 
 See the [Testing Documentation](docs/test.md).

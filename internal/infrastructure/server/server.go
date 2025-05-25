@@ -14,6 +14,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 	"go.uber.org/zap"
 )
 
@@ -66,11 +67,27 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize database health handler: %w", err)
 	}
+	// Initialize OpenAPI handler using DI
+	openAPIHandler := di.InitializeOpenAPIHandler()
+	// Initialize Swagger UI handler
+	swaggerHandler := di.InitializeSwaggerHandler()
 
 	// Register REST routes
 	healthHandler.RegisterRoutes(mux)
 	// Register database health check route
 	mux.HandleFunc("/health/database", dbHealthHandler.HandleDatabaseHealth)
+
+	// Register OpenAPI routes
+	openAPIServer, err := openapi.NewServer(openAPIHandler)
+	if err != nil {
+		return fmt.Errorf("failed to create OpenAPI server: %w", err)
+	}
+	mux.Handle("/api/", http.StripPrefix("/api", openAPIServer))
+
+	// Register Swagger UI routes
+	mux.HandleFunc("/docs", swaggerHandler.ServeSwaggerUI)
+	mux.HandleFunc("/docs/", swaggerHandler.ServeSwaggerUI)
+	mux.HandleFunc("/api/openapi.yaml", swaggerHandler.ServeOpenAPISpec)
 
 	// Register Connect-go routes
 	// This path pattern will handle both gRPC and HTTP/JSON requests

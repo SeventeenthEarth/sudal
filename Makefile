@@ -204,7 +204,7 @@ endif
 	$(GOLANGCILINT) run ./... || echo "Warning: Linter found issues, but continuing..."
 	@echo "--- Linter finished ---"
 
-generate: ginkgo-bootstrap buf-generate wire-gen generate-mocks ## Generate all code (test suites, proto, wire, mocks)
+generate: ginkgo-bootstrap buf-generate wire-gen generate-mocks ogen-generate ## Generate all code (test suites, proto, wire, mocks, openapi)
 	@echo "--- All code generation completed ---"
 
 proto-clean: ## Clean generated Protocol Buffer files
@@ -389,3 +389,19 @@ endif
 	@go generate ./... || echo "Warning: Some mock generation may have failed, but continuing..."
 	@echo "Mock generation completed"
 	@echo "--- Mocks generated ---"
+
+ogen-clean: ## Clean generated OpenAPI code
+	@echo "--- Cleaning generated OpenAPI code ---"
+	rm -rf internal/infrastructure/openapi/oas_*.go
+	@echo "--- OpenAPI generated code cleaned ---"
+
+ogen-generate: ogen-clean ## Generate OpenAPI server code using ogen
+	@echo "--- Generating OpenAPI server code using ogen ---"
+	@echo "Checking for ogen..."
+	@if ! command -v ogen >/dev/null 2>&1; then \
+		echo "ogen not found. Installing..."; \
+		go install github.com/ogen-go/ogen/cmd/ogen@latest; \
+	fi
+	@echo "Running ogen to generate OpenAPI server code..."
+	go run github.com/ogen-go/ogen/cmd/ogen -target internal/infrastructure/openapi -package openapi -clean api/openapi.yaml
+	@echo "--- OpenAPI code generation completed ---"

@@ -33,7 +33,13 @@ The codebase is organized into the following directories:
 
 ## API Framework
 
+The backend supports multiple API protocols:
+
+### Connect-go (gRPC/HTTP)
 The backend uses Connect-go framework for API development, which supports both gRPC and HTTP/JSON protocols with a single implementation. APIs are defined using Protocol Buffers (`.proto` files) and served via Connect-go handlers.
+
+### OpenAPI (REST)
+The backend also provides REST API endpoints with OpenAPI 3.0 specification and Swagger UI documentation. REST APIs are generated using [ogen-go/ogen](https://github.com/ogen-go/ogen) from OpenAPI specifications, ensuring type safety and automatic code generation.
 
 ### Protocol Buffers and JSON Serialization
 
@@ -92,7 +98,9 @@ The following `make` commands are available for development:
 - `make test.int`: Run integration tests with preparation steps.
 - `make test.e2e`: Run end-to-end tests with preparation steps.
 - `make clean`: Remove build artifacts and caches.
-- `make generate`: Run all code generation tasks (mocks, test suites, proto).
+- `make generate`: Run all code generation tasks (mocks, test suites, proto, openapi).
+- `make ogen-generate`: Generate OpenAPI server code from specification.
+- `make ogen-clean`: Clean generated OpenAPI code.
 - `make run`: Run the application using Docker Compose with `docker-compose up --build`.
 
 ## Testing
@@ -117,6 +125,50 @@ For detailed information about testing, including:
 - End-to-end testing
 
 See the [Testing Documentation](docs/test.md).
+
+## API Documentation
+
+### OpenAPI and Swagger UI
+
+The project provides interactive API documentation through Swagger UI, generated from OpenAPI 3.0 specifications:
+
+- **Swagger UI**: Available at `/docs` when the server is running
+- **OpenAPI Spec**: Available at `/api/openapi.yaml`
+- **REST Endpoints**: Available under `/api/*`
+
+#### Accessing the Documentation
+
+1. Start the server:
+   ```bash
+   make run
+   ```
+
+2. Open Swagger UI in your browser:
+   ```
+   http://localhost:8080/docs
+   ```
+
+#### Available Endpoints
+
+- `GET /api/ping` - Simple health check
+- `GET /api/healthz` - Comprehensive health check
+- `GET /api/health/database` - Database health check
+
+#### Code Generation
+
+The OpenAPI server code is automatically generated using ogen-go/ogen:
+
+```bash
+# Generate OpenAPI code
+make ogen-generate
+
+# Clean generated code
+make ogen-clean
+```
+
+**Note**: Generated files (`internal/infrastructure/openapi/oas_*.go`) are automatically excluded from version control via `.gitignore`. Only the OpenAPI specification (`api/openapi.yaml`) and custom handler implementations are tracked in git.
+
+For detailed information about OpenAPI implementation, code generation, and development workflow, see the [OpenAPI Documentation](docs/openapi.md).
 
 ## Configuration
 

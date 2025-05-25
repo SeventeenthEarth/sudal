@@ -14,6 +14,7 @@ import (
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 )
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_di_initializer.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/di DatabaseHealthInitializer
@@ -131,4 +132,30 @@ func NewDefaultDatabaseHealthInitializer() DatabaseHealthInitializer {
 // InitializeDatabaseHealthHandler implements DatabaseHealthInitializer interface
 func (d *DefaultDatabaseHealthInitializer) InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
 	return InitializeDatabaseHealthHandler()
+}
+
+// OpenAPISet is a Wire provider set for OpenAPI-related dependencies
+var OpenAPISet = wire.NewSet(
+	data.NewRepository,
+	wire.Bind(new(domain.Repository), new(*data.Repository)),
+	application.NewPingUseCase,
+	application.NewHealthCheckUseCase,
+	application.NewService,
+	NewOpenAPIHandler,
+)
+
+// NewOpenAPIHandler creates a new OpenAPI handler
+func NewOpenAPIHandler(service application.Service) *openapi.OpenAPIHandler {
+	return openapi.NewOpenAPIHandler(service)
+}
+
+// InitializeOpenAPIHandler initializes and returns an OpenAPI handler
+func InitializeOpenAPIHandler() *openapi.OpenAPIHandler {
+	wire.Build(OpenAPISet)
+	return nil // Wire will fill this in
+}
+
+// InitializeSwaggerHandler initializes and returns a Swagger UI handler
+func InitializeSwaggerHandler() *openapi.SwaggerHandler {
+	return openapi.NewSwaggerHandler("api/openapi.yaml")
 }

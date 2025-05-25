@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: Sudal Social Quiz Platform API
+  description: |
+    REST API for the Sudal Social Quiz Platform backend.
+    This API provides health check endpoints and will be extended with quiz functionality.
+    
+    Note: This OpenAPI specification covers only REST endpoints. 
+    gRPC services are documented separately as OpenAPI does not support gRPC protocols.
+  version: 1.0.0
+  contact:
+    name: Sudal Development Team
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.sudal.dev
+    description: Production server
+
+paths:
+  /ping:
+    get:
+      summary: Simple health check
+      description: |
+        Simple health check endpoint to verify the service is alive and responding.
+        This endpoint is useful for simple liveness probes in container orchestration systems.
+      operationId: ping
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+              example:
+                status: "ok"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /healthz:
+    get:
+      summary: Comprehensive health check
+      description: |
+        Comprehensive health check that verifies the service and its dependencies 
+        are functioning correctly. This endpoint is suitable for readiness probes 
+        in Kubernetes, as it checks the health of dependencies like databases.
+      operationId: health
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service and dependencies are healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+        '503':
+          description: Service or dependencies are unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "unhealthy"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health/database:
+    get:
+      summary: Database health check
+      description: |
+        Specific health check for database connectivity and status.
+        This endpoint verifies that the database connection is working properly.
+      operationId: databaseHealth
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Database is healthy and accessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseHealthResponse'
+              example:
+                status: "healthy"
+                database: "connected"
+        '503':
+          description: Database is unhealthy or inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseHealthResponse'
+              example:
+                status: "unhealthy"
+                database: "disconnected"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    PingResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Simple status indicator
+          example: "ok"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Overall health status
+          enum: ["healthy", "unhealthy"]
+          example: "healthy"
+
+    DatabaseHealthResponse:
+      type: object
+      required:
+        - status
+        - database
+      properties:
+        status:
+          type: string
+          description: Overall database health status
+          enum: ["healthy", "unhealthy"]
+          example: "healthy"
+        database:
+          type: string
+          description: Database connection status
+          enum: ["connected", "disconnected"]
+          example: "connected"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Internal server error"
+        code:
+          type: integer
+          description: Error code
+          example: 500
+
+tags:
+  - name: Health
+    description: Health check endpoints for monitoring service status

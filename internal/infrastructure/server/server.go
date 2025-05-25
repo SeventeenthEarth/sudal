@@ -10,6 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
@@ -89,21 +92,37 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/docs/", swaggerHandler.ServeSwaggerUI)
 	mux.HandleFunc("/api/openapi.yaml", swaggerHandler.ServeOpenAPISpec)
 
-	// Register Connect-go routes
-	// This path pattern will handle both gRPC and HTTP/JSON requests
+	// Register Connect-go routes with gRPC support
+	// This path pattern will handle gRPC, gRPC-Web, and HTTP/JSON requests
 	path, handler := healthv1connect.NewHealthServiceHandler(healthConnectHandler)
 	mux.Handle(path, handler)
 
 	// Apply middleware
 	httpHandler := middleware.RequestLogger(mux)
 
-	// Create the HTTP server
+	// Configure HTTP/2 server for gRPC support
+	h2s := &http2.Server{
+		// Allow HTTP/2 connections without prior knowledge
+		// This is important for gRPC clients
+		IdleTimeout: 60 * time.Second,
+	}
+
+	// Wrap handler with h2c (HTTP/2 Cleartext) to support gRPC over HTTP/2 without TLS
+	// This allows both HTTP/1.1 and HTTP/2 clients to connect
+	h2cHandler := h2c.NewHandler(httpHandler, h2s)
+
+	// Create the HTTP server with HTTP/2 support
 	s.server = &http.Server{
 		Addr:         ":" + s.port,
-		Handler:      httpHandler,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		Handler:      h2cHandler,
+		ReadTimeout:  0, // Disable read timeout for gRPC streaming
+		WriteTimeout: 0, // Disable write timeout for gRPC streaming
 		IdleTimeout:  60 * time.Second,
+	}
+
+	// Configure HTTP/2 on the server
+	if err := http2.ConfigureServer(s.server, h2s); err != nil {
+		return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
 	}
 
 	// Channel to listen for errors coming from the listener

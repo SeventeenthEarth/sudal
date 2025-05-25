@@ -14,6 +14,13 @@ plugins:
       - paths=source_relative
       - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
 
+  # Generate gRPC Go service interfaces and clients
+  - plugin: go-grpc
+    out: ../gen/go
+    opt:
+      - paths=source_relative
+      - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
+
   # Generate OpenAPI v2 specifications from Protocol Buffers
   - plugin: openapiv2
     out: ../gen/openapi

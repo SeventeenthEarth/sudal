@@ -8,8 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
+
+	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
+	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 )
 
 // TestContext holds the context for BDD test scenarios
@@ -22,6 +28,19 @@ type TestContext struct {
 	Error             error
 	ConcurrentResults []ConcurrentResult
 	Context           context.Context
+	// gRPC related fields
+	GRPCConn              *grpc.ClientConn
+	GRPCClient            healthv1.HealthServiceClient
+	GRPCResponse          *healthv1.CheckResponse
+	GRPCMetadata          metadata.MD
+	GRPCTimeout           time.Duration
+	GRPCConcurrentResults []GRPCResult
+	// Connect-Go related fields
+	ConnectGoClient            healthv1connect.HealthServiceClient
+	ConnectGoResponse          *connect.Response[healthv1.CheckResponse]
+	ConnectGoProtocol          string
+	ConnectGoTimeout           time.Duration
+	ConnectGoConcurrentResults []ConnectGoResult
 }
 
 // ConcurrentResult holds the result of a concurrent request
@@ -29,6 +48,20 @@ type ConcurrentResult struct {
 	Response *http.Response
 	Body     []byte
 	Error    error
+}
+
+// GRPCResult represents the result of a gRPC call
+type GRPCResult struct {
+	Response *healthv1.CheckResponse
+	Error    error
+	Metadata metadata.MD
+}
+
+// ConnectGoResult represents the result of a Connect-Go call
+type ConnectGoResult struct {
+	Response *connect.Response[healthv1.CheckResponse]
+	Error    error
+	Protocol string
 }
 
 // NewTestContext creates a new test context for BDD scenarios

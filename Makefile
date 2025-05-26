@@ -1,10 +1,34 @@
-.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean clean-all lint fmt vet proto-clean buf-generate buf-lint buf-breaking run install-tools generate-mocks mock-clean ginkgo-bootstrap ginkgo-clean tmp-clean wire-gen wire-clean generate
+.PHONY: help init build test test.prepare test.unit test.unit.only test.int test.int.only test.e2e test.e2e.only clean clean-all lint fmt vet proto-clean buf-generate buf-lint buf-breaking run install-tools generate-mocks mock-clean ginkgo-bootstrap ginkgo-clean tmp-clean wire-gen wire-clean generate migrate-up migrate-down migrate-create migrate-status migrate-force migrate-version migrate-squash migrate-reset migrate-fresh migrate-drop
 
 # Variables
 BINARY_NAME=sudal-server
 CMD_PATH=./cmd/server
 OUTPUT_DIR=./bin
 CONFIG_FILE?=./configs/config.yaml # Default config path, can be overridden
+
+# Database Migration Variables
+MIGRATIONS_DIR=./db/migrations
+# Use POSTGRES_DSN if available, otherwise construct from individual components
+DATABASE_URL?=$(POSTGRES_DSN)
+ifeq ($(DATABASE_URL),)
+    # Set defaults for database connection and strip any comments from environment variables
+    DB_HOST_CLEAN=$(shell echo "$(DB_HOST)" | cut -d' ' -f1)
+    DB_PORT_CLEAN=$(shell echo "$(DB_PORT)" | cut -d' ' -f1)
+    DB_USER_CLEAN=$(shell echo "$(DB_USER)" | cut -d' ' -f1)
+    DB_PASSWORD_CLEAN=$(shell echo "$(DB_PASSWORD)" | cut -d' ' -f1)
+    DB_NAME_CLEAN=$(shell echo "$(DB_NAME)" | cut -d' ' -f1)
+    DB_SSLMODE_CLEAN=$(shell echo "$(DB_SSLMODE)" | cut -d' ' -f1)
+    # Use defaults if environment variables are empty
+    # Note: Use localhost for local development, even when Docker Compose uses 'db' internally
+    DB_HOST_FINAL=$(if $(DB_HOST_CLEAN),$(if $(filter db,$(DB_HOST_CLEAN)),localhost,$(DB_HOST_CLEAN)),localhost)
+    DB_PORT_FINAL=$(if $(DB_PORT_CLEAN),$(DB_PORT_CLEAN),5432)
+    DB_USER_FINAL=$(if $(DB_USER_CLEAN),$(DB_USER_CLEAN),user)
+    DB_PASSWORD_FINAL=$(if $(DB_PASSWORD_CLEAN),$(DB_PASSWORD_CLEAN),password)
+    DB_NAME_FINAL=$(if $(DB_NAME_CLEAN),$(DB_NAME_CLEAN),quizapp_db)
+    DB_SSLMODE_FINAL=$(if $(DB_SSLMODE_CLEAN),$(DB_SSLMODE_CLEAN),disable)
+    # Construct DATABASE_URL from cleaned components
+    DATABASE_URL=postgres://$(DB_USER_FINAL):$(DB_PASSWORD_FINAL)@$(DB_HOST_FINAL):$(DB_PORT_FINAL)/$(DB_NAME_FINAL)?sslmode=$(DB_SSLMODE_FINAL)
+endif
 
 # Git
 DESIRED_ORIGIN_URL=git@github.com-17thearth:SeventeenthEarth/sudal.git
@@ -19,6 +43,7 @@ PROTOC_GEN_OPENAPIV2=$(shell command -v protoc-gen-openapiv2 2> /dev/null)
 BUF=$(shell command -v buf 2> /dev/null)
 GINKGO=$(shell command -v ginkgo 2> /dev/null)
 MOCKGEN=$(shell command -v mockgen 2> /dev/null)
+MIGRATE=$(shell command -v migrate 2> /dev/null)
 
 # Default goal
 .DEFAULT_GOAL := help
@@ -405,3 +430,237 @@ ogen-generate: ogen-clean ## Generate OpenAPI server code using ogen
 	@echo "Running ogen to generate OpenAPI server code..."
 	go run github.com/ogen-go/ogen/cmd/ogen -target internal/infrastructure/openapi -package openapi -clean api/openapi.yaml
 	@echo "--- OpenAPI code generation completed ---"
+
+# Database Migration Targets
+
+migrate-up: ## Apply all pending database migrations
+	@echo "--- Applying database migrations ---"
+	@echo "Database URL: $(DATABASE_URL)"
+	@echo "Migrations directory: $(MIGRATIONS_DIR)"
+	@if [ -z "$(MIGRATE)" ]; then \
+		echo "migrate CLI not found. Installing..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi
+	@if [ ! -d "$(MIGRATIONS_DIR)" ]; then \
+		echo "Error: Migrations directory $(MIGRATIONS_DIR) does not exist"; \
+		echo "Run 'make migrate-create DESC=initial_setup' to create your first migration"; \
+		exit 1; \
+	fi
+	@echo "Running migrations..."
+	@if [ -z "$(MIGRATE)" ]; then \
+		$$(go env GOPATH)/bin/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up; \
+	else \
+		$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up; \
+	fi
+	@echo "--- Database migrations applied successfully ---"
+
+migrate-down: ## Rollback the last database migration
+	@echo "--- Rolling back last database migration ---"
+	@echo "Database URL: $(DATABASE_URL)"
+	@echo "Migrations directory: $(MIGRATIONS_DIR)"
+	@if [ -z "$(MIGRATE)" ]; then \
+		echo "migrate CLI not found. Installing..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi
+	@echo "WARNING: This will rollback the last applied migration!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read dummy
+	@if [ -z "$(MIGRATE)" ]; then \
+		$$(go env GOPATH)/bin/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1; \
+	else \
+		$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1; \
+	fi
+	@echo "--- Last migration rolled back successfully ---"
+
+migrate-status: ## Show current migration status
+	@echo "--- Database migration status ---"
+	@echo "Database URL: $(DATABASE_URL)"
+	@echo "Migrations directory: $(MIGRATIONS_DIR)"
+	@if [ -z "$(MIGRATE)" ]; then \
+		echo "migrate CLI not found. Installing..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi
+	@if [ ! -d "$(MIGRATIONS_DIR)" ]; then \
+		echo "Migrations directory $(MIGRATIONS_DIR) does not exist"; \
+		exit 1; \
+	fi
+	@echo "Current migration version:"
+	@if [ -z "$(MIGRATE)" ]; then \
+		$$(go env GOPATH)/bin/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version || echo "No migrations applied yet"; \
+	else \
+		$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version || echo "No migrations applied yet"; \
+	fi
+	@echo ""
+	@echo "Available migration files:"
+	@ls -la $(MIGRATIONS_DIR)/ 2>/dev/null || echo "No migration files found"
+
+migrate-version: ## Show current migration version
+	@echo "--- Current migration version ---"
+	@if [ -z "$(MIGRATE)" ]; then \
+		echo "migrate CLI not found. Installing..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi
+	@if [ -z "$(MIGRATE)" ]; then \
+		$$(go env GOPATH)/bin/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version; \
+	else \
+		$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version; \
+	fi
+
+migrate-force: ## Force set migration version (use with caution)
+	@echo "--- Force set migration version ---"
+	@echo "WARNING: This is a dangerous operation that should only be used for recovery!"
+	@echo "Current version:"
+	@$(MAKE) migrate-version || echo "Could not determine current version"
+	@echo ""
+	@echo "Enter the version number to force set (or Ctrl+C to cancel):"
+	@read version; \
+	if [ -z "$$version" ]; then \
+		echo "No version provided. Cancelling."; \
+		exit 1; \
+	fi; \
+	echo "Setting migration version to $$version..."; \
+	if [ -z "$(MIGRATE)" ]; then \
+		echo "migrate CLI not found. Installing..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+		$$(go env GOPATH)/bin/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" force $$version; \
+	else \
+		$(MIGRATE) -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" force $$version; \
+	fi
+	@echo "--- Migration version forced successfully ---"
+
+migrate-create: ## Create new migration files (usage: make migrate-create DESC=description)
+	@echo "--- Creating new migration files ---"
+	@if [ -z "$(DESC)" ]; then \
+		echo "Error: DESC parameter is required"; \
+		echo "Usage: make migrate-create DESC=create_users_table"; \
+		exit 1; \
+	fi
+	@if [ -z "$(MIGRATE)" ]; then \
+		echo "migrate CLI not found. Installing..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi
+	@mkdir -p $(MIGRATIONS_DIR)
+	@echo "Creating migration files for: $(DESC)"
+	@if [ -z "$(MIGRATE)" ]; then \
+		$$(go env GOPATH)/bin/migrate create -ext sql -dir $(MIGRATIONS_DIR) -seq $(DESC); \
+	else \
+		$(MIGRATE) create -ext sql -dir $(MIGRATIONS_DIR) -seq $(DESC); \
+	fi
+	@echo "--- Migration files created successfully ---"
+	@echo "Edit the generated .up.sql and .down.sql files in $(MIGRATIONS_DIR)/"
+
+migrate-squash: ## Squash multiple migrations into one (DANGEROUS - use only in development)
+	@echo "--- Migration Squashing Tool ---"
+	@echo "⚠️  WARNING: This is a DANGEROUS operation!"
+	@echo "⚠️  Only use this in development environments!"
+	@echo "⚠️  Make sure to backup your database first!"
+	@echo ""
+	@echo "Current migration status:"
+	@$(MAKE) migrate-status
+	@echo ""
+	@echo "This will:"
+	@echo "1. Create a backup of existing migrations"
+	@echo "2. Create a schema dump of the current database"
+	@echo "3. Create a new squashed migration file"
+	@echo "4. Test the squashed migration on a fresh database"
+	@echo ""
+	@echo "Do you want to continue? (y/N):"
+	@read confirm; \
+	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
+		echo "Operation cancelled."; \
+		exit 0; \
+	fi; \
+	echo "Creating backup of existing migrations..."; \
+	mkdir -p db/migrations_backup_$$(date +%Y%m%d_%H%M%S); \
+	cp db/migrations/*.sql db/migrations_backup_$$(date +%Y%m%d_%H%M%S)/; \
+	echo "Creating schema dump..."; \
+	docker exec sudal-db pg_dump -U user -d quizapp_db --schema-only --no-owner --no-privileges --exclude-table=schema_migrations > /tmp/schema_dump.sql; \
+	echo "Creating test database..."; \
+	docker exec sudal-db dropdb -U user --if-exists test_squashed_migration; \
+	docker exec sudal-db createdb -U user test_squashed_migration; \
+	echo ""; \
+	echo "✅ Backup created in db/migrations_backup_$$(date +%Y%m%d_%H%M%S)/"; \
+	echo "✅ Schema dump created at: /tmp/schema_dump.sql"; \
+	echo "✅ Test database 'test_squashed_migration' created"; \
+	echo ""; \
+	echo "Next steps:"; \
+	echo "1. Create your squashed migration files manually"; \
+	echo "2. Test: DB_NAME=test_squashed_migration make migrate-up"; \
+	echo "3. Compare schemas to ensure they match"; \
+	echo "4. If successful, replace old migrations with squashed ones"; \
+	echo "5. Reset migration version: make migrate-force"
+
+# Database Reset and Fresh Migration Targets
+
+migrate-drop: ## Drop all database objects using DROP SCHEMA CASCADE (DANGEROUS)
+	@echo "--- Dropping all database objects ---"
+	@echo "⚠️  WARNING: This will DELETE ALL DATA and ALL OBJECTS in the database!"
+	@echo "⚠️  This includes: tables, views, functions, triggers, sequences, types, etc."
+	@echo "⚠️  This action is IRREVERSIBLE!"
+	@echo ""
+	@echo "Database: $(DATABASE_URL)"
+	@echo ""
+	@echo "Do you want to continue? Type 'DROP ALL DATA' to confirm:"
+	@read confirm; \
+	if [ "$$confirm" != "DROP ALL DATA" ]; then \
+		echo "Operation cancelled. You must type exactly 'DROP ALL DATA' to confirm."; \
+		exit 0; \
+	fi; \
+	echo "Dropping public schema and all objects..."; \
+	docker exec sudal-db psql -U user -d quizapp_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO \"user\"; GRANT ALL ON SCHEMA public TO public;"; \
+	echo "--- All database objects dropped successfully ---"
+
+migrate-reset: ## Reset database to clean state and reapply all migrations
+	@echo "--- Resetting database ---"
+	@echo "This will:"
+	@echo "1. Drop all database objects (tables, views, functions, etc.)"
+	@echo "2. Reapply all migrations from scratch"
+	@echo ""
+	@echo "Do you want to continue? (y/N):"
+	@read confirm; \
+	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
+		echo "Operation cancelled."; \
+		exit 0; \
+	fi; \
+	echo "Dropping all database objects..."; \
+	docker exec sudal-db psql -U user -d quizapp_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO \"user\"; GRANT ALL ON SCHEMA public TO public;" || echo "Schema drop failed or already clean"; \
+	echo "Reapplying all migrations..."; \
+	$(MAKE) migrate-up; \
+	echo "--- Database reset completed ---"
+
+migrate-fresh: ## Fresh migration setup - backup old migrations and start clean
+	@echo "--- Fresh Migration Setup ---"
+	@echo "This will:"
+	@echo "1. Create backup of current migration files"
+	@echo "2. Drop all database tables"
+	@echo "3. Clear migration files directory"
+	@echo "4. You can then create new migrations from scratch"
+	@echo ""
+	@echo "⚠️  WARNING: This will backup and remove all current migration files!"
+	@echo ""
+	@echo "Do you want to continue? (y/N):"
+	@read confirm; \
+	if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
+		echo "Operation cancelled."; \
+		exit 0; \
+	fi; \
+	echo "Creating backup of migration files..."; \
+	BACKUP_DIR="db/migrations_backup_fresh_$$(date +%Y%m%d_%H%M%S)"; \
+	mkdir -p "$$BACKUP_DIR"; \
+	if [ -n "$$(ls -A $(MIGRATIONS_DIR) 2>/dev/null)" ]; then \
+		cp $(MIGRATIONS_DIR)/*.sql "$$BACKUP_DIR/" 2>/dev/null || echo "No .sql files to backup"; \
+	fi; \
+	echo "Dropping all database objects..."; \
+	docker exec sudal-db psql -U user -d quizapp_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO \"user\"; GRANT ALL ON SCHEMA public TO public;" || echo "Schema drop failed or already clean"; \
+	echo "Clearing migration files..."; \
+	rm -f $(MIGRATIONS_DIR)/*.sql; \
+	echo ""; \
+	echo "✅ Fresh setup completed!"; \
+	echo "✅ Migration files backed up to: $$BACKUP_DIR"; \
+	echo "✅ Database tables dropped"; \
+	echo "✅ Migration directory cleared"; \
+	echo ""; \
+	echo "Next steps:"; \
+	echo "1. Create your first migration: make migrate-create DESC=initial_schema"; \
+	echo "2. Edit the migration files"; \
+	echo "3. Apply migrations: make migrate-up"

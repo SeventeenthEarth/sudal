@@ -272,6 +272,11 @@ The application supports three distinct environments:
      - Or set individual components: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`
    - In production, database configuration is required
 
+5. **Redis Configuration**:
+   - Set `REDIS_ADDR` to specify the Redis server address (default: localhost:6379)
+   - Set `REDIS_PASSWORD` if your Redis server requires authentication (optional)
+   - When using Docker Compose, set `REDIS_ADDR=redis:6379` to connect to the Redis container
+
 ### Quick Start for Local Development
 
 1. **Create a `.env` file** in the project root:
@@ -288,6 +293,8 @@ The application supports three distinct environments:
    DB_USER=user
    DB_PASSWORD=password
    DB_NAME=quizapp_db
+   REDIS_ADDR=localhost:6379
+   REDIS_PASSWORD=
    ```
 
 3. **Run with Docker Compose** (recommended):

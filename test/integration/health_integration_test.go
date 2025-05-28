@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 
@@ -87,5 +88,83 @@ var _ = ginkgo.Describe("Integration Tests", func() {
 				gomega.Expect(status["status"]).To(gomega.Equal("healthy"))
 			})
 		})
+
+		ginkgo.Context("JSON Encoding Error Scenarios", func() {
+			ginkgo.Describe("Ping Endpoint JSON Encoding Error", func() {
+				ginkgo.It("should handle JSON encoding errors gracefully", func() {
+					// Given: A request that will cause JSON encoding to fail
+					req := httptest.NewRequest("GET", "/ping", nil)
+					recorder := httptest.NewRecorder()
+
+					// Create a service that returns a status with problematic data for JSON encoding
+					// We'll use a custom response writer that fails on Write
+					failingWriter := &FailingResponseWriter{
+						ResponseRecorder:  recorder,
+						ShouldFailOnWrite: true,
+					}
+
+					// When: Calling the ping handler with failing writer
+					handler.Ping(failingWriter, req)
+
+					// Then: Should handle the encoding error
+					gomega.Expect(failingWriter.WriteCallCount).To(gomega.BeNumerically(">", 0))
+				})
+			})
+
+			ginkgo.Describe("Health Endpoint JSON Encoding Error", func() {
+				ginkgo.It("should handle JSON encoding errors gracefully", func() {
+					// Given: A request that will cause JSON encoding to fail
+					req := httptest.NewRequest("GET", "/healthz", nil)
+					recorder := httptest.NewRecorder()
+
+					// Create a failing response writer
+					failingWriter := &FailingResponseWriter{
+						ResponseRecorder:  recorder,
+						ShouldFailOnWrite: true,
+					}
+
+					// When: Calling the health handler with failing writer
+					handler.Health(failingWriter, req)
+
+					// Then: Should handle the encoding error
+					gomega.Expect(failingWriter.WriteCallCount).To(gomega.BeNumerically(">", 0))
+				})
+			})
+
+			ginkgo.Describe("DatabaseHealth Endpoint JSON Encoding Error", func() {
+				ginkgo.It("should handle JSON encoding errors gracefully for success response", func() {
+					// Given: A request that will cause JSON encoding to fail
+					req := httptest.NewRequest("GET", "/health/database", nil)
+					recorder := httptest.NewRecorder()
+
+					// Create a failing response writer
+					failingWriter := &FailingResponseWriter{
+						ResponseRecorder:  recorder,
+						ShouldFailOnWrite: true,
+					}
+
+					// When: Calling the database health handler with failing writer
+					handler.DatabaseHealth(failingWriter, req)
+
+					// Then: Should handle the encoding error
+					gomega.Expect(failingWriter.WriteCallCount).To(gomega.BeNumerically(">", 0))
+				})
+			})
+		})
 	})
 })
+
+// FailingResponseWriter is a custom ResponseWriter that can simulate write failures
+type FailingResponseWriter struct {
+	*httptest.ResponseRecorder
+	ShouldFailOnWrite bool
+	WriteCallCount    int
+}
+
+func (f *FailingResponseWriter) Write(data []byte) (int, error) {
+	f.WriteCallCount++
+	if f.ShouldFailOnWrite {
+		return 0, fmt.Errorf("simulated write failure")
+	}
+	return f.ResponseRecorder.Write(data)
+}

@@ -62,27 +62,26 @@ func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
 
 // GetConnectionPoolStats returns the current connection pool statistics
 // This is useful for monitoring and debugging connection pool behavior
-func GetConnectionPoolStats(pgManager *PostgresManager) *ConnectionStats {
-	if pgManager == nil || pgManager.db == nil {
+func GetConnectionPoolStats(pgManager PostgresManager) *ConnectionStats {
+	if pgManager == nil {
 		return nil
 	}
 
-	stats := pgManager.db.Stats()
-	return &ConnectionStats{
-		MaxOpenConnections: stats.MaxOpenConnections,
-		OpenConnections:    stats.OpenConnections,
-		InUse:              stats.InUse,
-		Idle:               stats.Idle,
-		WaitCount:          stats.WaitCount,
-		WaitDuration:       stats.WaitDuration,
-		MaxIdleClosed:      stats.MaxIdleClosed,
-		MaxLifetimeClosed:  stats.MaxLifetimeClosed,
+	// Use HealthCheck to get stats since we can't access internal fields
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	healthStatus, err := pgManager.HealthCheck(ctx)
+	if err != nil || healthStatus.Stats == nil {
+		return nil
 	}
+
+	return healthStatus.Stats
 }
 
 // LogConnectionPoolStats logs the current connection pool statistics
 // This can be called periodically to monitor pool health
-func LogConnectionPoolStats(pgManager *PostgresManager) {
+func LogConnectionPoolStats(pgManager PostgresManager) {
 	if pgManager == nil {
 		return
 	}
@@ -92,7 +91,8 @@ func LogConnectionPoolStats(pgManager *PostgresManager) {
 		return
 	}
 
-	pgManager.logger.Info("Connection pool statistics",
+	logger := log.GetLogger().With(zap.String("component", "postgres_manager"))
+	logger.Info("Connection pool statistics",
 		zap.Int("max_open_connections", stats.MaxOpenConnections),
 		zap.Int("open_connections", stats.OpenConnections),
 		zap.Int("in_use", stats.InUse),

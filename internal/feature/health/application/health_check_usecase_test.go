@@ -15,14 +15,14 @@ import (
 var _ = ginkgo.Describe("HealthCheckUseCase", func() {
 	var (
 		ctrl     *gomock.Controller
-		mockRepo *mocks.MockRepository
+		mockRepo *mocks.MockHealthRepository
 		useCase  application.HealthCheckUseCase
 		ctx      context.Context
 	)
 
 	ginkgo.BeforeEach(func() {
 		ctrl = gomock.NewController(ginkgo.GinkgoT())
-		mockRepo = mocks.NewMockRepository(ctrl)
+		mockRepo = mocks.NewMockHealthRepository(ctrl)
 		ctx = context.Background()
 	})
 

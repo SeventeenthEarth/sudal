@@ -68,11 +68,19 @@ func (h *Handler) DatabaseHealth(w http.ResponseWriter, r *http.Request) {
 	dbStatus, err := h.service.CheckDatabase(ctx)
 	if err != nil {
 		// Create error response with proper structure
+		// Use the dbStatus if available (repository may return both status and error)
+		var databaseStatus *domain.DatabaseStatus
+		if dbStatus != nil {
+			databaseStatus = dbStatus
+		} else {
+			databaseStatus = domain.UnhealthyDatabaseStatus(err.Error())
+		}
+
 		errorResponse := &domain.DetailedHealthStatus{
 			Status:    "error",
 			Message:   "Database health check failed",
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
-			Database:  domain.UnhealthyDatabaseStatus(err.Error()),
+			Database:  databaseStatus,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

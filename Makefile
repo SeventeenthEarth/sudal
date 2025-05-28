@@ -97,16 +97,17 @@ endif
 	@go tool cover -html=coverage.unit.out -o coverage.unit.html
 	@echo "✅ Unit tests completed - coverage report: coverage.unit.html"
 
-test.int: ## Run integration tests
+test.int: ## Run integration tests (excludes infrastructure - use test.unit.infra for infrastructure coverage)
 	@echo "🧪 Running integration tests..."
 ifeq ($(GINKGO),)
-	@go test -v -race -coverprofile=coverage.int.out -coverpkg=github.com/seventeenthearth/sudal/internal/... ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
+	@go test -v -race -coverprofile=coverage.int.out -coverpkg=github.com/seventeenthearth/sudal/internal/feature/... ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
 else
-	@$(GINKGO) -v -race -cover -coverpkg=github.com/seventeenthearth/sudal/internal/... --coverprofile=coverage.int.out --trace --fail-on-pending --randomize-all ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
+	@$(GINKGO) -v -race -cover -coverpkg=github.com/seventeenthearth/sudal/internal/feature/... --coverprofile=coverage.int.out --trace --fail-on-pending --randomize-all ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
 endif
 	@go tool cover -func=coverage.int.out
 	@go tool cover -html=coverage.int.out -o coverage.int.html
 	@echo "✅ Integration tests completed - coverage report: coverage.int.html"
+	@echo "ℹ️  Note: Infrastructure coverage is measured separately via 'make test.unit.infra'"
 
 test.e2e: ## Run end-to-end tests
 	@echo "🧪 Running end-to-end tests..."

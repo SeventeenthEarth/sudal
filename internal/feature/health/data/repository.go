@@ -13,11 +13,11 @@ import (
 // Repository is the implementation of the domain.Repository interface
 type Repository struct {
 	// Database manager for performing health checks
-	dbManager *database.PostgresManager
+	dbManager database.PostgresManager
 }
 
 // NewRepository creates a new health repository
-func NewRepository(dbManager *database.PostgresManager) *Repository {
+func NewRepository(dbManager database.PostgresManager) *Repository {
 	return &Repository{
 		dbManager: dbManager,
 	}

@@ -13,15 +13,29 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
-// PostgresManager manages PostgreSQL database connections and connection pooling
-type PostgresManager struct {
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_postgres_manager.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database PostgresManager
+
+// PostgresManager defines the interface for PostgreSQL database connection management
+type PostgresManager interface {
+	// GetDB returns the underlying database connection
+	GetDB() *sql.DB
+	// Ping performs a health check on the database connection
+	Ping(ctx context.Context) error
+	// HealthCheck performs a comprehensive health check including connection stats
+	HealthCheck(ctx context.Context) (*HealthStatus, error)
+	// Close closes the database connection pool
+	Close() error
+}
+
+// PostgresManagerImpl manages PostgreSQL database connections and connection pooling
+type PostgresManagerImpl struct {
 	db     *sql.DB
 	config *config.Config
 	logger *zap.Logger
 }
 
 // NewPostgresManager creates a new PostgreSQL connection manager with connection pooling
-func NewPostgresManager(cfg *config.Config) (*PostgresManager, error) {
+func NewPostgresManager(cfg *config.Config) (PostgresManager, error) {
 	logger := log.GetLogger().With(zap.String("component", "postgres_manager"))
 
 	if cfg.DB.DSN == "" {
@@ -69,7 +83,7 @@ func NewPostgresManager(cfg *config.Config) (*PostgresManager, error) {
 
 	logger.Info("PostgreSQL connection pool initialized successfully")
 
-	return &PostgresManager{
+	return &PostgresManagerImpl{
 		db:     db,
 		config: cfg,
 		logger: logger,
@@ -78,12 +92,12 @@ func NewPostgresManager(cfg *config.Config) (*PostgresManager, error) {
 
 // GetDB returns the underlying database connection
 // This should be used sparingly and only when direct access to *sql.DB is needed
-func (pm *PostgresManager) GetDB() *sql.DB {
+func (pm *PostgresManagerImpl) GetDB() *sql.DB {
 	return pm.db
 }
 
 // Ping performs a health check on the database connection
-func (pm *PostgresManager) Ping(ctx context.Context) error {
+func (pm *PostgresManagerImpl) Ping(ctx context.Context) error {
 	pm.logger.Debug("Performing database health check")
 
 	if err := pm.db.PingContext(ctx); err != nil {
@@ -98,7 +112,7 @@ func (pm *PostgresManager) Ping(ctx context.Context) error {
 }
 
 // HealthCheck performs a comprehensive health check including connection stats
-func (pm *PostgresManager) HealthCheck(ctx context.Context) (*HealthStatus, error) {
+func (pm *PostgresManagerImpl) HealthCheck(ctx context.Context) (*HealthStatus, error) {
 	pm.logger.Debug("Performing comprehensive database health check")
 
 	// Perform basic ping
@@ -142,7 +156,7 @@ func (pm *PostgresManager) HealthCheck(ctx context.Context) (*HealthStatus, erro
 }
 
 // Close closes the database connection pool
-func (pm *PostgresManager) Close() error {
+func (pm *PostgresManagerImpl) Close() error {
 	pm.logger.Info("Closing PostgreSQL connection pool")
 
 	if pm.db != nil {

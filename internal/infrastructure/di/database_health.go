@@ -16,12 +16,12 @@ import (
 
 // DatabaseHealthHandler handles database health check requests
 type DatabaseHealthHandler struct {
-	dbManager *database.PostgresManager
+	dbManager database.PostgresManager
 	logger    *zap.Logger
 }
 
 // NewDatabaseHealthHandler creates a new database health handler
-func NewDatabaseHealthHandler(dbManager *database.PostgresManager) *DatabaseHealthHandler {
+func NewDatabaseHealthHandler(dbManager database.PostgresManager) *DatabaseHealthHandler {
 	// Check if we're in test environment and return mock handler
 	if IsTestEnvironment() {
 		return NewMockDatabaseHealthHandler()

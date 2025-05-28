@@ -88,7 +88,7 @@ func ProvideConfig() *config.Config {
 }
 
 // ProvidePostgresManager provides a PostgreSQL connection manager
-func ProvidePostgresManager(cfg *config.Config) (*database.PostgresManager, error) {
+func ProvidePostgresManager(cfg *config.Config) (database.PostgresManager, error) {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil, nil
@@ -148,7 +148,7 @@ func InitializeHealthConnectHandler() (*healthConnect.HealthServiceHandler, erro
 }
 
 // InitializePostgresManager initializes and returns a PostgreSQL connection manager
-func InitializePostgresManager() (*database.PostgresManager, error) {
+func InitializePostgresManager() (database.PostgresManager, error) {
 	wire.Build(DatabaseSet)
 	return nil, nil // Wire will fill this in
 }

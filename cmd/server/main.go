@@ -17,6 +17,21 @@ import (
 func main() {
 	fmt.Println("Starting Sudal Server...")
 
+	// Initialize application
+	cfg := initializeApplication()
+
+	// Verify external dependencies
+	verifyDependencies(cfg)
+
+	// Start the server
+	startServer(cfg)
+
+	// Cleanup
+	cleanup()
+}
+
+// initializeApplication handles configuration loading and logger initialization
+func initializeApplication() *config.Config {
 	// Parse command line flags
 	configPath := flag.String("config", "", "Path to configuration file")
 	flag.Parse()
@@ -42,7 +57,17 @@ func main() {
 		zap.String("log_level", string(logLevel)),
 	)
 
-	// Verify database connectivity at startup
+	return cfg
+}
+
+// verifyDependencies checks connectivity to external dependencies
+func verifyDependencies(cfg *config.Config) {
+	verifyDatabaseConnectivity(cfg)
+	verifyRedisConnectivity(cfg)
+}
+
+// verifyDatabaseConnectivity verifies database connection
+func verifyDatabaseConnectivity(cfg *config.Config) {
 	log.Info("Verifying database connectivity...")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -53,14 +78,33 @@ func main() {
 	}
 
 	log.Info("Database connectivity verified successfully")
+}
 
-	// Create and start the server
+// verifyRedisConnectivity verifies Redis connection
+func verifyRedisConnectivity(cfg *config.Config) {
+	log.Info("Verifying Redis connectivity...")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := database.VerifyRedisConnectivity(ctx, cfg); err != nil {
+		log.Error("Redis connectivity verification failed", zap.Error(err))
+		os.Exit(1)
+	}
+
+	log.Info("Redis connectivity verified successfully")
+}
+
+// startServer creates and starts the HTTP server
+func startServer(cfg *config.Config) {
 	srv := server.NewServer(cfg.ServerPort)
 	if err := srv.Start(); err != nil {
 		log.Error("Failed to start server", zap.Error(err))
 		os.Exit(1)
 	}
+}
 
+// cleanup performs cleanup operations before application exit
+func cleanup() {
 	// Ensure logs are flushed before exiting
 	if err := log.Sync(); err != nil {
 		fmt.Printf("Failed to sync logger: %v\n", err)

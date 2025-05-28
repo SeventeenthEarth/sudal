@@ -17,6 +17,21 @@ var _ = ginkgo.Describe("LoadConfig", func() {
 		ginkgo.BeforeEach(func() {
 			// Reset Viper to clear any previous configuration
 			config.ResetViper()
+
+			// Clear environment variables that might interfere with config file loading
+			err := os.Unsetenv("APP_ENV")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			err = os.Unsetenv("ENVIRONMENT")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			err = os.Unsetenv("SERVER_PORT")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			err = os.Unsetenv("LOG_LEVEL")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			err = os.Unsetenv("REDIS_ADDR")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			err = os.Unsetenv("REDIS_PASSWORD")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 			// Create a temporary config file
 			tempFile, err := os.CreateTemp("", "config-*.yaml")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -35,8 +50,9 @@ db:
   dsn: postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable
 
 # Redis Configuration
-redis_addr: localhost:6379
-redis_password: "testpassword"
+redis:
+  addr: localhost:6379
+  password: "testpassword"
 `
 			_, err = tempFile.WriteString(configContent)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -61,8 +77,8 @@ redis_password: "testpassword"
 			gomega.Expect(cfg.AppEnv).To(gomega.Equal("test"))
 			gomega.Expect(cfg.Environment).To(gomega.Equal("test"))
 			gomega.Expect(cfg.DB.DSN).To(gomega.Equal("postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"))
-			gomega.Expect(cfg.RedisAddr).To(gomega.Equal("localhost:6379"))
-			gomega.Expect(cfg.RedisPassword).To(gomega.Equal("testpassword"))
+			gomega.Expect(cfg.Redis.Addr).To(gomega.Equal("localhost:6379"))
+			gomega.Expect(cfg.Redis.Password).To(gomega.Equal("testpassword"))
 		})
 
 		ginkgo.Context("when the config file does not exist", func() {
@@ -445,13 +461,25 @@ var _ = ginkgo.Describe("GetConfig", func() {
 		var cfg *config.Config
 
 		ginkgo.BeforeEach(func() {
+			// Reset Viper to clear any previous configuration
+			config.ResetViper()
+
+			// Set APP_ENV to a valid value for this test
+			err := os.Setenv("APP_ENV", "test")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
 			// Load a config
-			var err error
 			cfg, err = config.LoadConfig("")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 			// Set the config instance
 			config.SetConfig(cfg)
+		})
+
+		ginkgo.AfterEach(func() {
+			// Clean up environment variable
+			err := os.Unsetenv("APP_ENV")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		})
 
 		ginkgo.It("should return the expected config instance", func() {

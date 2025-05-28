@@ -42,20 +42,25 @@ var _ = Describe("Configuration System Integration", func() {
 			"DB_CONNECT_TIMEOUT_SECONDS":    os.Getenv("DB_CONNECT_TIMEOUT_SECONDS"),
 		}
 
+		// Clear all environment variables for clean test state
+		for key := range envVars {
+			_ = os.Unsetenv(key) // Ignore error
+		}
+
 		// Reset config for each test
 		config.ResetViper()
 	})
 
 	AfterEach(func() {
 		// Clean up temporary directory
-		_ = os.RemoveAll(tempDir) // 오류 무시
+		_ = os.RemoveAll(tempDir) // Ignore error
 
 		// Restore original environment variables
 		for key, value := range envVars {
 			if value == "" {
-				_ = os.Unsetenv(key) // 오류 무시
+				_ = os.Unsetenv(key) // Ignore error
 			} else {
-				_ = os.Setenv(key, value) // 오류 무시
+				_ = os.Setenv(key, value) // Ignore error
 			}
 		}
 
@@ -68,10 +73,10 @@ var _ = Describe("Configuration System Integration", func() {
 		Context("when loading from environment variables", func() {
 			It("should load configuration from environment variables", func() {
 				// Set environment variables
-				_ = os.Setenv("SERVER_PORT", "9090") // 오류 무시
-				_ = os.Setenv("LOG_LEVEL", "debug")  // 오류 무시
-				_ = os.Setenv("APP_ENV", "test")     // 오류 무시
-				_ = os.Setenv("ENVIRONMENT", "test") // 오류 무시
+				_ = os.Setenv("SERVER_PORT", "9090") // Ignore error
+				_ = os.Setenv("LOG_LEVEL", "debug")  // Ignore error
+				_ = os.Setenv("APP_ENV", "test")     // Ignore error
+				_ = os.Setenv("ENVIRONMENT", "test") // Ignore error
 
 				// Load config
 				cfg, err := config.LoadConfig("")
@@ -92,8 +97,8 @@ var _ = Describe("Configuration System Integration", func() {
 				configContent := `
 server_port: "8888"
 log_level: "info"
-app_env: "dev"
-environment: "dev"
+app_env: "test"
+environment: "test"
 db:
   dsn: "postgres://user:pass@host:5432/db?sslmode=disable"
 `
@@ -109,8 +114,8 @@ db:
 				// Verify config values
 				Expect(cfg.ServerPort).To(Equal("8888"))
 				Expect(cfg.LogLevel).To(Equal("info"))
-				Expect(cfg.AppEnv).To(Equal("dev"))
-				Expect(cfg.Environment).To(Equal("dev"))
+				Expect(cfg.AppEnv).To(Equal("test"))
+				Expect(cfg.Environment).To(Equal("test"))
 				Expect(cfg.DB.DSN).To(Equal("postgres://user:pass@host:5432/db?sslmode=disable"))
 			})
 
@@ -123,7 +128,10 @@ db:
 
 		Context("when using default values", func() {
 			It("should use default values when environment variables are not set", func() {
-				// Load config without setting environment variables
+				// Set APP_ENV to a valid value for testing
+				_ = os.Setenv("APP_ENV", "test") // Ignore error
+
+				// Load config without setting other environment variables
 				cfg, err := config.LoadConfig("")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(cfg).NotTo(BeNil())
@@ -131,20 +139,21 @@ db:
 				// Verify default values
 				Expect(cfg.ServerPort).To(Equal("8080"))
 				Expect(cfg.LogLevel).To(Equal("info"))
-				Expect(cfg.AppEnv).To(Equal("dev"))
-				Expect(cfg.Environment).To(Equal("dev"))
+				Expect(cfg.AppEnv).To(Equal("test"))
+				Expect(cfg.Environment).To(Equal("dev")) // Environment still defaults to dev
 			})
 		})
 
 		Context("when constructing database connection strings", func() {
 			It("should construct PostgresDSN correctly from components", func() {
 				// Set environment variables for PostgreSQL components
-				_ = os.Setenv("DB_HOST", "localhost")    // 오류 무시
-				_ = os.Setenv("DB_PORT", "5432")         // 오류 무시
-				_ = os.Setenv("DB_USER", "testuser")     // 오류 무시
-				_ = os.Setenv("DB_PASSWORD", "testpass") // 오류 무시
-				_ = os.Setenv("DB_NAME", "testdb")       // 오류 무시
-				_ = os.Setenv("DB_SSLMODE", "disable")   // 오류 무시
+				_ = os.Setenv("APP_ENV", "test")         // Ignore error
+				_ = os.Setenv("DB_HOST", "localhost")    // Ignore error
+				_ = os.Setenv("DB_PORT", "5432")         // Ignore error
+				_ = os.Setenv("DB_USER", "testuser")     // Ignore error
+				_ = os.Setenv("DB_PASSWORD", "testpass") // Ignore error
+				_ = os.Setenv("DB_NAME", "testdb")       // Ignore error
+				_ = os.Setenv("DB_SSLMODE", "disable")   // Ignore error
 
 				// Load config
 				cfg, err := config.LoadConfig("")
@@ -158,17 +167,18 @@ db:
 
 			It("should load database connection pool configuration correctly", func() {
 				// Set environment variables for database pool configuration
-				_ = os.Setenv("DB_HOST", "localhost")                 // 오류 무시
-				_ = os.Setenv("DB_PORT", "5432")                      // 오류 무시
-				_ = os.Setenv("DB_USER", "testuser")                  // 오류 무시
-				_ = os.Setenv("DB_PASSWORD", "testpass")              // 오류 무시
-				_ = os.Setenv("DB_NAME", "testdb")                    // 오류 무시
-				_ = os.Setenv("DB_SSLMODE", "disable")                // 오류 무시
-				_ = os.Setenv("DB_MAX_OPEN_CONNS", "50")              // 오류 무시
-				_ = os.Setenv("DB_MAX_IDLE_CONNS", "10")              // 오류 무시
-				_ = os.Setenv("DB_CONN_MAX_LIFETIME_SECONDS", "7200") // 오류 무시
-				_ = os.Setenv("DB_CONN_MAX_IDLE_TIME_SECONDS", "600") // 오류 무시
-				_ = os.Setenv("DB_CONNECT_TIMEOUT_SECONDS", "60")     // 오류 무시
+				_ = os.Setenv("APP_ENV", "test")                      // Ignore error
+				_ = os.Setenv("DB_HOST", "localhost")                 // Ignore error
+				_ = os.Setenv("DB_PORT", "5432")                      // Ignore error
+				_ = os.Setenv("DB_USER", "testuser")                  // Ignore error
+				_ = os.Setenv("DB_PASSWORD", "testpass")              // Ignore error
+				_ = os.Setenv("DB_NAME", "testdb")                    // Ignore error
+				_ = os.Setenv("DB_SSLMODE", "disable")                // Ignore error
+				_ = os.Setenv("DB_MAX_OPEN_CONNS", "50")              // Ignore error
+				_ = os.Setenv("DB_MAX_IDLE_CONNS", "10")              // Ignore error
+				_ = os.Setenv("DB_CONN_MAX_LIFETIME_SECONDS", "7200") // Ignore error
+				_ = os.Setenv("DB_CONN_MAX_IDLE_TIME_SECONDS", "600") // Ignore error
+				_ = os.Setenv("DB_CONNECT_TIMEOUT_SECONDS", "60")     // Ignore error
 
 				// Load config
 				cfg, err := config.LoadConfig("")
@@ -191,8 +201,8 @@ db:
 				// Create a config with missing ServerPort
 				cfg := &config.Config{
 					LogLevel:    "info",
-					AppEnv:      "dev",
-					Environment: "dev",
+					AppEnv:      "test",
+					Environment: "test",
 				}
 
 				// Validate config
@@ -290,8 +300,8 @@ db:
 			cfg := &config.Config{
 				ServerPort:  "8080",
 				LogLevel:    "info",
-				AppEnv:      "dev",
-				Environment: "dev",
+				AppEnv:      "test",
+				Environment: "test",
 			}
 
 			// Set the config

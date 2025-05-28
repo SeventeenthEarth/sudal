@@ -103,3 +103,51 @@ func LogConnectionPoolStats(pgManager *PostgresManager) {
 		zap.Int64("max_lifetime_closed", stats.MaxLifetimeClosed),
 	)
 }
+
+// VerifyRedisConnectivity is a standalone utility function to verify Redis connectivity
+// This can be called during application startup or on-demand for health checks
+func VerifyRedisConnectivity(ctx context.Context, cfg *config.Config) error {
+	logger := log.GetLogger().With(zap.String("component", "redis_verification"))
+
+	logger.Info("Starting Redis connectivity verification",
+		zap.String("addr", cfg.Redis.Addr),
+		zap.Bool("password_set", cfg.Redis.Password != ""),
+		zap.Int("db", cfg.Redis.DB),
+		zap.Int("pool_size", cfg.Redis.PoolSize),
+		zap.Int("max_retries", cfg.Redis.MaxRetries),
+	)
+
+	// Create a temporary Redis manager for verification
+	redisManager, err := NewRedisManager(cfg)
+	if err != nil {
+		logger.Error("Failed to create Redis manager for verification",
+			log.FormatError(err),
+		)
+		return fmt.Errorf("redis connectivity verification failed: %w", err)
+	}
+	defer func() {
+		if closeErr := redisManager.Close(); closeErr != nil {
+			logger.Warn("Failed to close Redis manager after verification",
+				log.FormatError(closeErr),
+			)
+		}
+	}()
+
+	// Perform health check with timeout
+	verificationCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := redisManager.Ping(verificationCtx); err != nil {
+		logger.Error("Redis connectivity verification failed",
+			log.FormatError(err),
+		)
+		return fmt.Errorf("redis connectivity verification failed: %w", err)
+	}
+
+	// Log connection pool statistics
+	redisManager.LogConnectionPoolStats()
+
+	logger.Info("Redis connectivity verification successful")
+
+	return nil
+}

@@ -51,6 +51,30 @@ type DBConfig struct {
 	DSN string `mapstructure:"POSTGRES_DSN"`
 }
 
+// RedisConfig holds Redis-specific configuration
+type RedisConfig struct {
+	// Connection parameters
+	Addr     string `mapstructure:"REDIS_ADDR"`
+	Password string `mapstructure:"REDIS_PASSWORD"`
+	DB       int    `mapstructure:"REDIS_DB"`
+
+	// Connection Pool Configuration
+	PoolSize     int `mapstructure:"REDIS_POOL_SIZE"`
+	MinIdleConns int `mapstructure:"REDIS_MIN_IDLE_CONNS"`
+	PoolTimeout  int `mapstructure:"REDIS_POOL_TIMEOUT"`
+	IdleTimeout  int `mapstructure:"REDIS_IDLE_TIMEOUT"`
+
+	// Timeout Configuration
+	DialTimeout  int `mapstructure:"REDIS_DIAL_TIMEOUT"`
+	ReadTimeout  int `mapstructure:"REDIS_READ_TIMEOUT"`
+	WriteTimeout int `mapstructure:"REDIS_WRITE_TIMEOUT"`
+
+	// Retry Configuration
+	MaxRetries      int `mapstructure:"REDIS_MAX_RETRIES"`
+	MinRetryBackoff int `mapstructure:"REDIS_MIN_RETRY_BACKOFF"`
+	MaxRetryBackoff int `mapstructure:"REDIS_MAX_RETRY_BACKOFF"`
+}
+
 // Config holds all configuration settings for the application
 type Config struct {
 	// Server settings
@@ -61,8 +85,7 @@ type Config struct {
 	DB DBConfig
 
 	// Redis settings
-	RedisAddr     string `mapstructure:"REDIS_ADDR"`
-	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+	Redis RedisConfig
 
 	// Firebase settings
 	FirebaseProjectID       string `mapstructure:"FIREBASE_PROJECT_ID"`
@@ -127,17 +150,10 @@ func LoadConfig(configPath string) (*Config, error) {
 	viper.SetEnvPrefix("")
 	viper.SetTypeByDefaultValue(true)
 
-	// Determine the environment
-	appEnv := os.Getenv("APP_ENV")
-	if appEnv == "" {
-		// Default to dev environment if not specified
-		appEnv = string(DevEnvironment)
-	}
-
-	// Set default values
+	// Set default values first
 	setDefaults()
 
-	// If a config file is specified, load it
+	// If a config file is specified, load it (this will override defaults)
 	if configPath != "" {
 		// Check if the file exists
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -151,6 +167,19 @@ func LoadConfig(configPath string) (*Config, error) {
 
 		if err := viper.ReadInConfig(); err != nil {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+	}
+
+	// Determine the environment (after config file is loaded)
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "" {
+		// Check if APP_ENV was set in config file
+		if viper.IsSet("app_env") {
+			appEnv = viper.GetString("app_env")
+		}
+		if appEnv == "" {
+			// Default to dev environment if not specified
+			appEnv = string(DevEnvironment)
 		}
 	}
 
@@ -190,6 +219,47 @@ func LoadConfig(configPath string) (*Config, error) {
 	}
 	if viper.IsSet("db.sslmode") {
 		config.DB.SSLMode = viper.GetString("db.sslmode")
+	}
+
+	// Handle nested Redis configuration from YAML
+	if viper.IsSet("redis.addr") {
+		config.Redis.Addr = viper.GetString("redis.addr")
+	}
+	if viper.IsSet("redis.password") {
+		config.Redis.Password = viper.GetString("redis.password")
+	}
+	if viper.IsSet("redis.db") {
+		config.Redis.DB = viper.GetInt("redis.db")
+	}
+	if viper.IsSet("redis.pool_size") {
+		config.Redis.PoolSize = viper.GetInt("redis.pool_size")
+	}
+	if viper.IsSet("redis.min_idle_conns") {
+		config.Redis.MinIdleConns = viper.GetInt("redis.min_idle_conns")
+	}
+	if viper.IsSet("redis.pool_timeout") {
+		config.Redis.PoolTimeout = viper.GetInt("redis.pool_timeout")
+	}
+	if viper.IsSet("redis.idle_timeout") {
+		config.Redis.IdleTimeout = viper.GetInt("redis.idle_timeout")
+	}
+	if viper.IsSet("redis.dial_timeout") {
+		config.Redis.DialTimeout = viper.GetInt("redis.dial_timeout")
+	}
+	if viper.IsSet("redis.read_timeout") {
+		config.Redis.ReadTimeout = viper.GetInt("redis.read_timeout")
+	}
+	if viper.IsSet("redis.write_timeout") {
+		config.Redis.WriteTimeout = viper.GetInt("redis.write_timeout")
+	}
+	if viper.IsSet("redis.max_retries") {
+		config.Redis.MaxRetries = viper.GetInt("redis.max_retries")
+	}
+	if viper.IsSet("redis.min_retry_backoff") {
+		config.Redis.MinRetryBackoff = viper.GetInt("redis.min_retry_backoff")
+	}
+	if viper.IsSet("redis.max_retry_backoff") {
+		config.Redis.MaxRetryBackoff = viper.GetInt("redis.max_retry_backoff")
 	}
 
 	// Process database configuration
@@ -348,6 +418,19 @@ func setDefaults() {
 	// Database defaults
 	viper.SetDefault("DB_PORT", "5432")
 	viper.SetDefault("DB_SSLMODE", "disable")
+
+	// Redis defaults
+	viper.SetDefault("REDIS_DB", 0)
+	viper.SetDefault("REDIS_POOL_SIZE", 10)
+	viper.SetDefault("REDIS_MIN_IDLE_CONNS", 2)
+	viper.SetDefault("REDIS_POOL_TIMEOUT", 4)        // 4 seconds
+	viper.SetDefault("REDIS_IDLE_TIMEOUT", 300)      // 5 minutes
+	viper.SetDefault("REDIS_DIAL_TIMEOUT", 5)        // 5 seconds
+	viper.SetDefault("REDIS_READ_TIMEOUT", 3)        // 3 seconds
+	viper.SetDefault("REDIS_WRITE_TIMEOUT", 3)       // 3 seconds
+	viper.SetDefault("REDIS_MAX_RETRIES", 3)         // 3 retries
+	viper.SetDefault("REDIS_MIN_RETRY_BACKOFF", 8)   // 8 milliseconds
+	viper.SetDefault("REDIS_MAX_RETRY_BACKOFF", 512) // 512 milliseconds
 
 	// Map PORT to SERVER_PORT for compatibility with Cloud Run and other platforms
 	if os.Getenv("PORT") != "" && os.Getenv("SERVER_PORT") == "" {

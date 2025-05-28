@@ -12,6 +12,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
@@ -68,6 +69,19 @@ var DatabaseHealthSet = wire.NewSet(
 	NewDatabaseHealthHandler,
 )
 
+// RedisSet is a Wire provider set for Redis-related dependencies
+var RedisSet = wire.NewSet(
+	ProvideConfig,
+	ProvideRedisManager,
+)
+
+// CacheSet is a Wire provider set for cache-related dependencies
+var CacheSet = wire.NewSet(
+	ProvideConfig,
+	ProvideRedisManager,
+	ProvideCacheUtil,
+)
+
 // ProvideConfig provides the application configuration
 func ProvideConfig() *config.Config {
 	return config.GetConfig()
@@ -80,6 +94,24 @@ func ProvidePostgresManager(cfg *config.Config) (*database.PostgresManager, erro
 		return nil, nil
 	}
 	return database.NewPostgresManager(cfg)
+}
+
+// ProvideRedisManager provides a Redis connection manager
+func ProvideRedisManager(cfg *config.Config) (*database.RedisManager, error) {
+	// Check if we're in test environment and return nil to use mock
+	if isTestEnvironmentWire() {
+		return nil, nil
+	}
+	return database.NewRedisManager(cfg)
+}
+
+// ProvideCacheUtil provides a cache utility instance
+func ProvideCacheUtil(redisManager *database.RedisManager) *cacheutil.CacheUtil {
+	// Check if we're in test environment and return nil to use mock
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	return cacheutil.NewCacheUtil(redisManager)
 }
 
 // isTestEnvironmentWire checks if we're running in a test environment for wire
@@ -124,6 +156,18 @@ func InitializePostgresManager() (*database.PostgresManager, error) {
 // InitializeDatabaseHealthHandler initializes and returns a database health handler
 func InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
 	wire.Build(DatabaseHealthSet)
+	return nil, nil // Wire will fill this in
+}
+
+// InitializeRedisManager initializes and returns a Redis connection manager
+func InitializeRedisManager() (*database.RedisManager, error) {
+	wire.Build(RedisSet)
+	return nil, nil // Wire will fill this in
+}
+
+// InitializeCacheUtil initializes and returns a cache utility
+func InitializeCacheUtil() (*cacheutil.CacheUtil, error) {
+	wire.Build(CacheSet)
 	return nil, nil // Wire will fill this in
 }
 

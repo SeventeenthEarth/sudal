@@ -18,6 +18,16 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 )
 
+// CacheTestContext holds cache-specific test context
+type CacheTestContext struct {
+	CacheUtil     interface{} // Will be *cacheutil.CacheUtil but avoiding import cycle
+	LastError     error
+	LastValue     string
+	TestKeyPrefix string
+	CreatedKeys   []string
+	mu            interface{} // Will be sync.Mutex but avoiding import
+}
+
 // TestContext holds the context for BDD test scenarios
 type TestContext struct {
 	T                 *testing.T
@@ -41,6 +51,8 @@ type TestContext struct {
 	ConnectGoProtocol          string
 	ConnectGoTimeout           time.Duration
 	ConnectGoConcurrentResults []ConnectGoResult
+	// Cache related fields
+	CacheTestContext *CacheTestContext
 }
 
 // ConcurrentResult holds the result of a concurrent request

@@ -31,20 +31,26 @@ var ConfigSet = wire.NewSet(
 
 // HealthSet is a Wire provider set for health-related dependencies
 var HealthSet = wire.NewSet(
+	ProvideConfig,
+	ProvidePostgresManager,
 	data.NewRepository,
 	wire.Bind(new(domain.Repository), new(*data.Repository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
+	application.NewDatabaseHealthUseCase,
 	application.NewService,
 	healthInterface.NewHandler,
 )
 
 // HealthConnectSet is a Wire provider set for Connect-go health service
 var HealthConnectSet = wire.NewSet(
+	ProvideConfig,
+	ProvidePostgresManager,
 	data.NewRepository,
 	wire.Bind(new(domain.Repository), new(*data.Repository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
+	application.NewDatabaseHealthUseCase,
 	application.NewService,
 	healthConnect.NewHealthServiceHandler,
 )
@@ -98,15 +104,15 @@ func isTestEnvironmentWire() bool {
 }
 
 // InitializeHealthHandler initializes and returns a health handler with all its dependencies
-func InitializeHealthHandler() *healthInterface.Handler {
+func InitializeHealthHandler() (*healthInterface.Handler, error) {
 	wire.Build(HealthSet)
-	return nil // Wire will fill this in
+	return nil, nil // Wire will fill this in
 }
 
 // InitializeHealthConnectHandler initializes and returns a Connect-go health service handler
-func InitializeHealthConnectHandler() *healthConnect.HealthServiceHandler {
+func InitializeHealthConnectHandler() (*healthConnect.HealthServiceHandler, error) {
 	wire.Build(HealthConnectSet)
-	return nil // Wire will fill this in
+	return nil, nil // Wire will fill this in
 }
 
 // InitializePostgresManager initializes and returns a PostgreSQL connection manager
@@ -136,10 +142,13 @@ func (d *DefaultDatabaseHealthInitializer) InitializeDatabaseHealthHandler() (*D
 
 // OpenAPISet is a Wire provider set for OpenAPI-related dependencies
 var OpenAPISet = wire.NewSet(
+	ProvideConfig,
+	ProvidePostgresManager,
 	data.NewRepository,
 	wire.Bind(new(domain.Repository), new(*data.Repository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
+	application.NewDatabaseHealthUseCase,
 	application.NewService,
 	NewOpenAPIHandler,
 )
@@ -150,9 +159,9 @@ func NewOpenAPIHandler(service application.Service) *openapi.OpenAPIHandler {
 }
 
 // InitializeOpenAPIHandler initializes and returns an OpenAPI handler
-func InitializeOpenAPIHandler() *openapi.OpenAPIHandler {
+func InitializeOpenAPIHandler() (*openapi.OpenAPIHandler, error) {
 	wire.Build(OpenAPISet)
-	return nil // Wire will fill this in
+	return nil, nil // Wire will fill this in
 }
 
 // InitializeSwaggerHandler initializes and returns a Swagger UI handler

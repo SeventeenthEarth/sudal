@@ -108,4 +108,58 @@ var _ = ginkgo.Describe("Service", func() {
 			})
 		})
 	})
+
+	ginkgo.Describe("CheckDatabase", func() {
+		var (
+			ctx    context.Context
+			result *domain.DatabaseStatus
+			err    error
+		)
+
+		ginkgo.BeforeEach(func() {
+			ctx = context.Background()
+			service = application.NewService(mockRepo)
+		})
+
+		ginkgo.JustBeforeEach(func() {
+			result, err = service.CheckDatabase(ctx)
+		})
+
+		ginkgo.Context("when the repository returns a database status successfully", func() {
+			var expectedDbStatus *domain.DatabaseStatus
+
+			ginkgo.BeforeEach(func() {
+				stats := &domain.ConnectionStats{
+					MaxOpenConnections: 25,
+					OpenConnections:    1,
+					InUse:              0,
+					Idle:               1,
+				}
+				expectedDbStatus = domain.HealthyDatabaseStatus("Database is healthy", stats)
+				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(expectedDbStatus, nil)
+			})
+
+			ginkgo.It("should return the database status without error", func() {
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(result).NotTo(gomega.BeNil())
+				gomega.Expect(result.Status).To(gomega.Equal(expectedDbStatus.Status))
+				gomega.Expect(result.Message).To(gomega.Equal(expectedDbStatus.Message))
+				gomega.Expect(result.Stats).To(gomega.Equal(expectedDbStatus.Stats))
+			})
+		})
+
+		ginkgo.Context("when the repository returns an error", func() {
+			var expectedError error
+
+			ginkgo.BeforeEach(func() {
+				expectedError = errors.New("database repository error")
+				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(nil, expectedError)
+			})
+
+			ginkgo.It("should return the error and nil database status", func() {
+				gomega.Expect(err).To(gomega.Equal(expectedError))
+				gomega.Expect(result).To(gomega.BeNil())
+			})
+		})
+	})
 })

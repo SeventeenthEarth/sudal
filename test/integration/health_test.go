@@ -26,7 +26,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 
 	ginkgo.BeforeEach(func() {
 		// Create a new health repository
-		repo = healthData.NewRepository()
+		repo = healthData.NewRepository(nil) // nil for test environment
 
 		// Create a new health service
 		service = healthApp.NewService(repo)

@@ -9,4 +9,5 @@ import "context"
 // where data layer depends on domain, not the other way around
 type Repository interface {
 	GetStatus(ctx context.Context) (*Status, error)
+	GetDatabaseStatus(ctx context.Context) (*DatabaseStatus, error)
 }

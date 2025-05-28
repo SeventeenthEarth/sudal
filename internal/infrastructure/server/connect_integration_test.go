@@ -116,3 +116,18 @@ func (m *mockHealthService) Check(ctx context.Context) (*domain.Status, error) {
 func (m *mockHealthService) Ping(ctx context.Context) (*domain.Status, error) {
 	return domain.OkStatus(), nil
 }
+
+func (m *mockHealthService) CheckDatabase(ctx context.Context) (*domain.DatabaseStatus, error) {
+	// Return a default healthy database status for tests
+	stats := &domain.ConnectionStats{
+		MaxOpenConnections: 25,
+		OpenConnections:    1,
+		InUse:              0,
+		Idle:               1,
+		WaitCount:          0,
+		WaitDuration:       0,
+		MaxIdleClosed:      0,
+		MaxLifetimeClosed:  0,
+	}
+	return domain.HealthyDatabaseStatus("Mock database connection is healthy", stats), m.err
+}

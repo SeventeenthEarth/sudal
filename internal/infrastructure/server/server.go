@@ -62,23 +62,26 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
 	// Initialize handlers using dependency injection
-	healthHandler := di.InitializeHealthHandler()
-	// Initialize Connect-go health service handler
-	healthConnectHandler := di.InitializeHealthConnectHandler()
-	// Initialize database health handler using DI
-	dbHealthHandler, err := di.InitializeDatabaseHealthHandler()
+	healthHandler, err := di.InitializeHealthHandler()
 	if err != nil {
-		return fmt.Errorf("failed to initialize database health handler: %w", err)
+		return fmt.Errorf("failed to initialize health handler: %w", err)
 	}
+	// Initialize Connect-go health service handler
+	healthConnectHandler, err := di.InitializeHealthConnectHandler()
+	if err != nil {
+		return fmt.Errorf("failed to initialize health connect handler: %w", err)
+	}
+	// Note: Database health is now handled by the unified health handler
 	// Initialize OpenAPI handler using DI
-	openAPIHandler := di.InitializeOpenAPIHandler()
+	openAPIHandler, err := di.InitializeOpenAPIHandler()
+	if err != nil {
+		return fmt.Errorf("failed to initialize OpenAPI handler: %w", err)
+	}
 	// Initialize Swagger UI handler
 	swaggerHandler := di.InitializeSwaggerHandler()
 
-	// Register REST routes
+	// Register REST routes (includes database health check)
 	healthHandler.RegisterRoutes(mux)
-	// Register database health check route
-	mux.HandleFunc("/health/database", dbHealthHandler.HandleDatabaseHealth)
 
 	// Register OpenAPI routes
 	openAPIServer, err := openapi.NewServer(openAPIHandler)

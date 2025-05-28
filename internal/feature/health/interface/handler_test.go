@@ -130,6 +130,71 @@ var _ = ginkgo.Describe("Handler", func() {
 		})
 	})
 
+	ginkgo.Describe("DatabaseHealth", func() {
+		var (
+			handler  *interfaces.Handler
+			req      *http.Request
+			recorder *httptest.ResponseRecorder
+		)
+
+		ginkgo.JustBeforeEach(func() {
+			handler = interfaces.NewHandler(mockService)
+			req = httptest.NewRequest("GET", "/health/database", nil)
+			recorder = httptest.NewRecorder()
+			handler.DatabaseHealth(recorder, req)
+		})
+
+		ginkgo.Context("when the service returns a database status successfully", func() {
+			var expectedDbStatus *domain.DatabaseStatus
+
+			ginkgo.BeforeEach(func() {
+				stats := &domain.ConnectionStats{
+					MaxOpenConnections: 25,
+					OpenConnections:    1,
+					InUse:              0,
+					Idle:               1,
+				}
+				expectedDbStatus = domain.HealthyDatabaseStatus("Database is healthy", stats)
+				mockService.EXPECT().CheckDatabase(gomock.Any()).Return(expectedDbStatus, nil)
+			})
+
+			ginkgo.It("should return a 200 OK with the correct database status", func() {
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
+
+				var response domain.DetailedHealthStatus
+				err := json.NewDecoder(recorder.Body).Decode(&response)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(response.Status).To(gomega.Equal("healthy"))
+				gomega.Expect(response.Message).To(gomega.Equal("Database is healthy"))
+				gomega.Expect(response.Database).NotTo(gomega.BeNil())
+				gomega.Expect(response.Database.Status).To(gomega.Equal(expectedDbStatus.Status))
+				gomega.Expect(response.Database.Message).To(gomega.Equal(expectedDbStatus.Message))
+				gomega.Expect(response.Timestamp).NotTo(gomega.BeEmpty())
+			})
+		})
+
+		ginkgo.Context("when the service returns an error", func() {
+			ginkgo.BeforeEach(func() {
+				expectedError := fmt.Errorf("database service error")
+				mockService.EXPECT().CheckDatabase(gomock.Any()).Return(nil, expectedError)
+			})
+
+			ginkgo.It("should return a 503 Service Unavailable", func() {
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusServiceUnavailable))
+				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
+
+				var response domain.DetailedHealthStatus
+				err := json.NewDecoder(recorder.Body).Decode(&response)
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(response.Status).To(gomega.Equal("error"))
+				gomega.Expect(response.Message).To(gomega.Equal("Database health check failed"))
+				gomega.Expect(response.Database).NotTo(gomega.BeNil())
+				gomega.Expect(response.Database.Status).To(gomega.Equal("unhealthy"))
+			})
+		})
+	})
+
 	ginkgo.Describe("RegisterRoutes", func() {
 		ginkgo.It("should register routes without panicking", func() {
 			// Arrange

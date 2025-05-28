@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/gen/go/health/v1"
+	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
@@ -203,11 +203,31 @@ var _ = Describe("Health Connect Service Integration", func() {
 
 // mockRepository is a mock implementation of the domain.Repository interface
 type mockRepository struct {
-	status *domain.Status
-	err    error
+	status         *domain.Status
+	databaseStatus *domain.DatabaseStatus
+	err            error
 }
 
 // GetStatus implements the domain.Repository interface
 func (m *mockRepository) GetStatus(ctx context.Context) (*domain.Status, error) {
 	return m.status, m.err
+}
+
+// GetDatabaseStatus implements the domain.Repository interface
+func (m *mockRepository) GetDatabaseStatus(ctx context.Context) (*domain.DatabaseStatus, error) {
+	if m.databaseStatus != nil {
+		return m.databaseStatus, m.err
+	}
+	// Return a default healthy database status for tests
+	stats := &domain.ConnectionStats{
+		MaxOpenConnections: 25,
+		OpenConnections:    1,
+		InUse:              0,
+		Idle:               1,
+		WaitCount:          0,
+		WaitDuration:       0,
+		MaxIdleClosed:      0,
+		MaxLifetimeClosed:  0,
+	}
+	return domain.HealthyDatabaseStatus("Mock database connection is healthy", stats), m.err
 }

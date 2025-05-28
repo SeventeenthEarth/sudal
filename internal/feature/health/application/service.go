@@ -12,20 +12,23 @@ import (
 type Service interface {
 	Ping(ctx context.Context) (*domain.Status, error)
 	Check(ctx context.Context) (*domain.Status, error)
+	CheckDatabase(ctx context.Context) (*domain.DatabaseStatus, error)
 }
 
 // service is the implementation of the health check service
 // It acts as a facade for the individual use cases
 type service struct {
-	pingUseCase        PingUseCase
-	healthCheckUseCase HealthCheckUseCase
+	pingUseCase           PingUseCase
+	healthCheckUseCase    HealthCheckUseCase
+	databaseHealthUseCase DatabaseHealthUseCase
 }
 
 // NewService creates a new health check service
 func NewService(repo domain.Repository) Service {
 	return &service{
-		pingUseCase:        NewPingUseCase(),
-		healthCheckUseCase: NewHealthCheckUseCase(repo),
+		pingUseCase:           NewPingUseCase(),
+		healthCheckUseCase:    NewHealthCheckUseCase(repo),
+		databaseHealthUseCase: NewDatabaseHealthUseCase(repo),
 	}
 }
 
@@ -38,4 +41,10 @@ func (s *service) Ping(ctx context.Context) (*domain.Status, error) {
 // Uses the repository to check the health of infrastructure components
 func (s *service) Check(ctx context.Context) (*domain.Status, error) {
 	return s.healthCheckUseCase.Execute(ctx)
+}
+
+// CheckDatabase performs a database health check
+// Uses the repository to check the health of database connections
+func (s *service) CheckDatabase(ctx context.Context) (*domain.DatabaseStatus, error) {
+	return s.databaseHealthUseCase.Execute(ctx)
 }

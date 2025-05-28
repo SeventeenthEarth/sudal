@@ -23,7 +23,7 @@ var _ = ginkgo.Describe("Integration Tests", func() {
 
 		ginkgo.BeforeEach(func() {
 			// 실제 서버 대신 핸들러를 직접 테스트
-			repo = healthData.NewRepository()
+			repo = healthData.NewRepository(nil) // nil for test environment
 			service = healthApp.NewService(repo)
 			handler = healthHandler.NewHandler(service)
 		})

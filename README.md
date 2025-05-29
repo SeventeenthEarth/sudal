@@ -79,7 +79,7 @@ These behaviors should be considered when writing client code that consumes the 
 3. **Tools:**
    - `golangci-lint` for linting (install via `make install-tools` or manually).
    - `ginkgo` for BDD-style testing (install via `make install-tools` or manually).
-   - `mockgen` for generating mocks (install via `make install-tools` or manually).
+   - `mockgen` for generating mocks (install via `make install-tools` or manually). All generated mocks are stored in `/internal/mocks`.
    - `buf` (optional but recommended for Protobuf management).
    - `protoc-gen-go`, `protoc-gen-connect-go` (for code generation from `.proto`).
 

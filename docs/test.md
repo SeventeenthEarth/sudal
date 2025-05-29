@@ -149,11 +149,62 @@ var _ = Describe("Handler", func() {
 
 ## Mocking Dependencies
 
-Interfaces are mocked using `mockgen` to isolate the component being tested:
+### Mock Generation with mockgen
+
+The project uses `mockgen` to automatically generate mock implementations of interfaces for testing. All mock files are stored in the `/internal/mocks` directory to maintain consistency and organization.
+
+#### Mock File Location
+
+- **Directory**: All generated mocks are stored in `/internal/mocks`
+- **Naming Convention**: Mock files follow the pattern `mock_<feature_name>.go`
+- **Package**: All mocks use the `mocks` package
+
+#### Generating Mocks
+
+Interfaces are mocked using `mockgen` with the following pattern:
 
 ```go
-//go:generate mockgen -destination=../mocks/mock_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/example Service
+//go:generate mockgen -destination=../../internal/mocks/mock_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/example Service
 ```
+
+#### Example Mock Generation
+
+For a repository interface in the health feature:
+
+```go
+//go:generate mockgen -destination=../../internal/mocks/mock_health_repository.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/domain/repo HealthRepository
+```
+
+#### Using Generated Mocks
+
+Generated mocks can be used in tests as follows:
+
+```go
+import (
+    "github.com/seventeenthearth/sudal/internal/mocks"
+    "go.uber.org/mock/gomock"
+)
+
+func TestExample(t *testing.T) {
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    mockRepo := mocks.NewMockHealthRepository(ctrl)
+    mockRepo.EXPECT().SomeMethod().Return(expectedResult, nil)
+
+    // Use the mock in your test
+}
+```
+
+#### Regenerating All Mocks
+
+To regenerate all mocks in the project:
+
+```bash
+make generate
+```
+
+This command will run all `//go:generate` directives and update the mock files in `/internal/mocks`.
 
 ## Testing Protocol Buffer APIs
 

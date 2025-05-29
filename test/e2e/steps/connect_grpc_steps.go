@@ -152,32 +152,55 @@ func WhenIMakeHealthCheckRequestsWithDifferentProtocols(ctx *TestContext) {
 
 // Connect-Go specific Then Steps
 
-// ThenConnectGoResponseShouldIndicateServingStatus checks that Connect-Go response indicates SERVING status
+// ThenConnectGoResponseShouldIndicateServingStatus checks that Connect-Go response indicates SERVING status in BDD style
 func ThenConnectGoResponseShouldIndicateServingStatus(ctx *TestContext) {
-	require.NoError(ctx.T, ctx.Error, "Connect-Go request should not fail")
-	require.NotNil(ctx.T, ctx.ConnectGoResponse, "Connect-Go response should not be nil")
-	require.NotNil(ctx.T, ctx.ConnectGoResponse.Msg, "Connect-Go response message should not be nil")
-	assert.Equal(ctx.T, healthv1.ServingStatus_SERVING_STATUS_SERVING, ctx.ConnectGoResponse.Msg.Status,
-		"Expected SERVING_STATUS_SERVING, got %v", ctx.ConnectGoResponse.Msg.Status)
+	ctx.NoErrorShouldHaveOccurred()
+	ctx.TheConnectGoResponseShouldBeSuccessful()
+
+	if ctx.ConnectGoResponse != nil && ctx.ConnectGoResponse.Msg != nil &&
+		ctx.ConnectGoResponse.Msg.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
+		ctx.T.Errorf("Expected Connect-Go response status to be SERVING_STATUS_SERVING, but got %v", ctx.ConnectGoResponse.Msg.Status)
+	}
 }
 
-// ThenConnectGoResponseShouldNotBeEmpty checks that Connect-Go response is not empty
+// ThenConnectGoResponseShouldNotBeEmpty checks that Connect-Go response is not empty in BDD style
 func ThenConnectGoResponseShouldNotBeEmpty(ctx *TestContext) {
-	require.NoError(ctx.T, ctx.Error, "Connect-Go request should not fail")
-	require.NotNil(ctx.T, ctx.ConnectGoResponse, "Connect-Go response should not be nil")
-	require.NotNil(ctx.T, ctx.ConnectGoResponse.Msg, "Connect-Go response message should not be nil")
-	assert.NotEqual(ctx.T, healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED, ctx.ConnectGoResponse.Msg.Status,
-		"Response status should not be unknown/unspecified")
+	ctx.NoErrorShouldHaveOccurred()
+	ctx.TheConnectGoResponseShouldBeSuccessful()
+
+	if ctx.ConnectGoResponse != nil && ctx.ConnectGoResponse.Msg != nil &&
+		ctx.ConnectGoResponse.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED {
+		ctx.T.Errorf("Expected Connect-Go response status to not be unknown/unspecified, but got %v", ctx.ConnectGoResponse.Msg.Status)
+	}
 }
 
-// ThenAllConnectGoRequestsShouldSucceed checks that all concurrent Connect-Go requests succeeded
+// ThenAllConnectGoRequestsShouldSucceed checks that all concurrent Connect-Go requests succeeded in BDD style
 func ThenAllConnectGoRequestsShouldSucceed(ctx *TestContext) {
-	require.NotEmpty(ctx.T, ctx.ConnectGoConcurrentResults, "No concurrent Connect-Go results found")
+	if len(ctx.ConnectGoConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent Connect-Go results to exist, but none were found")
+		return
+	}
 
+	failedCount := 0
 	for i, result := range ctx.ConnectGoConcurrentResults {
-		assert.NoError(ctx.T, result.Error, "Connect-Go request %d failed with error", i+1)
-		assert.NotNil(ctx.T, result.Response, "Connect-Go request %d has no response", i+1)
-		assert.NotNil(ctx.T, result.Response.Msg, "Connect-Go request %d response message is nil", i+1)
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent Connect-Go request %d to succeed, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent Connect-Go request %d to have a response, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if result.Response.Msg == nil {
+			ctx.T.Errorf("Expected concurrent Connect-Go request %d response message to exist, but it was nil", i+1)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent Connect-Go requests to succeed, but %d failed", len(ctx.ConnectGoConcurrentResults), failedCount)
 	}
 }
 

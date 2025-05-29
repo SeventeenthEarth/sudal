@@ -8,28 +8,40 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Database health specific Then Steps
+// Database health specific Then Steps - BDD Style
 
-// ThenJSONResponseShouldContainDatabaseInformation checks for database information in response
+// ThenJSONResponseShouldContainDatabaseInformation checks for database information in response in BDD style
 func ThenJSONResponseShouldContainDatabaseInformation(ctx *TestContext) {
-	require.NotNil(ctx.T, ctx.Response, "No response received")
-	require.NotEmpty(ctx.T, ctx.ResponseBody, "Response body is empty")
+	ctx.TheJSONResponseShouldHaveStructure([]string{"database"})
+
+	if ctx.Response == nil || len(ctx.ResponseBody) == 0 {
+		return // Error already reported by TheJSONResponseShouldHaveStructure
+	}
 
 	var jsonData map[string]interface{}
 	err := json.Unmarshal(ctx.ResponseBody, &jsonData)
-	require.NoError(ctx.T, err, "Response is not valid JSON")
+	if err != nil {
+		return // Error already reported by TheJSONResponseShouldHaveStructure
+	}
 
 	database, exists := jsonData["database"]
-	require.True(ctx.T, exists, "Response does not contain 'database' field")
+	if !exists {
+		return // Error already reported by TheJSONResponseShouldHaveStructure
+	}
 
 	databaseInfo, ok := database.(map[string]interface{})
-	require.True(ctx.T, ok, "Database field should be an object")
+	if !ok {
+		ctx.T.Errorf("Expected database field to be an object, but got %T", database)
+		return
+	}
 
-	_, statusExists := databaseInfo["status"]
-	assert.True(ctx.T, statusExists, "Database info does not contain 'status' field")
+	if _, statusExists := databaseInfo["status"]; !statusExists {
+		ctx.T.Errorf("Expected database information to contain 'status' field, but it was missing")
+	}
 
-	_, messageExists := databaseInfo["message"]
-	assert.True(ctx.T, messageExists, "Database info does not contain 'message' field")
+	if _, messageExists := databaseInfo["message"]; !messageExists {
+		ctx.T.Errorf("Expected database information to contain 'message' field, but it was missing")
+	}
 }
 
 // ThenJSONResponseShouldContainConnectionStatistics checks for connection statistics
@@ -311,56 +323,119 @@ func ThenConnectionStatisticsShouldIncludeCurrentUsageMetrics(ctx *TestContext) 
 	}
 }
 
-// ThenAllDatabaseHealthRequestsShouldSucceed checks that all concurrent database health requests succeeded
+// ThenAllDatabaseHealthRequestsShouldSucceed checks that all concurrent database health requests succeeded in BDD style
 func ThenAllDatabaseHealthRequestsShouldSucceed(ctx *TestContext) {
-	require.NotEmpty(ctx.T, ctx.ConcurrentResults, "No concurrent results found")
+	if len(ctx.ConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent database health results to exist, but none were found")
+		return
+	}
 
+	failedCount := 0
 	for i, result := range ctx.ConcurrentResults {
-		assert.NoError(ctx.T, result.Error, "Request %d failed with error", i+1)
-		assert.NotNil(ctx.T, result.Response, "Request %d has no response", i+1)
-		assert.Equal(ctx.T, 200, result.Response.StatusCode,
-			"Request %d expected status 200, got %d", i+1, result.Response.StatusCode)
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent database health request %d to succeed, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent database health request %d to have a response, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if result.Response.StatusCode != 200 {
+			ctx.T.Errorf("Expected concurrent database health request %d to have status 200, but got %d", i+1, result.Response.StatusCode)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent database health requests to succeed, but %d failed", len(ctx.ConcurrentResults), failedCount)
 	}
 }
 
-// ThenAllResponsesShouldContainValidConnectionStatistics checks all concurrent responses for valid stats
+// ThenAllResponsesShouldContainValidConnectionStatistics checks all concurrent responses for valid stats in BDD style
 func ThenAllResponsesShouldContainValidConnectionStatistics(ctx *TestContext) {
-	require.NotEmpty(ctx.T, ctx.ConcurrentResults, "No concurrent results found")
+	if len(ctx.ConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent results to exist for connection statistics validation, but none were found")
+		return
+	}
 
+	failedCount := 0
 	for i, result := range ctx.ConcurrentResults {
-		assert.NoError(ctx.T, result.Error, "Request %d failed with error", i+1)
-		assert.NotNil(ctx.T, result.Response, "Request %d has no response", i+1)
-		assert.NotEmpty(ctx.T, result.Body, "Request %d has empty response body", i+1)
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent request %d to succeed for statistics validation, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent request %d to have a response for statistics validation, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if len(result.Body) == 0 {
+			ctx.T.Errorf("Expected concurrent request %d to have response body for statistics validation, but it was empty", i+1)
+			failedCount++
+			continue
+		}
 
 		var jsonData map[string]interface{}
 		err := json.Unmarshal(result.Body, &jsonData)
-		assert.NoError(ctx.T, err, "Request %d response is not valid JSON", i+1)
+		if err != nil {
+			ctx.T.Errorf("Expected concurrent request %d response to be valid JSON for statistics validation, but got error: %v", i+1, err)
+			failedCount++
+			continue
+		}
 
 		database, exists := jsonData["database"]
-		assert.True(ctx.T, exists, "Request %d response does not contain 'database' field", i+1)
+		if !exists {
+			ctx.T.Errorf("Expected concurrent request %d response to contain 'database' field for statistics validation, but it was missing", i+1)
+			failedCount++
+			continue
+		}
 
 		databaseInfo, ok := database.(map[string]interface{})
-		assert.True(ctx.T, ok, "Request %d database field should be an object", i+1)
+		if !ok {
+			ctx.T.Errorf("Expected concurrent request %d database field to be an object for statistics validation, but got %T", i+1, database)
+			failedCount++
+			continue
+		}
 
 		stats, statsExists := databaseInfo["stats"]
-		assert.True(ctx.T, statsExists, "Request %d database info does not contain 'stats' field", i+1)
+		if !statsExists {
+			ctx.T.Errorf("Expected concurrent request %d database info to contain 'stats' field for statistics validation, but it was missing", i+1)
+			failedCount++
+			continue
+		}
 
 		statsMap, ok := stats.(map[string]interface{})
-		assert.True(ctx.T, ok, "Request %d stats field should be an object", i+1)
+		if !ok {
+			ctx.T.Errorf("Expected concurrent request %d stats field to be an object for statistics validation, but got %T", i+1, stats)
+			failedCount++
+			continue
+		}
 
 		// Basic validation of stats structure
 		requiredFields := []string{"max_open_connections", "open_connections", "in_use", "idle"}
 		for _, field := range requiredFields {
 			value, exists := statsMap[field]
-			assert.True(ctx.T, exists, "Request %d stats does not contain '%s' field", i+1, field)
+			if !exists {
+				ctx.T.Errorf("Expected concurrent request %d stats to contain '%s' field for statistics validation, but it was missing", i+1, field)
+				failedCount++
+				continue
+			}
 
 			// Check if value is a number
 			switch value.(type) {
 			case int, int64, float64:
 				// Valid number type
 			default:
-				ctx.T.Errorf("Request %d %s should be a number, got %T", i+1, field, value)
+				ctx.T.Errorf("Expected concurrent request %d %s to be a number for statistics validation, but got %T", i+1, field, value)
+				failedCount++
 			}
 		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent responses to contain valid connection statistics, but %d had issues", len(ctx.ConcurrentResults), failedCount)
 	}
 }

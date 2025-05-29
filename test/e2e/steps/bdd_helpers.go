@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -161,8 +162,203 @@ func RunTableDrivenBDDTest(t *testing.T, serverURL string, test TableDrivenBDDTe
 	})
 }
 
-// Helper methods for common assertions
+// BDD-style assertion methods
 
+// TheResponseStatusCodeShouldBe checks the HTTP status code in BDD style
+func (ctx *TestContext) TheResponseStatusCodeShouldBe(expectedCode int) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but no response was received")
+		return
+	}
+	if ctx.Response.StatusCode != expectedCode {
+		ctx.T.Errorf("Expected status code to be %d, but got %d", expectedCode, ctx.Response.StatusCode)
+	}
+}
+
+// TheJSONResponseShouldContainField checks a specific field in JSON response in BDD style
+func (ctx *TestContext) TheJSONResponseShouldContainField(fieldPath string, expectedValue interface{}) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but no response was received")
+		return
+	}
+	if len(ctx.ResponseBody) == 0 {
+		ctx.T.Errorf("Expected response body to contain data, but it was empty")
+		return
+	}
+
+	var jsonData map[string]interface{}
+	err := json.Unmarshal(ctx.ResponseBody, &jsonData)
+	if err != nil {
+		ctx.T.Errorf("Expected response to be valid JSON, but got error: %v", err)
+		return
+	}
+
+	value, exists := jsonData[fieldPath]
+	if !exists {
+		ctx.T.Errorf("Expected JSON response to contain field '%s', but it was not found", fieldPath)
+		return
+	}
+	if value != expectedValue {
+		ctx.T.Errorf("Expected field '%s' to be %v, but got %v", fieldPath, expectedValue, value)
+	}
+}
+
+// TheJSONResponseShouldContain checks if JSON response contains a specific field in BDD style
+func (ctx *TestContext) TheJSONResponseShouldContain(fieldPath string) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but no response was received")
+		return
+	}
+	if len(ctx.ResponseBody) == 0 {
+		ctx.T.Errorf("Expected response body to contain data, but it was empty")
+		return
+	}
+
+	var jsonData map[string]interface{}
+	err := json.Unmarshal(ctx.ResponseBody, &jsonData)
+	if err != nil {
+		ctx.T.Errorf("Expected response to be valid JSON, but got error: %v", err)
+		return
+	}
+
+	_, exists := jsonData[fieldPath]
+	if !exists {
+		ctx.T.Errorf("Expected JSON response to contain field '%s', but it was not found", fieldPath)
+	}
+}
+
+// TheResponseShouldNotBeEmpty checks that response body is not empty in BDD style
+func (ctx *TestContext) TheResponseShouldNotBeEmpty() {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but no response was received")
+		return
+	}
+	if len(ctx.ResponseBody) == 0 {
+		ctx.T.Errorf("Expected response body to contain data, but it was empty")
+	}
+}
+
+// TheContentTypeShouldBe checks the Content-Type header in BDD style
+func (ctx *TestContext) TheContentTypeShouldBe(expectedContentType string) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but no response was received")
+		return
+	}
+	contentType := ctx.Response.Header.Get("Content-Type")
+	if !strings.Contains(contentType, expectedContentType) {
+		ctx.T.Errorf("Expected Content-Type to contain '%s', but got '%s'", expectedContentType, contentType)
+	}
+}
+
+// NoErrorShouldHaveOccurred checks that no error occurred in BDD style
+func (ctx *TestContext) NoErrorShouldHaveOccurred() {
+	if ctx.Error != nil {
+		ctx.T.Errorf("Expected no error to occur, but got: %v", ctx.Error)
+	}
+}
+
+// AnErrorShouldHaveOccurred checks that an error occurred in BDD style
+func (ctx *TestContext) AnErrorShouldHaveOccurred() {
+	if ctx.Error == nil {
+		ctx.T.Errorf("Expected an error to occur, but none was received")
+	}
+}
+
+// Advanced BDD-style assertions for gRPC and Connect-Go testing
+
+// TheGRPCResponseShouldBeSuccessful checks gRPC response success in BDD style
+func (ctx *TestContext) TheGRPCResponseShouldBeSuccessful() {
+	if ctx.GRPCResponse == nil {
+		ctx.T.Errorf("Expected gRPC response to exist, but none was received")
+		return
+	}
+	// gRPC specific validations can be added here
+}
+
+// TheConnectGoResponseShouldBeSuccessful checks Connect-Go response success in BDD style
+func (ctx *TestContext) TheConnectGoResponseShouldBeSuccessful() {
+	if ctx.ConnectGoResponse == nil {
+		ctx.T.Errorf("Expected Connect-Go response to exist, but none was received")
+		return
+	}
+	if ctx.ConnectGoResponse.Msg == nil {
+		ctx.T.Errorf("Expected Connect-Go response message to exist, but it was nil")
+		return
+	}
+}
+
+// TheResponseHeaderShouldContain checks if response contains specific header in BDD style
+func (ctx *TestContext) TheResponseHeaderShouldContain(headerName, expectedValue string) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but none was received")
+		return
+	}
+	actualValue := ctx.Response.Header.Get(headerName)
+	if actualValue == "" {
+		ctx.T.Errorf("Expected response to contain header '%s', but it was not found", headerName)
+		return
+	}
+	if !strings.Contains(actualValue, expectedValue) {
+		ctx.T.Errorf("Expected header '%s' to contain '%s', but got '%s'", headerName, expectedValue, actualValue)
+	}
+}
+
+// TheJSONResponseShouldHaveStructure checks JSON structure in BDD style
+func (ctx *TestContext) TheJSONResponseShouldHaveStructure(requiredFields []string) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist, but none was received")
+		return
+	}
+	if len(ctx.ResponseBody) == 0 {
+		ctx.T.Errorf("Expected response body to contain data, but it was empty")
+		return
+	}
+
+	var jsonData map[string]interface{}
+	err := json.Unmarshal(ctx.ResponseBody, &jsonData)
+	if err != nil {
+		ctx.T.Errorf("Expected response to be valid JSON, but got error: %v", err)
+		return
+	}
+
+	for _, field := range requiredFields {
+		if _, exists := jsonData[field]; !exists {
+			ctx.T.Errorf("Expected JSON response to contain required field '%s', but it was missing", field)
+		}
+	}
+}
+
+// AllConcurrentRequestsShouldSucceed checks all concurrent requests in BDD style
+func (ctx *TestContext) AllConcurrentRequestsShouldSucceed() {
+	if len(ctx.ConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent results to exist, but none were found")
+		return
+	}
+
+	failedCount := 0
+	for i, result := range ctx.ConcurrentResults {
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent request %d to succeed, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent request %d to have a response, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if result.Response.StatusCode != http.StatusOK {
+			ctx.T.Errorf("Expected concurrent request %d to have status 200, but got %d", i+1, result.Response.StatusCode)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent requests to succeed, but %d failed", len(ctx.ConcurrentResults), failedCount)
+	}
+}
+
+// Legacy methods for backward compatibility (will be deprecated)
 // AssertStatusCode checks the HTTP status code
 func (ctx *TestContext) AssertStatusCode(expectedCode int) {
 	require.NotNil(ctx.T, ctx.Response, "No response received")

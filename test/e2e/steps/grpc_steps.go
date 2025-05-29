@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -136,73 +135,120 @@ func WhenIMakeConcurrentGRPCHealthCheckRequests(ctx *TestContext, numRequests in
 
 // gRPC specific Then Steps
 
-// ThenGRPCResponseShouldIndicateServingStatus checks that gRPC response indicates SERVING status
+// ThenGRPCResponseShouldIndicateServingStatus checks that gRPC response indicates SERVING status in BDD style
 func ThenGRPCResponseShouldIndicateServingStatus(ctx *TestContext) {
-	require.NoError(ctx.T, ctx.Error, "gRPC request should not fail")
-	require.NotNil(ctx.T, ctx.GRPCResponse, "gRPC response should not be nil")
-	assert.Equal(ctx.T, healthv1.ServingStatus_SERVING_STATUS_SERVING, ctx.GRPCResponse.Status,
-		"Expected SERVING_STATUS_SERVING, got %v", ctx.GRPCResponse.Status)
+	ctx.NoErrorShouldHaveOccurred()
+	ctx.TheGRPCResponseShouldBeSuccessful()
+
+	if ctx.GRPCResponse != nil && ctx.GRPCResponse.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
+		ctx.T.Errorf("Expected gRPC response status to be SERVING_STATUS_SERVING, but got %v", ctx.GRPCResponse.Status)
+	}
 }
 
-// ThenGRPCResponseShouldNotBeEmpty checks that gRPC response is not empty
+// ThenGRPCResponseShouldNotBeEmpty checks that gRPC response is not empty in BDD style
 func ThenGRPCResponseShouldNotBeEmpty(ctx *TestContext) {
-	require.NoError(ctx.T, ctx.Error, "gRPC request should not fail")
-	require.NotNil(ctx.T, ctx.GRPCResponse, "gRPC response should not be nil")
-	assert.NotEqual(ctx.T, healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED, ctx.GRPCResponse.Status,
-		"Response status should not be unknown/unspecified")
+	ctx.NoErrorShouldHaveOccurred()
+	ctx.TheGRPCResponseShouldBeSuccessful()
+
+	if ctx.GRPCResponse != nil && ctx.GRPCResponse.Status == healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED {
+		ctx.T.Errorf("Expected gRPC response status to not be unknown/unspecified, but got %v", ctx.GRPCResponse.Status)
+	}
 }
 
-// ThenAllGRPCRequestsShouldSucceed checks that all concurrent gRPC requests succeeded
+// ThenAllGRPCRequestsShouldSucceed checks that all concurrent gRPC requests succeeded in BDD style
 func ThenAllGRPCRequestsShouldSucceed(ctx *TestContext) {
-	require.NotEmpty(ctx.T, ctx.GRPCConcurrentResults, "No concurrent gRPC results found")
+	if len(ctx.GRPCConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent gRPC results to exist, but none were found")
+		return
+	}
 
+	failedCount := 0
 	for i, result := range ctx.GRPCConcurrentResults {
-		assert.NoError(ctx.T, result.Error, "gRPC request %d failed with error", i+1)
-		assert.NotNil(ctx.T, result.Response, "gRPC request %d has no response", i+1)
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent gRPC request %d to succeed, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent gRPC request %d to have a response, but none was received", i+1)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent gRPC requests to succeed, but %d failed", len(ctx.GRPCConcurrentResults), failedCount)
 	}
 }
 
-// ThenAllGRPCResponsesShouldIndicateServingStatus checks all concurrent gRPC responses for SERVING status
+// ThenAllGRPCResponsesShouldIndicateServingStatus checks all concurrent gRPC responses for SERVING status in BDD style
 func ThenAllGRPCResponsesShouldIndicateServingStatus(ctx *TestContext) {
-	require.NotEmpty(ctx.T, ctx.GRPCConcurrentResults, "No concurrent gRPC results found")
+	if len(ctx.GRPCConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent gRPC results to exist for serving status check, but none were found")
+		return
+	}
 
+	failedCount := 0
 	for i, result := range ctx.GRPCConcurrentResults {
-		assert.NoError(ctx.T, result.Error, "gRPC request %d failed with error", i+1)
-		assert.NotNil(ctx.T, result.Response, "gRPC request %d has no response", i+1)
-		assert.Equal(ctx.T, healthv1.ServingStatus_SERVING_STATUS_SERVING, result.Response.Status,
-			"gRPC request %d expected SERVING_STATUS_SERVING, got %v", i+1, result.Response.Status)
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent gRPC request %d to succeed for serving status check, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent gRPC request %d to have a response for serving status check, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if result.Response.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
+			ctx.T.Errorf("Expected concurrent gRPC request %d to have SERVING_STATUS_SERVING, but got %v", i+1, result.Response.Status)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent gRPC responses to indicate serving status, but %d failed", len(ctx.GRPCConcurrentResults), failedCount)
 	}
 }
 
-// ThenGRPCResponseShouldContainMetadata checks that gRPC response contains metadata
+// ThenGRPCResponseShouldContainMetadata checks that gRPC response contains metadata in BDD style
 func ThenGRPCResponseShouldContainMetadata(ctx *TestContext) {
-	require.NoError(ctx.T, ctx.Error, "gRPC request should not fail")
-	require.NotNil(ctx.T, ctx.GRPCResponse, "gRPC response should not be nil")
+	ctx.NoErrorShouldHaveOccurred()
+	ctx.TheGRPCResponseShouldBeSuccessful()
 
-	// Check that we received some metadata (even if empty, the map should exist)
-	assert.NotNil(ctx.T, ctx.GRPCMetadata, "gRPC metadata should not be nil")
-
+	if ctx.GRPCMetadata == nil {
+		ctx.T.Errorf("Expected gRPC metadata to exist, but it was nil")
+	}
 	// Note: We don't assert specific metadata content as the server might not return
 	// specific metadata, but we verify that the metadata mechanism is working
 }
 
-// ThenGRPCConnectionShouldBeEstablished checks that gRPC connection is established
+// ThenGRPCConnectionShouldBeEstablished checks that gRPC connection is established in BDD style
 func ThenGRPCConnectionShouldBeEstablished(ctx *TestContext) {
-	require.NotNil(ctx.T, ctx.GRPCConn, "gRPC connection should be established")
-	require.NotNil(ctx.T, ctx.GRPCClient, "gRPC client should be created")
+	if ctx.GRPCConn == nil {
+		ctx.T.Errorf("Expected gRPC connection to be established, but it was nil")
+		return
+	}
+	if ctx.GRPCClient == nil {
+		ctx.T.Errorf("Expected gRPC client to be created, but it was nil")
+		return
+	}
 
 	// Test connection by making a simple call
 	grpcCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	_, err := ctx.GRPCClient.Check(grpcCtx, &healthv1.CheckRequest{})
-	assert.NoError(ctx.T, err, "gRPC connection should be working")
+	if err != nil {
+		ctx.T.Errorf("Expected gRPC connection to be working, but got error: %v", err)
+	}
 }
 
-// ThenGRPCConnectionShouldBeClosed checks that gRPC connection is properly closed
+// ThenGRPCConnectionShouldBeClosed checks that gRPC connection is properly closed in BDD style
 func ThenGRPCConnectionShouldBeClosed(ctx *TestContext) {
 	if ctx.GRPCConn != nil {
 		err := ctx.GRPCConn.Close()
-		assert.NoError(ctx.T, err, "gRPC connection should close without error")
+		if err != nil {
+			ctx.T.Errorf("Expected gRPC connection to close without error, but got: %v", err)
+		}
 	}
 }

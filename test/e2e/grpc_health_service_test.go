@@ -10,8 +10,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/seventeenthearth/sudal/test/e2e/steps"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/net/http2"
 
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
@@ -228,11 +226,22 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 		req := connect.NewRequest(&healthv1.CheckRequest{})
 		resp, err := client.Check(ctx, req)
 
-		// Then: Response should indicate serving status
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Msg)
-		assert.Equal(t, healthv1.ServingStatus_SERVING_STATUS_SERVING, resp.Msg.Status)
+		// Then: Response should indicate serving status (BDD style)
+		if err != nil {
+			t.Errorf("Expected Connect-Go gRPC request to succeed, but got error: %v", err)
+			return
+		}
+		if resp == nil {
+			t.Errorf("Expected Connect-Go gRPC response to exist, but it was nil")
+			return
+		}
+		if resp.Msg == nil {
+			t.Errorf("Expected Connect-Go gRPC response message to exist, but it was nil")
+			return
+		}
+		if resp.Msg.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
+			t.Errorf("Expected Connect-Go gRPC response status to be SERVING_STATUS_SERVING, but got %v", resp.Msg.Status)
+		}
 	})
 
 	// Test Connect-Go client with gRPC-Web protocol
@@ -251,11 +260,22 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 		req := connect.NewRequest(&healthv1.CheckRequest{})
 		resp, err := client.Check(ctx, req)
 
-		// Then: Response should indicate serving status
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Msg)
-		assert.Equal(t, healthv1.ServingStatus_SERVING_STATUS_SERVING, resp.Msg.Status)
+		// Then: Response should indicate serving status (BDD style)
+		if err != nil {
+			t.Errorf("Expected Connect-Go gRPC-Web request to succeed, but got error: %v", err)
+			return
+		}
+		if resp == nil {
+			t.Errorf("Expected Connect-Go gRPC-Web response to exist, but it was nil")
+			return
+		}
+		if resp.Msg == nil {
+			t.Errorf("Expected Connect-Go gRPC-Web response message to exist, but it was nil")
+			return
+		}
+		if resp.Msg.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
+			t.Errorf("Expected Connect-Go gRPC-Web response status to be SERVING_STATUS_SERVING, but got %v", resp.Msg.Status)
+		}
 	})
 
 	// Test Connect-Go client with default protocol (HTTP/JSON)
@@ -274,10 +294,21 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 		req := connect.NewRequest(&healthv1.CheckRequest{})
 		resp, err := client.Check(ctx, req)
 
-		// Then: Response should indicate serving status
-		require.NoError(t, err)
-		require.NotNil(t, resp)
-		require.NotNil(t, resp.Msg)
-		assert.Equal(t, healthv1.ServingStatus_SERVING_STATUS_SERVING, resp.Msg.Status)
+		// Then: Response should indicate serving status (BDD style)
+		if err != nil {
+			t.Errorf("Expected Connect-Go default protocol request to succeed, but got error: %v", err)
+			return
+		}
+		if resp == nil {
+			t.Errorf("Expected Connect-Go default protocol response to exist, but it was nil")
+			return
+		}
+		if resp.Msg == nil {
+			t.Errorf("Expected Connect-Go default protocol response message to exist, but it was nil")
+			return
+		}
+		if resp.Msg.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
+			t.Errorf("Expected Connect-Go default protocol response status to be SERVING_STATUS_SERVING, but got %v", resp.Msg.Status)
+		}
 	})
 }

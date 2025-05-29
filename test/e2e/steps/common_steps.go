@@ -175,30 +175,58 @@ func WhenIMakeConcurrentPOSTRequests(ctx *TestContext, numRequests int, endpoint
 	ctx.ConcurrentResults = results
 }
 
-// Common Then Steps
+// Common Then Steps - BDD Style
 
-// ThenHTTPStatusShouldBe checks the HTTP status code
+// ThenHTTPStatusShouldBe checks the HTTP status code in BDD style
 func ThenHTTPStatusShouldBe(ctx *TestContext, expectedStatus int) {
+	ctx.TheResponseStatusCodeShouldBe(expectedStatus)
+}
+
+// ThenJSONResponseShouldContainStatus checks for a specific status in JSON response in BDD style
+func ThenJSONResponseShouldContainStatus(ctx *TestContext, expectedStatus string) {
+	ctx.TheJSONResponseShouldContainField("status", expectedStatus)
+}
+
+// ThenResponseShouldNotBeEmpty checks that response is not empty in BDD style
+func ThenResponseShouldNotBeEmpty(ctx *TestContext) {
+	ctx.TheResponseShouldNotBeEmpty()
+}
+
+// ThenContentTypeShouldBe checks the Content-Type header in BDD style
+func ThenContentTypeShouldBe(ctx *TestContext, expectedContentType string) {
+	ctx.TheContentTypeShouldBe(expectedContentType)
+}
+
+// Legacy functions for backward compatibility (will be deprecated)
+// ThenHTTPStatusShouldBeLegacy checks the HTTP status code using testify
+func ThenHTTPStatusShouldBeLegacy(ctx *TestContext, expectedStatus int) {
 	ctx.AssertStatusCode(expectedStatus)
 }
 
-// ThenJSONResponseShouldContainStatus checks for a specific status in JSON response
-func ThenJSONResponseShouldContainStatus(ctx *TestContext, expectedStatus string) {
-	ctx.AssertJSONField("status", expectedStatus)
-}
-
-// ThenResponseShouldNotBeEmpty checks that response is not empty
-func ThenResponseShouldNotBeEmpty(ctx *TestContext) {
-	ctx.AssertResponseNotEmpty()
-}
-
-// ThenContentTypeShouldBe checks the Content-Type header
-func ThenContentTypeShouldBe(ctx *TestContext, expectedContentType string) {
-	ctx.AssertContentType(expectedContentType)
-}
-
-// ThenAllRequestsShouldSucceed checks that all concurrent requests succeeded
+// ThenAllRequestsShouldSucceed checks that all concurrent requests succeeded in BDD style
 func ThenAllRequestsShouldSucceed(ctx *TestContext) {
+	if len(ctx.ConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent results to exist, but none were found")
+		return
+	}
+
+	for i, result := range ctx.ConcurrentResults {
+		if result.Error != nil {
+			ctx.T.Errorf("Expected request %d to succeed, but got error: %v", i+1, result.Error)
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected request %d to have a response, but none was received", i+1)
+			continue
+		}
+		if result.Response.StatusCode != http.StatusOK {
+			ctx.T.Errorf("Expected request %d to have status 200, but got %d", i+1, result.Response.StatusCode)
+		}
+	}
+}
+
+// Legacy version using testify
+func ThenAllRequestsShouldSucceedLegacy(ctx *TestContext) {
 	require.NotEmpty(ctx.T, ctx.ConcurrentResults, "No concurrent results found")
 
 	for i, result := range ctx.ConcurrentResults {
@@ -211,30 +239,96 @@ func ThenAllRequestsShouldSucceed(ctx *TestContext) {
 	}
 }
 
-// ThenAllResponsesShouldContainStatus checks that all concurrent responses contain expected status
+// ThenAllResponsesShouldContainStatus checks that all concurrent responses contain expected status in BDD style
 func ThenAllResponsesShouldContainStatus(ctx *TestContext, expectedStatus string) {
-	require.NotEmpty(ctx.T, ctx.ConcurrentResults, "No concurrent results found")
+	if len(ctx.ConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent results to exist, but none were found")
+		return
+	}
 
+	failedCount := 0
 	for i, result := range ctx.ConcurrentResults {
-		assert.NoError(ctx.T, result.Error, "Request %d failed with error", i+1)
-		assert.NotNil(ctx.T, result.Response, "Request %d has no response", i+1)
-		assert.NotEmpty(ctx.T, result.Body, "Request %d has empty response body", i+1)
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent request %d to succeed, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent request %d to have a response, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if len(result.Body) == 0 {
+			ctx.T.Errorf("Expected concurrent request %d to have response body, but it was empty", i+1)
+			failedCount++
+			continue
+		}
 
 		var jsonData map[string]interface{}
 		err := json.Unmarshal(result.Body, &jsonData)
-		assert.NoError(ctx.T, err, "Request %d response is not valid JSON", i+1)
+		if err != nil {
+			ctx.T.Errorf("Expected concurrent request %d response to be valid JSON, but got error: %v", i+1, err)
+			failedCount++
+			continue
+		}
 
 		status, exists := jsonData["status"]
-		assert.True(ctx.T, exists, "Request %d response does not contain 'status' field", i+1)
-		assert.Equal(ctx.T, expectedStatus, status,
-			"Request %d expected status '%s', got '%v'", i+1, expectedStatus, status)
+		if !exists {
+			ctx.T.Errorf("Expected concurrent request %d response to contain 'status' field, but it was missing", i+1)
+			failedCount++
+			continue
+		}
+		if status != expectedStatus {
+			ctx.T.Errorf("Expected concurrent request %d status to be '%s', but got '%v'", i+1, expectedStatus, status)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent requests to contain status '%s', but %d failed", len(ctx.ConcurrentResults), expectedStatus, failedCount)
 	}
 }
 
-// Monitoring specific Then Steps
+// Monitoring specific Then Steps - BDD Style
 
-// ThenResponseShouldBeLightweightForMonitoring checks that response is lightweight for monitoring
+// ThenResponseShouldBeLightweightForMonitoring checks that response is lightweight for monitoring in BDD style
 func ThenResponseShouldBeLightweightForMonitoring(ctx *TestContext) {
+	if ctx.Response == nil {
+		ctx.T.Errorf("Expected response to exist for monitoring check, but none was received")
+		return
+	}
+	if len(ctx.ResponseBody) == 0 {
+		ctx.T.Errorf("Expected response body to contain data for monitoring check, but it was empty")
+		return
+	}
+
+	// Check response size is small (good for monitoring)
+	contentLength := len(ctx.ResponseBody)
+	if contentLength >= 1000 {
+		ctx.T.Errorf("Expected response to be lightweight for monitoring (< 1000 bytes), but got %d bytes", contentLength)
+		return
+	}
+
+	var jsonData map[string]interface{}
+	err := json.Unmarshal(ctx.ResponseBody, &jsonData)
+	if err != nil {
+		ctx.T.Errorf("Expected response to be valid JSON for monitoring, but got error: %v", err)
+		return
+	}
+
+	// Should have minimal fields for quick monitoring
+	if len(jsonData) > 3 {
+		ctx.T.Errorf("Expected monitoring response to have minimal fields (≤ 3), but got %d fields", len(jsonData))
+	}
+
+	// Should contain status field
+	if _, exists := jsonData["status"]; !exists {
+		ctx.T.Errorf("Expected monitoring response to contain 'status' field, but it was missing")
+	}
+}
+
+// Legacy monitoring function for backward compatibility
+func ThenResponseShouldBeLightweightForMonitoringLegacy(ctx *TestContext) {
 	require.NotNil(ctx.T, ctx.Response, "No response received")
 	require.NotEmpty(ctx.T, ctx.ResponseBody, "Response body is empty")
 

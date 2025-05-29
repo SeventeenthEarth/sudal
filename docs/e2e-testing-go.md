@@ -4,7 +4,7 @@ This document describes the Go-based End-to-End (E2E) testing framework that rep
 
 ## Overview
 
-The Go E2E testing framework provides a BDD (Behavior Driven Development) style testing approach using Go's standard testing package and testify assertions. It maintains the Given-When-Then structure while leveraging Go's type safety and performance benefits.
+The Go E2E testing framework provides a pure BDD (Behavior Driven Development) style testing approach using a custom BDD framework optimized for gRPC testing. It maintains the Given-When-Then structure while leveraging Go's type safety and performance benefits, with natural language assertions that enhance readability and maintainability.
 
 ## Architecture
 
@@ -54,11 +54,11 @@ func TestExample(t *testing.T) {
             steps.WhenIMakeGETRequest(ctx, "/healthz")
         },
         Then: func(ctx *steps.TestContext) {
-            steps.ThenHTTPStatusShouldBe(ctx, 200)
-            steps.ThenJSONResponseShouldContainStatus(ctx, "healthy")
+            ctx.TheResponseStatusCodeShouldBe(200)
+            ctx.TheJSONResponseShouldContainField("status", "healthy")
         },
     }
-    
+
     steps.RunBDDScenario(t, serverURL, scenario)
 }
 ```
@@ -89,8 +89,8 @@ func TestTableDriven(t *testing.T) {
         },
         Then: func(ctx *steps.TestContext, testData interface{}) {
             testCase := testData.(TestCase)
-            steps.ThenHTTPStatusShouldBe(ctx, testCase.ExpectedStatus)
-            steps.ThenJSONResponseShouldContainStatus(ctx, testCase.ExpectedValue)
+            ctx.TheResponseStatusCodeShouldBe(testCase.ExpectedStatus)
+            ctx.TheJSONResponseShouldContainField("status", testCase.ExpectedValue)
         },
     }
 
@@ -133,11 +133,13 @@ func TestMultipleScenarios(t *testing.T) {
 - `WhenIMakePOSTRequest(ctx, endpoint, contentType, body)`: Makes POST request
 - `WhenIMakeConcurrentRequests(ctx, numRequests, endpoint)`: Makes concurrent requests
 
-#### Then Steps
-- `ThenHTTPStatusShouldBe(ctx, expectedStatus)`: Checks HTTP status
-- `ThenJSONResponseShouldContainStatus(ctx, expectedStatus)`: Checks JSON status field
-- `ThenResponseShouldNotBeEmpty(ctx)`: Validates response is not empty
-- `ThenContentTypeShouldBe(ctx, expectedContentType)`: Checks Content-Type header
+#### Then Steps (BDD Style)
+- `ctx.TheResponseStatusCodeShouldBe(expectedStatus)`: Checks HTTP status in natural language
+- `ctx.TheJSONResponseShouldContainField("status", expectedValue)`: Checks JSON field value
+- `ctx.TheResponseShouldNotBeEmpty()`: Validates response is not empty
+- `ctx.TheContentTypeShouldBe(expectedContentType)`: Checks Content-Type header
+- `ctx.TheJSONResponseShouldHaveStructure([]string{"field1", "field2"})`: Validates JSON structure
+- `ctx.AllConcurrentRequestsShouldSucceed()`: Validates all concurrent requests succeeded
 
 ### Connect-Go Steps
 
@@ -183,7 +185,7 @@ go test -v ./test/e2e -run TestConnectGoHealthService
    make run
    ```
 
-2. **Dependencies**: Ensure testify is installed
+2. **Dependencies**: Ensure all dependencies are installed
    ```bash
    go mod tidy
    ```
@@ -206,13 +208,20 @@ steps.WhenIMakeHealthCheckRequestWithInvalidContentType(ctx)
 steps.ThenHTTPStatusShouldBe(ctx, 415)
 ```
 
-### Assertions
-Rich assertion library through testify:
+### BDD Style Assertions
+Natural language assertions for enhanced readability:
 
 ```go
-ctx.AssertStatusCode(200)
-ctx.AssertJSONField("status", "healthy")
-ctx.AssertContentType("application/json")
+// BDD Style - Natural Language
+ctx.TheResponseStatusCodeShouldBe(200)
+ctx.TheJSONResponseShouldContainField("status", "healthy")
+ctx.TheContentTypeShouldBe("application/json")
+ctx.TheResponseShouldNotBeEmpty()
+ctx.AllConcurrentRequestsShouldSucceed()
+
+// gRPC and Connect-Go specific
+ctx.TheGRPCResponseShouldBeSuccessful()
+ctx.TheConnectGoResponseShouldBeSuccessful()
 ```
 
 ## Migration from Python

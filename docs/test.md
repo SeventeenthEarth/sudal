@@ -97,12 +97,14 @@ The project follows a Behavior-Driven Development (BDD) approach to testing usin
 
 ## End-to-End Tests
 
-End-to-end tests verify that the entire system works correctly by testing against a running server. These tests:
+End-to-end tests verify that the entire system works correctly by testing against a running server using a **custom BDD framework optimized for gRPC testing**. These tests:
 
-1. Require the server to be running in Docker (using `make run` in a separate terminal)
-2. Connect to the server and verify that it responds correctly
-3. Test actual functionality by making requests to the server
-4. Fail if the server is not accessible or not functioning correctly
+1. Use pure BDD style with natural language assertions for enhanced readability
+2. Require the server to be running in Docker (using `make run` in a separate terminal)
+3. Connect to the server and verify that it responds correctly using custom BDD assertions
+4. Test actual functionality by making requests to the server with gRPC-optimized testing
+5. Support both Connect-Go and native gRPC protocols
+6. Fail if the server is not accessible or not functioning correctly
 
 To run end-to-end tests:
 
@@ -112,6 +114,18 @@ make run
 
 # Then, in another terminal, run the e2e tests
 make test.e2e
+```
+
+### BDD Style E2E Testing
+
+E2E tests use a custom BDD framework with natural language assertions:
+
+```go
+// BDD Style - Natural Language
+ctx.TheResponseStatusCodeShouldBe(200)
+ctx.TheJSONResponseShouldContainField("status", "SERVING_STATUS_SERVING")
+ctx.TheGRPCResponseShouldBeSuccessful()
+ctx.AllConcurrentRequestsShouldSucceed()
 ```
 
 ### Coverage for End-to-End Tests

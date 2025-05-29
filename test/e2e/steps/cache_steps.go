@@ -7,9 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
@@ -74,7 +71,7 @@ func GetCacheUtil(ctx *CacheTestContext) *cacheutil.CacheUtil {
 
 // Cache BDD Step Functions
 
-// GivenCacheUtilityIsAvailable initializes the cache utility for testing
+// GivenCacheUtilityIsAvailable initializes the cache utility for testing in BDD style
 func GivenCacheUtilityIsAvailable(ctx *TestContext) {
 	// Set test environment variables
 	os.Setenv("APP_ENV", "test")
@@ -84,16 +81,28 @@ func GivenCacheUtilityIsAvailable(ctx *TestContext) {
 
 	// Load configuration first
 	cfg, err := config.LoadConfig("")
-	require.NoError(ctx.T, err, "Failed to load configuration")
+	if err != nil {
+		ctx.T.Errorf("Expected configuration to load successfully, but got error: %v", err)
+		return
+	}
 
 	// Create Redis manager directly (bypassing DI for E2E tests)
 	redisManager, err := database.NewRedisManager(cfg)
-	require.NoError(ctx.T, err, "Failed to create Redis manager")
-	require.NotNil(ctx.T, redisManager, "Redis manager should not be nil")
+	if err != nil {
+		ctx.T.Errorf("Expected Redis manager to be created successfully, but got error: %v", err)
+		return
+	}
+	if redisManager == nil {
+		ctx.T.Errorf("Expected Redis manager to exist, but it was nil")
+		return
+	}
 
 	// Create cache utility directly
 	cacheUtil := cacheutil.NewCacheUtil(redisManager)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should not be nil")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be created successfully, but it was nil")
+		return
+	}
 
 	// Create cache test context if it doesn't exist
 	if ctx.CacheTestContext == nil {
@@ -102,73 +111,119 @@ func GivenCacheUtilityIsAvailable(ctx *TestContext) {
 	ctx.CacheTestContext.CacheUtil = cacheUtil
 }
 
-// GivenCacheKeyDoesNotExist ensures a cache key does not exist
+// GivenCacheKeyDoesNotExist ensures a cache key does not exist in BDD style
 func GivenCacheKeyDoesNotExist(ctx *TestContext, keySuffix string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	_ = cacheUtil.Delete(key) // Ensure key doesn't exist
 }
 
-// GivenCacheKeyExists sets a cache key with a value
+// GivenCacheKeyExists sets a cache key with a value in BDD style
 func GivenCacheKeyExists(ctx *TestContext, keySuffix, value string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	err := cacheUtil.Set(key, value, 0) // No TTL
-	require.NoError(ctx.T, err, "Failed to set cache key for test setup")
+	if err != nil {
+		ctx.T.Errorf("Expected to set cache key for test setup, but got error: %v", err)
+	}
 }
 
-// GivenCacheKeyExistsWithTTL sets a cache key with a value and TTL
+// GivenCacheKeyExistsWithTTL sets a cache key with a value and TTL in BDD style
 func GivenCacheKeyExistsWithTTL(ctx *TestContext, keySuffix, value string, ttl time.Duration) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	err := cacheUtil.Set(key, value, ttl)
-	require.NoError(ctx.T, err, "Failed to set cache key with TTL for test setup")
+	if err != nil {
+		ctx.T.Errorf("Expected to set cache key with TTL for test setup, but got error: %v", err)
+	}
 }
 
-// WhenISetCacheKey sets a cache key with a value
+// WhenISetCacheKey sets a cache key with a value in BDD style
 func WhenISetCacheKey(ctx *TestContext, keySuffix, value string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	ctx.CacheTestContext.LastError = cacheUtil.Set(key, value, 0)
 }
 
-// WhenISetCacheKeyWithTTL sets a cache key with a value and TTL
+// WhenISetCacheKeyWithTTL sets a cache key with a value and TTL in BDD style
 func WhenISetCacheKeyWithTTL(ctx *TestContext, keySuffix, value string, ttl time.Duration) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	ctx.CacheTestContext.LastError = cacheUtil.Set(key, value, ttl)
 }
 
-// WhenIGetCacheKey retrieves a cache key
+// WhenIGetCacheKey retrieves a cache key in BDD style
 func WhenIGetCacheKey(ctx *TestContext, keySuffix string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	ctx.CacheTestContext.LastValue, ctx.CacheTestContext.LastError = cacheUtil.Get(key)
 }
 
-// WhenIDeleteCacheKey deletes a cache key
+// WhenIDeleteCacheKey deletes a cache key in BDD style
 func WhenIDeleteCacheKey(ctx *TestContext, keySuffix string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	ctx.CacheTestContext.LastError = cacheUtil.Delete(key)
@@ -179,42 +234,75 @@ func WhenIWaitForDuration(ctx *TestContext, duration time.Duration) {
 	time.Sleep(duration)
 }
 
-// ThenCacheOperationShouldSucceed verifies that the last cache operation succeeded
+// ThenCacheOperationShouldSucceed verifies that the last cache operation succeeded in BDD style
 func ThenCacheOperationShouldSucceed(ctx *TestContext) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
-	assert.NoError(ctx.T, ctx.CacheTestContext.LastError, "Cache operation should succeed")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
+	if ctx.CacheTestContext.LastError != nil {
+		ctx.T.Errorf("Expected cache operation to succeed, but got error: %v", ctx.CacheTestContext.LastError)
+	}
 }
 
-// ThenCacheOperationShouldFail verifies that the last cache operation failed
+// ThenCacheOperationShouldFail verifies that the last cache operation failed in BDD style
 func ThenCacheOperationShouldFail(ctx *TestContext) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
-	assert.Error(ctx.T, ctx.CacheTestContext.LastError, "Cache operation should fail")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
+	if ctx.CacheTestContext.LastError == nil {
+		ctx.T.Errorf("Expected cache operation to fail, but it succeeded")
+	}
 }
 
-// ThenCacheValueShouldBe verifies that the retrieved cache value matches expected value
+// ThenCacheValueShouldBe verifies that the retrieved cache value matches expected value in BDD style
 func ThenCacheValueShouldBe(ctx *TestContext, expectedValue string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
-	assert.NoError(ctx.T, ctx.CacheTestContext.LastError, "Should be able to retrieve cache value")
-	assert.Equal(ctx.T, expectedValue, ctx.CacheTestContext.LastValue, "Cache value should match expected value")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
+	if ctx.CacheTestContext.LastError != nil {
+		ctx.T.Errorf("Expected to be able to retrieve cache value, but got error: %v", ctx.CacheTestContext.LastError)
+		return
+	}
+	if ctx.CacheTestContext.LastValue != expectedValue {
+		ctx.T.Errorf("Expected cache value to be '%s', but got '%s'", expectedValue, ctx.CacheTestContext.LastValue)
+	}
 }
 
-// ThenCacheKeyShouldNotExist verifies that a cache key does not exist (returns ErrCacheMiss)
+// ThenCacheKeyShouldNotExist verifies that a cache key does not exist (returns ErrCacheMiss) in BDD style
 func ThenCacheKeyShouldNotExist(ctx *TestContext) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
-	assert.Error(ctx.T, ctx.CacheTestContext.LastError, "Should get an error when key doesn't exist")
-	assert.True(ctx.T, errors.Is(ctx.CacheTestContext.LastError, cacheutil.ErrCacheMiss),
-		"Error should be ErrCacheMiss, got: %v", ctx.CacheTestContext.LastError)
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
+	if ctx.CacheTestContext.LastError == nil {
+		ctx.T.Errorf("Expected to get an error when key doesn't exist, but operation succeeded")
+		return
+	}
+	if !errors.Is(ctx.CacheTestContext.LastError, cacheutil.ErrCacheMiss) {
+		ctx.T.Errorf("Expected error to be ErrCacheMiss, but got: %v", ctx.CacheTestContext.LastError)
+	}
 }
 
-// ThenCacheKeyShouldExist verifies that a cache key exists and can be retrieved
+// ThenCacheKeyShouldExist verifies that a cache key exists and can be retrieved in BDD style
 func ThenCacheKeyShouldExist(ctx *TestContext, keySuffix string) {
-	require.NotNil(ctx.T, ctx.CacheTestContext, "Cache test context should be initialized")
+	if ctx.CacheTestContext == nil {
+		ctx.T.Errorf("Expected cache test context to be initialized, but it was nil")
+		return
+	}
 	cacheUtil := getCacheUtil(ctx.CacheTestContext)
-	require.NotNil(ctx.T, cacheUtil, "Cache utility should be available")
+	if cacheUtil == nil {
+		ctx.T.Errorf("Expected cache utility to be available, but it was nil")
+		return
+	}
 
 	key := ctx.CacheTestContext.GetTestKey(keySuffix)
 	_, err := cacheUtil.Get(key)
-	assert.NoError(ctx.T, err, "Cache key should exist and be retrievable")
+	if err != nil {
+		ctx.T.Errorf("Expected cache key '%s' to exist and be retrievable, but got error: %v", key, err)
+	}
 }
 
 // CleanupCacheTestKeys cleans up all test keys created during the test

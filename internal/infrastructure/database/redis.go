@@ -119,7 +119,7 @@ func NewRedisManager(cfg *config.Config) (RedisManager, error) {
 
 	// Test initial connection with retry
 	if err := manager.checkConnectionWithRetry(); err != nil {
-		client.Close()
+		client.Close() // nolint:errcheck
 		return nil, fmt.Errorf("failed to establish Redis connection: %w", err)
 	}
 
@@ -160,7 +160,7 @@ func (rm *RedisManagerImpl) Ping(ctx context.Context) error {
 		rm.logger.Error("Redis health check failed after retries",
 			log.FormatError(err),
 		)
-		return fmt.Errorf("Redis health check failed: %w", err)
+		return fmt.Errorf("redis health check failed: %w", err)
 	}
 
 	rm.logger.Debug("Redis health check successful")

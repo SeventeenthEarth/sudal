@@ -55,7 +55,7 @@ var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
 
 	ginkgo.AfterEach(func() {
 		if db != nil {
-			db.Close()
+			db.Close() // nolint:errcheck
 		}
 		// Verify all expectations were met
 		gomega.Expect(mock.ExpectationsWereMet()).To(gomega.BeNil())

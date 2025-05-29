@@ -93,7 +93,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				// Parse response
 				var healthResponse entity.DetailedHealthStatus
@@ -120,7 +120,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -151,7 +151,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -175,7 +175,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 				Expect(resp.Header.Get("Content-Type")).To(Equal("application/json"))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 			})
 		})
 
@@ -191,7 +191,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(resp).NotTo(BeNil())
 				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				// Parse response
 				var healthResponse entity.DetailedHealthStatus
@@ -217,7 +217,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusServiceUnavailable))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -240,7 +240,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -288,7 +288,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -319,7 +319,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -367,7 +367,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-					defer resp.Body.Close()
+					defer resp.Body.Close() // nolint:errcheck
 
 					var healthResponse entity.DetailedHealthStatus
 					err = json.NewDecoder(resp.Body).Decode(&healthResponse)

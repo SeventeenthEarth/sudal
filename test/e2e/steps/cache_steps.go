@@ -74,10 +74,10 @@ func GetCacheUtil(ctx *CacheTestContext) cacheutil.CacheUtil {
 // GivenCacheUtilityIsAvailable initializes the cache utility for testing in BDD style
 func GivenCacheUtilityIsAvailable(ctx *TestContext) {
 	// Set test environment variables
-	os.Setenv("APP_ENV", "test")
-	os.Setenv("REDIS_ADDR", "localhost:6379")
-	os.Setenv("REDIS_PASSWORD", "")
-	os.Setenv("REDIS_DB", "0")
+	os.Setenv("APP_ENV", "test")              // nolint:errcheck
+	os.Setenv("REDIS_ADDR", "localhost:6379") // nolint:errcheck
+	os.Setenv("REDIS_PASSWORD", "")           // nolint:errcheck
+	os.Setenv("REDIS_DB", "0")                // nolint:errcheck
 
 	// Load configuration first
 	cfg, err := config.LoadConfig("")

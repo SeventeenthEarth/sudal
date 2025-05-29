@@ -38,7 +38,7 @@ func WhenIMakeHealthCheckRequestUsingConnectGo(ctx *TestContext) {
 		} else {
 			ctx.ResponseBody = body
 		}
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 	}
 }
 
@@ -71,7 +71,7 @@ func WhenIMakeHealthCheckRequestWithInvalidContentType(ctx *TestContext) {
 		} else {
 			ctx.ResponseBody = body
 		}
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 	}
 }
 
@@ -98,7 +98,7 @@ func WhenIMakeRequestToNonExistentEndpoint(ctx *TestContext) {
 		} else {
 			ctx.ResponseBody = body
 		}
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 	}
 }
 
@@ -138,7 +138,7 @@ func WhenIMakeConcurrentHealthCheckRequests(ctx *TestContext, numRequests int) {
 				} else {
 					result.Body = body
 				}
-				resp.Body.Close()
+				resp.Body.Close() // nolint:errcheck
 			}
 
 			results[index] = result

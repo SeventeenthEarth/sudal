@@ -77,7 +77,7 @@ func NewPostgresManager(cfg *config.Config) (PostgresManager, error) {
 		logger.Error("Failed to ping database",
 			log.FormatError(err),
 		)
-		db.Close()
+		db.Close() // nolint:errcheck
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

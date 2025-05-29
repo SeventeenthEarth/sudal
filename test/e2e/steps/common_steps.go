@@ -21,7 +21,7 @@ func GivenServerIsRunning(ctx *TestContext) {
 	// We can add a health check here if needed
 	resp, err := ctx.HTTPClient.Get(fmt.Sprintf("%s/ping", ctx.ServerURL))
 	if err == nil && resp != nil {
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 	}
 	// Note: We don't fail here as the server might not be ready yet
 	// The actual test will fail if the server is not accessible
@@ -44,7 +44,7 @@ func WhenIMakeGETRequest(ctx *TestContext, endpoint string) {
 		} else {
 			ctx.ResponseBody = body
 		}
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 	}
 }
 
@@ -79,7 +79,7 @@ func WhenIMakePOSTRequest(ctx *TestContext, endpoint string, contentType string,
 		} else {
 			ctx.ResponseBody = responseBody
 		}
-		resp.Body.Close()
+		resp.Body.Close() // nolint:errcheck
 	}
 }
 
@@ -110,7 +110,7 @@ func WhenIMakeConcurrentRequests(ctx *TestContext, numRequests int, endpoint str
 				} else {
 					result.Body = body
 				}
-				resp.Body.Close()
+				resp.Body.Close() // nolint:errcheck
 			}
 
 			results[index] = result
@@ -164,7 +164,7 @@ func WhenIMakeConcurrentPOSTRequests(ctx *TestContext, numRequests int, endpoint
 				} else {
 					result.Body = responseBody
 				}
-				resp.Body.Close()
+				resp.Body.Close() // nolint:errcheck
 			}
 
 			results[index] = result

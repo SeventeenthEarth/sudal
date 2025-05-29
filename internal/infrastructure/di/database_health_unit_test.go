@@ -45,8 +45,8 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 		// Clear environment variables to ensure clean test state
-		os.Unsetenv("GO_TEST")
-		os.Unsetenv("GINKGO_TEST")
+		os.Unsetenv("GO_TEST")     // nolint:errcheck
+		os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 
 		// Reset config to ensure clean state
 		config.ResetViper()
@@ -62,8 +62,8 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 	ginkgo.AfterEach(func() {
 		ctrl.Finish()
 		// Clean up environment variables
-		os.Unsetenv("GO_TEST")
-		os.Unsetenv("GINKGO_TEST")
+		os.Unsetenv("GO_TEST")     // nolint:errcheck
+		os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 		config.ResetViper()
 	})
 
@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 		ginkgo.Context("when in test environment", func() {
 			ginkgo.BeforeEach(func() {
 				// Set test environment
-				os.Setenv("GO_TEST", "1")
+				os.Setenv("GO_TEST", "1") // nolint:errcheck
 			})
 
 			ginkgo.It("should return mock handler when GO_TEST is set", func() {
@@ -188,7 +188,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 
 		ginkgo.Context("when in test environment", func() {
 			ginkgo.BeforeEach(func() {
-				os.Setenv("GO_TEST", "1")
+				os.Setenv("GO_TEST", "1") // nolint:errcheck
 			})
 
 			ginkgo.It("should return mock response", func() {
@@ -254,7 +254,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 
 			ginkgo.It("should return true when GO_TEST is set to 1", func() {
 				// Given
-				os.Setenv("GO_TEST", "1")
+				os.Setenv("GO_TEST", "1") // nolint:errcheck
 
 				// When
 				result := di.IsTestEnvironment()
@@ -265,7 +265,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 
 			ginkgo.It("should return true when GINKGO_TEST is set to 1", func() {
 				// Given
-				os.Setenv("GINKGO_TEST", "1")
+				os.Setenv("GINKGO_TEST", "1") // nolint:errcheck
 
 				// When
 				result := di.IsTestEnvironment()
@@ -276,7 +276,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 
 			ginkgo.It("should return false when GO_TEST is set to other value", func() {
 				// Given
-				os.Setenv("GO_TEST", "0")
+				os.Setenv("GO_TEST", "0") // nolint:errcheck
 
 				// When
 				result := di.IsTestEnvironment()
@@ -351,18 +351,18 @@ func createTestDatabaseHealthHandler(dbManager database.PostgresManager) *di.Dat
 	originalGoTest := os.Getenv("GO_TEST")
 	originalGinkgoTest := os.Getenv("GINKGO_TEST")
 
-	os.Unsetenv("GO_TEST")
-	os.Unsetenv("GINKGO_TEST")
+	os.Unsetenv("GO_TEST")     // nolint:errcheck
+	os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 
 	// Create handler using the actual constructor
 	handler := di.NewDatabaseHealthHandler(dbManager)
 
 	// Restore original environment variables
 	if originalGoTest != "" {
-		os.Setenv("GO_TEST", originalGoTest)
+		os.Setenv("GO_TEST", originalGoTest) // nolint:errcheck
 	}
 	if originalGinkgoTest != "" {
-		os.Setenv("GINKGO_TEST", originalGinkgoTest)
+		os.Setenv("GINKGO_TEST", originalGinkgoTest) // nolint:errcheck
 	}
 
 	return handler

@@ -3,7 +3,6 @@ package openapi
 import (
 	"html/template"
 	"net/http"
-	"path/filepath"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"go.uber.org/zap"
@@ -103,23 +102,4 @@ func (h *SwaggerHandler) ServeOpenAPISpec(w http.ResponseWriter, r *http.Request
 
 	// Read the OpenAPI spec file
 	http.ServeFile(w, r, h.specPath)
-}
-
-// getContentType returns the appropriate content type for a file
-func getContentType(filename string) string {
-	ext := filepath.Ext(filename)
-	switch ext {
-	case ".html":
-		return "text/html; charset=utf-8"
-	case ".css":
-		return "text/css"
-	case ".js":
-		return "application/javascript"
-	case ".json":
-		return "application/json"
-	case ".yaml", ".yml":
-		return "application/x-yaml"
-	default:
-		return "application/octet-stream"
-	}
 }

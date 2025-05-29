@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Redis health check failed"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("redis health check failed"))
 			})
 
 			ginkgo.It("should handle context timeout", func() {
@@ -101,7 +101,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Redis health check failed"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("redis health check failed"))
 			})
 
 			ginkgo.It("should succeed after retry", func() {
@@ -238,7 +238,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 
 				// Then
 				gomega.Expect(pingErr).To(gomega.HaveOccurred())
-				gomega.Expect(pingErr.Error()).To(gomega.ContainSubstring("Redis health check failed"))
+				gomega.Expect(pingErr.Error()).To(gomega.ContainSubstring("redis health check failed"))
 				gomega.Expect(closeErr).To(gomega.BeNil())
 			})
 		})
@@ -255,7 +255,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Redis health check failed"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("redis health check failed"))
 			})
 
 			ginkgo.It("should handle authentication errors without retry", func() {
@@ -269,7 +269,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(err.Error()).To(gomega.ContainSubstring("Redis health check failed"))
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("redis health check failed"))
 			})
 
 			ginkgo.It("should handle connection pool exhaustion", func() {

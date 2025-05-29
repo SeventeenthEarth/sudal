@@ -349,9 +349,10 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 					Expect(result.Error).NotTo(HaveOccurred(), fmt.Sprintf("Mixed protocol request %d failed", i+1))
 					Expect(result.Success).To(BeTrue(), fmt.Sprintf("Mixed protocol request %d was not successful", i+1))
 
-					if result.Protocol == "grpc-web" {
+					switch result.Protocol {
+					case "grpc-web":
 						grpcWebSuccessCount++
-					} else if result.Protocol == "http" {
+					case "http":
 						httpSuccessCount++
 					}
 				}

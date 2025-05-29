@@ -122,7 +122,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 							result.StatusCode = resp.StatusCode
 
 							if resp.StatusCode == http.StatusOK {
-								defer resp.Body.Close()
+								defer resp.Body.Close() // nolint:errcheck
 								var healthResponse entity.DetailedHealthStatus
 								if decodeErr := json.NewDecoder(resp.Body).Decode(&healthResponse); decodeErr == nil {
 									result.Response = &healthResponse
@@ -181,7 +181,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 						if resp != nil {
 							result.StatusCode = resp.StatusCode
-							defer resp.Body.Close()
+							defer resp.Body.Close() // nolint:errcheck
 						}
 
 						results[index] = result
@@ -236,7 +236,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 							result.StatusCode = resp.StatusCode
 
 							if resp.StatusCode == http.StatusOK {
-								defer resp.Body.Close()
+								defer resp.Body.Close() // nolint:errcheck
 								var healthResponse entity.DetailedHealthStatus
 								if decodeErr := json.NewDecoder(resp.Body).Decode(&healthResponse); decodeErr == nil {
 									result.Response = &healthResponse
@@ -311,7 +311,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 						if resp != nil {
 							result.StatusCode = resp.StatusCode
-							defer resp.Body.Close()
+							defer resp.Body.Close() // nolint:errcheck
 
 							var healthResponse entity.DetailedHealthStatus
 							if decodeErr := json.NewDecoder(resp.Body).Decode(&healthResponse); decodeErr == nil {
@@ -370,7 +370,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 						if resp != nil {
 							result.StatusCode = resp.StatusCode
-							defer resp.Body.Close()
+							defer resp.Body.Close() // nolint:errcheck
 						}
 
 						results[index] = result
@@ -438,7 +438,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 						if resp != nil {
 							result.StatusCode = resp.StatusCode
-							defer resp.Body.Close()
+							defer resp.Body.Close() // nolint:errcheck
 						}
 
 						results[index] = result

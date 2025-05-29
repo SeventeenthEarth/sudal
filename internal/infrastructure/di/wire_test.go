@@ -16,8 +16,8 @@ var _ = ginkgo.Describe("DI", func() {
 
 	ginkgo.BeforeEach(func() {
 		// Set test environment variables
-		os.Setenv("GINKGO_TEST", "1")
-		os.Setenv("APP_ENV", "test")
+		os.Setenv("GINKGO_TEST", "1") // nolint:errcheck
+		os.Setenv("APP_ENV", "test")  // nolint:errcheck
 
 		// Load test configuration with required database DSN
 		var err error
@@ -50,8 +50,8 @@ var _ = ginkgo.Describe("DI", func() {
 		config.ResetViper()
 
 		// Clean up environment variables
-		os.Unsetenv("GINKGO_TEST")
-		os.Unsetenv("APP_ENV")
+		os.Unsetenv("GINKGO_TEST") // nolint:errcheck
+		os.Unsetenv("APP_ENV")     // nolint:errcheck
 	})
 
 	ginkgo.Describe("InitializeHealthHandler", func() {
@@ -114,8 +114,8 @@ var _ = ginkgo.Describe("DI", func() {
 		ginkgo.Context("when in test environment", func() {
 			ginkgo.It("should return nil for test environment", func() {
 				// Arrange
-				os.Setenv("GO_TEST", "1")
-				defer os.Unsetenv("GO_TEST")
+				os.Setenv("GO_TEST", "1")    // nolint:errcheck
+				defer os.Unsetenv("GO_TEST") // nolint:errcheck
 
 				// Act
 				manager, err := di.ProvidePostgresManager(originalConfig)
@@ -127,8 +127,8 @@ var _ = ginkgo.Describe("DI", func() {
 
 			ginkgo.It("should return nil when GINKGO_TEST is set", func() {
 				// Arrange
-				os.Setenv("GINKGO_TEST", "1")
-				defer os.Unsetenv("GINKGO_TEST")
+				os.Setenv("GINKGO_TEST", "1")    // nolint:errcheck
+				defer os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 
 				// Act
 				manager, err := di.ProvidePostgresManager(originalConfig)
@@ -168,8 +168,8 @@ var _ = ginkgo.Describe("DI", func() {
 		ginkgo.Context("when not in test environment", func() {
 			ginkgo.BeforeEach(func() {
 				// Clear test environment variables
-				os.Unsetenv("GO_TEST")
-				os.Unsetenv("GINKGO_TEST")
+				os.Unsetenv("GO_TEST")     // nolint:errcheck
+				os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 				// Set production config
 				prodConfig := *originalConfig
 				prodConfig.AppEnv = "production"
@@ -201,8 +201,8 @@ var _ = ginkgo.Describe("DI", func() {
 		ginkgo.Context("when in test environment", func() {
 			ginkgo.It("should return nil for test environment", func() {
 				// Arrange
-				os.Setenv("GO_TEST", "1")
-				defer os.Unsetenv("GO_TEST")
+				os.Setenv("GO_TEST", "1")    // nolint:errcheck
+				defer os.Unsetenv("GO_TEST") // nolint:errcheck
 
 				// Act
 				manager, err := di.ProvideRedisManager(originalConfig)
@@ -214,8 +214,8 @@ var _ = ginkgo.Describe("DI", func() {
 
 			ginkgo.It("should return nil when GINKGO_TEST is set", func() {
 				// Arrange
-				os.Setenv("GINKGO_TEST", "1")
-				defer os.Unsetenv("GINKGO_TEST")
+				os.Setenv("GINKGO_TEST", "1")    // nolint:errcheck
+				defer os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 
 				// Act
 				manager, err := di.ProvideRedisManager(originalConfig)
@@ -255,8 +255,8 @@ var _ = ginkgo.Describe("DI", func() {
 		ginkgo.Context("when not in test environment", func() {
 			ginkgo.BeforeEach(func() {
 				// Clear test environment variables
-				os.Unsetenv("GO_TEST")
-				os.Unsetenv("GINKGO_TEST")
+				os.Unsetenv("GO_TEST")     // nolint:errcheck
+				os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 				// Set production config
 				prodConfig := *originalConfig
 				prodConfig.AppEnv = "production"
@@ -288,8 +288,8 @@ var _ = ginkgo.Describe("DI", func() {
 		ginkgo.Context("when in test environment", func() {
 			ginkgo.It("should return nil for test environment", func() {
 				// Arrange
-				os.Setenv("GO_TEST", "1")
-				defer os.Unsetenv("GO_TEST")
+				os.Setenv("GO_TEST", "1")    // nolint:errcheck
+				defer os.Unsetenv("GO_TEST") // nolint:errcheck
 
 				// Act
 				cacheUtil := di.ProvideCacheUtil(nil)
@@ -300,8 +300,8 @@ var _ = ginkgo.Describe("DI", func() {
 
 			ginkgo.It("should return nil when GINKGO_TEST is set", func() {
 				// Arrange
-				os.Setenv("GINKGO_TEST", "1")
-				defer os.Unsetenv("GINKGO_TEST")
+				os.Setenv("GINKGO_TEST", "1")    // nolint:errcheck
+				defer os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 
 				// Act
 				cacheUtil := di.ProvideCacheUtil(nil)
@@ -340,8 +340,8 @@ var _ = ginkgo.Describe("DI", func() {
 		ginkgo.Context("when not in test environment", func() {
 			ginkgo.BeforeEach(func() {
 				// Clear test environment variables
-				os.Unsetenv("GO_TEST")
-				os.Unsetenv("GINKGO_TEST")
+				os.Unsetenv("GO_TEST")     // nolint:errcheck
+				os.Unsetenv("GINKGO_TEST") // nolint:errcheck
 				// Set production config
 				prodConfig := *originalConfig
 				prodConfig.AppEnv = "production"
@@ -373,7 +373,7 @@ var _ = ginkgo.Describe("DI", func() {
 			initializer := di.NewDefaultDatabaseHealthInitializer()
 
 			// Assert
-			var _ di.DatabaseHealthInitializer = initializer
+			var _ di.DatabaseHealthInitializer = initializer // nolint:staticcheck
 			gomega.Expect(initializer).NotTo(gomega.BeNil())
 		})
 

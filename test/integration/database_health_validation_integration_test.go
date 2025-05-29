@@ -106,7 +106,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -146,7 +146,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -188,7 +188,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-					defer resp.Body.Close()
+					defer resp.Body.Close() // nolint:errcheck
 
 					var healthResponse entity.DetailedHealthStatus
 					err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -245,7 +245,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -285,7 +285,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -315,7 +315,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -352,7 +352,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				// Parse as raw JSON to check field names
 				var rawResponse map[string]interface{}
@@ -393,7 +393,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
@@ -429,7 +429,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
-				defer resp.Body.Close()
+				defer resp.Body.Close() // nolint:errcheck
 
 				// Parse as raw JSON to check data types
 				var rawResponse map[string]interface{}

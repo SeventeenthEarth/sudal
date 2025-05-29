@@ -16,6 +16,7 @@ We maintain both BDD-style and legacy testify-based functions for backward compa
 ### 2. **BDD Style Assertion Methods**
 
 #### Basic Response Assertions
+
 ```go
 // Status Code
 ctx.TheResponseStatusCodeShouldBe(200)
@@ -33,6 +34,7 @@ ctx.TheJSONResponseShouldHaveStructure([]string{"status", "database", "timestamp
 ```
 
 #### Advanced Assertions
+
 ```go
 // Headers
 ctx.TheResponseHeaderShouldContain("Content-Type", "application/json")
@@ -46,6 +48,7 @@ ctx.AllConcurrentRequestsShouldSucceed()
 ```
 
 #### gRPC and Connect-Go Specific
+
 ```go
 // gRPC Response
 ctx.TheGRPCResponseShouldBeSuccessful()
@@ -56,7 +59,8 @@ ctx.TheConnectGoResponseShouldBeSuccessful()
 
 ### 3. **Migration Examples**
 
-#### Before (testify style):
+#### Before (testify style)
+
 ```go
 Then: func(ctx *steps.TestContext) {
     require.NotNil(ctx.T, ctx.Response, "No response received")
@@ -73,7 +77,8 @@ Then: func(ctx *steps.TestContext) {
 }
 ```
 
-#### After (BDD style):
+#### After (BDD style)
+
 ```go
 Then: func(ctx *steps.TestContext) {
     ctx.TheResponseStatusCodeShouldBe(200)
@@ -85,6 +90,7 @@ Then: func(ctx *steps.TestContext) {
 ### 4. **Step Function Updates**
 
 #### Connect-Go Steps
+
 ```go
 // BDD Style
 func ThenResponseShouldIndicateServingStatus(ctx *TestContext) {
@@ -102,6 +108,7 @@ func ThenResponseShouldIndicateServingStatusLegacy(ctx *TestContext) {
 ```
 
 #### Database Health Steps
+
 ```go
 // BDD Style
 func ThenJSONResponseShouldContainDatabaseInformation(ctx *TestContext) {
@@ -121,6 +128,7 @@ func ThenJSONResponseShouldContainDatabaseInformation(ctx *TestContext) {
 ### 6. **Migration Timeline**
 
 #### Phase 1: Hybrid Implementation (✅ COMPLETED)
+
 - ✅ BDD-style assertion methods added to TestContext
 - ✅ All step functions updated to use BDD style internally
 - ✅ Legacy methods kept for backward compatibility
@@ -130,6 +138,7 @@ func ThenJSONResponseShouldContainDatabaseInformation(ctx *TestContext) {
 - ✅ Connect-Go steps converted to BDD style
 
 #### Phase 2: Complete Migration (✅ COMPLETED)
+
 - ✅ Core assertion framework completed
 - ✅ All step functions updated to BDD style
 - ✅ All existing test files updated to use BDD methods
@@ -139,6 +148,7 @@ func ThenJSONResponseShouldContainDatabaseInformation(ctx *TestContext) {
 - ✅ Documentation updated to reflect BDD style
 
 #### Phase 3: Maintenance and Enhancement (ONGOING)
+
 - ✅ Pure BDD style throughout E2E tests achieved
 - ✅ Custom BDD framework optimized for gRPC maintained
 - 🔄 Add more specialized BDD assertion methods as needed
@@ -148,6 +158,7 @@ func ThenJSONResponseShouldContainDatabaseInformation(ctx *TestContext) {
 ### 7. **Best Practices**
 
 #### Writing BDD-Style Tests
+
 ```go
 scenarios := []steps.BDDScenario{
     {
@@ -171,11 +182,13 @@ scenarios := []steps.BDDScenario{
 ```
 
 #### Error Message Style
+
 - Use descriptive, natural language
 - Include expected vs actual values
 - Provide context about what was being tested
 
 #### Assertion Naming Convention
+
 - Start with "The" for state assertions: `TheResponseStatusCodeShouldBe`
 - Use "Should" for expectations: `AllConcurrentRequestsShouldSucceed`
 - Use "ShouldHave" for possession: `TheJSONResponseShouldHaveStructure`

@@ -18,12 +18,12 @@ import (
 var _ = ginkgo.Describe("Handler", func() {
 	var (
 		ctrl        *gomock.Controller
-		mockService *mocks.MockService
+		mockService *mocks.MockHealthService
 	)
 
 	ginkgo.BeforeEach(func() {
 		ctrl = gomock.NewController(ginkgo.GinkgoT())
-		mockService = mocks.NewMockService(ctrl)
+		mockService = mocks.NewMockHealthService(ctrl)
 	})
 
 	ginkgo.AfterEach(func() {

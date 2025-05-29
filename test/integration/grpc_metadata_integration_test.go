@@ -25,7 +25,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 	var (
 		ctrl     *gomock.Controller
 		mockRepo *mocks.MockHealthRepository
-		service  application.Service
+		service  application.HealthService
 		handler  *healthConnect.HealthServiceHandler
 		server   *http.Server
 		listener net.Listener

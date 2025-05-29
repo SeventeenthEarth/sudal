@@ -19,7 +19,7 @@ import (
 var _ = Describe("Handler Error Scenarios Integration Tests", func() {
 	var (
 		handler *healthInterface.Handler
-		service application.Service
+		service application.HealthService
 		repo    repo.HealthRepository
 	)
 

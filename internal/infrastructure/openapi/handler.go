@@ -10,11 +10,11 @@ import (
 
 // OpenAPIHandler implements the ogen-generated Handler interface
 type OpenAPIHandler struct {
-	healthService application.Service
+	healthService application.HealthService
 }
 
 // NewOpenAPIHandler creates a new OpenAPI handler
-func NewOpenAPIHandler(healthService application.Service) *OpenAPIHandler {
+func NewOpenAPIHandler(healthService application.HealthService) *OpenAPIHandler {
 	return &OpenAPIHandler{
 		healthService: healthService,
 	}

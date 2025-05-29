@@ -396,7 +396,7 @@ var _ = ginkgo.Describe("DI", func() {
 			ctrl := gomock.NewController(ginkgo.GinkgoT())
 			defer ctrl.Finish()
 
-			mockService := mocks.NewMockService(ctrl)
+			mockService := mocks.NewMockHealthService(ctrl)
 
 			// Act
 			handler := di.NewOpenAPIHandler(mockService)

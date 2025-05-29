@@ -19,7 +19,7 @@ var _ = ginkgo.Describe("Integration Tests", func() {
 		var (
 			handler *healthHandler.Handler
 			repo    *healthData.HealthRepository
-			service healthApp.Service
+			service healthApp.HealthService
 		)
 
 		ginkgo.BeforeEach(func() {

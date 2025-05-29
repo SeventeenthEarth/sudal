@@ -12,13 +12,13 @@ import (
 
 // HealthServiceHandler implements the Connect-go health service
 type HealthServiceHandler struct {
-	service application.Service
+	healthService application.HealthService
 }
 
 // NewHealthServiceHandler creates a new health service handler
-func NewHealthServiceHandler(service application.Service) *HealthServiceHandler {
+func NewHealthServiceHandler(service application.HealthService) *HealthServiceHandler {
 	return &HealthServiceHandler{
-		service: service,
+		healthService: service,
 	}
 }
 
@@ -30,7 +30,7 @@ func (h *HealthServiceHandler) Check(
 	log.InfoContext(ctx, "Health check requested")
 
 	// Call the application service to perform the health check
-	status, err := h.service.Check(ctx)
+	status, err := h.healthService.Check(ctx)
 	if err != nil {
 		log.ErrorContext(ctx, "Health check failed", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)

@@ -198,7 +198,7 @@ var OpenAPISet = wire.NewSet(
 )
 
 // NewOpenAPIHandler creates a new OpenAPI handler
-func NewOpenAPIHandler(service application.Service) *openapi.OpenAPIHandler {
+func NewOpenAPIHandler(service application.HealthService) *openapi.OpenAPIHandler {
 	return openapi.NewOpenAPIHandler(service)
 }
 

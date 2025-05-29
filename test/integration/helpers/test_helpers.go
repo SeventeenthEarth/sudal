@@ -131,11 +131,11 @@ type IntegrationTestContext struct {
 	BaseURL  string
 
 	// Mocks
-	MockRepo     *internalMocks.MockHealthRepository
-	MockService  *internalMocks.MockService
-	MockPostgres *internalMocks.MockPostgresManager
-	MockRedis    *internalMocks.MockRedisManager
-	MockCache    *internalMocks.MockCacheUtil
+	MockRepo          *internalMocks.MockHealthRepository
+	MockHealthService *internalMocks.MockHealthService
+	MockPostgres      *internalMocks.MockPostgresManager
+	MockRedis         *internalMocks.MockRedisManager
+	MockCache         *internalMocks.MockCacheUtil
 
 	// Mock controller for gomock
 	MockCtrl *gomock.Controller
@@ -162,16 +162,16 @@ func NewIntegrationTestContext() *IntegrationTestContext {
 	ctrl := gomock.NewController(nil) // Will be set properly in test setup
 	mockRedis := internalMocks.NewMockRedisManager(ctrl)
 	return &IntegrationTestContext{
-		MockCtrl:         ctrl,
-		MockRepo:         internalMocks.NewMockHealthRepository(ctrl),
-		MockService:      internalMocks.NewMockService(ctrl),
-		MockPostgres:     internalMocks.NewMockPostgresManager(ctrl),
-		MockRedis:        mockRedis,
-		MockCache:        internalMocks.NewMockCacheUtil(ctrl),
-		ConcurrentTester: NewConcurrentTestHelper(),
-		HTTPClient:       &http.Client{Timeout: 10 * time.Second},
-		TestTimeout:      5 * time.Second,
-		Protocol:         "http",
+		MockCtrl:          ctrl,
+		MockRepo:          internalMocks.NewMockHealthRepository(ctrl),
+		MockHealthService: internalMocks.NewMockHealthService(ctrl),
+		MockPostgres:      internalMocks.NewMockPostgresManager(ctrl),
+		MockRedis:         mockRedis,
+		MockCache:         internalMocks.NewMockCacheUtil(ctrl),
+		ConcurrentTester:  NewConcurrentTestHelper(),
+		HTTPClient:        &http.Client{Timeout: 10 * time.Second},
+		TestTimeout:       5 * time.Second,
+		Protocol:          "http",
 	}
 }
 
@@ -269,8 +269,8 @@ func (ctx *IntegrationTestContext) ConfigureMockForHealthyState() {
 		},
 	}, nil).AnyTimes()
 
-	ctx.MockService.EXPECT().Ping(gomock.Any()).Return(entity.OkStatus(), nil).AnyTimes()
-	ctx.MockService.EXPECT().Check(gomock.Any()).Return(entity.HealthyStatus(), nil).AnyTimes()
+	ctx.MockHealthService.EXPECT().Ping(gomock.Any()).Return(entity.OkStatus(), nil).AnyTimes()
+	ctx.MockHealthService.EXPECT().Check(gomock.Any()).Return(entity.HealthyStatus(), nil).AnyTimes()
 	stats := &entity.ConnectionStats{
 		MaxOpenConnections: 25,
 		OpenConnections:    5,
@@ -281,7 +281,7 @@ func (ctx *IntegrationTestContext) ConfigureMockForHealthyState() {
 		MaxIdleClosed:      0,
 		MaxLifetimeClosed:  0,
 	}
-	ctx.MockService.EXPECT().CheckDatabase(gomock.Any()).Return(entity.HealthyDatabaseStatus("Database is healthy", stats), nil).AnyTimes()
+	ctx.MockHealthService.EXPECT().CheckDatabase(gomock.Any()).Return(entity.HealthyDatabaseStatus("Database is healthy", stats), nil).AnyTimes()
 
 	if ctx.ConnectGoClientHelper != nil {
 		ctx.ConnectGoClientHelper.SetServingStatus()
@@ -298,9 +298,9 @@ func (ctx *IntegrationTestContext) ConfigureMockForUnhealthyState(err error) {
 	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(nil, err).AnyTimes()
 	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(nil, err).AnyTimes()
 
-	ctx.MockService.EXPECT().Ping(gomock.Any()).Return(nil, err).AnyTimes()
-	ctx.MockService.EXPECT().Check(gomock.Any()).Return(nil, err).AnyTimes()
-	ctx.MockService.EXPECT().CheckDatabase(gomock.Any()).Return(nil, err).AnyTimes()
+	ctx.MockHealthService.EXPECT().Ping(gomock.Any()).Return(nil, err).AnyTimes()
+	ctx.MockHealthService.EXPECT().Check(gomock.Any()).Return(nil, err).AnyTimes()
+	ctx.MockHealthService.EXPECT().CheckDatabase(gomock.Any()).Return(nil, err).AnyTimes()
 
 	if ctx.ConnectGoClientHelper != nil {
 		ctx.ConnectGoClientHelper.SetError(err)

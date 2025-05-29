@@ -15,10 +15,10 @@ import (
 
 var _ = ginkgo.Describe("Service", func() {
 	var (
-		ctrl     *gomock.Controller
-		mockRepo *mocks.MockHealthRepository
-		service  application.Service
-		ctx      context.Context
+		ctrl          *gomock.Controller
+		mockRepo      *mocks.MockHealthRepository
+		healthService application.HealthService
+		ctx           context.Context
 	)
 
 	ginkgo.BeforeEach(func() {
@@ -34,10 +34,10 @@ var _ = ginkgo.Describe("Service", func() {
 	ginkgo.Describe("NewService", func() {
 		ginkgo.It("should create a new service", func() {
 			// Act
-			service = application.NewService(mockRepo)
+			healthService = application.NewService(mockRepo)
 
 			// Assert
-			gomega.Expect(service).NotTo(gomega.BeNil())
+			gomega.Expect(healthService).NotTo(gomega.BeNil())
 		})
 	})
 
@@ -51,11 +51,11 @@ var _ = ginkgo.Describe("Service", func() {
 			// We need to create a service with our mocks, but the NewService function
 			// creates its own use cases. For this test, we'll just verify the behavior
 			// of the real service with the real PingUseCase.
-			service = application.NewService(mockRepo)
+			healthService = application.NewService(mockRepo)
 		})
 
 		ginkgo.JustBeforeEach(func() {
-			result, err = service.Ping(ctx)
+			result, err = healthService.Ping(ctx)
 		})
 
 		ginkgo.It("should return an 'ok' status without error", func() {
@@ -72,11 +72,11 @@ var _ = ginkgo.Describe("Service", func() {
 		)
 
 		ginkgo.BeforeEach(func() {
-			service = application.NewService(mockRepo)
+			healthService = application.NewService(mockRepo)
 		})
 
 		ginkgo.JustBeforeEach(func() {
-			result, err = service.Check(ctx)
+			result, err = healthService.Check(ctx)
 		})
 
 		ginkgo.Context("when the repository returns a status successfully", func() {
@@ -118,11 +118,11 @@ var _ = ginkgo.Describe("Service", func() {
 
 		ginkgo.BeforeEach(func() {
 			ctx = context.Background()
-			service = application.NewService(mockRepo)
+			healthService = application.NewService(mockRepo)
 		})
 
 		ginkgo.JustBeforeEach(func() {
-			result, err = service.CheckDatabase(ctx)
+			result, err = healthService.CheckDatabase(ctx)
 		})
 
 		ginkgo.Context("when the repository returns a database status successfully", func() {

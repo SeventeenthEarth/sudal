@@ -18,14 +18,14 @@ import (
 var _ = Describe("HealthServiceHandler", func() {
 	var (
 		mockCtrl      *gomock.Controller
-		mockService   *mocks.MockService
+		mockService   *mocks.MockHealthService
 		healthHandler *connectImpl.HealthServiceHandler
 		ctx           context.Context
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
-		mockService = mocks.NewMockService(mockCtrl)
+		mockService = mocks.NewMockHealthService(mockCtrl)
 		healthHandler = connectImpl.NewHealthServiceHandler(mockService)
 		ctx = context.Background()
 	})

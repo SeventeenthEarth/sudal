@@ -34,7 +34,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 	var (
 		ctrl       *gomock.Controller
 		mockRepo   *mocks.MockHealthRepository
-		service    application.Service
+		service    application.HealthService
 		handler    *healthInterface.Handler
 		server     *http.Server
 		listener   net.Listener

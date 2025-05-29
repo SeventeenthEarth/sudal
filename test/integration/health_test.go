@@ -22,7 +22,7 @@ import (
 var _ = ginkgo.Describe("Health Endpoints", func() {
 	var (
 		repo     *healthData.HealthRepository
-		service  healthApp.Service
+		service  healthApp.HealthService
 		handler  *healthHandler.Handler
 		recorder *httptest.ResponseRecorder
 	)
@@ -153,7 +153,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 
 		ginkgo.Context("when the service returns an error", func() {
 			var (
-				mockService  *internalMocks.MockService
+				mockService  *internalMocks.MockHealthService
 				mockHandler  *healthHandler.Handler
 				mockRecorder *httptest.ResponseRecorder
 				ctrl         *gomock.Controller
@@ -162,7 +162,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 			ginkgo.BeforeEach(func() {
 				// Create a mock service that returns an error
 				ctrl = gomock.NewController(ginkgo.GinkgoT())
-				mockService = internalMocks.NewMockService(ctrl)
+				mockService = internalMocks.NewMockHealthService(ctrl)
 				mockService.EXPECT().Check(gomock.Any()).Return(nil, fmt.Errorf("service error")).AnyTimes()
 
 				// Create a handler with the mock service

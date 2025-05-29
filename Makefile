@@ -33,7 +33,12 @@ help: ## Show this help message
 	@echo "📋 Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_.-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "🔧 Cleanup Operations:"
+	@echo "� Code Quality:"
+	@echo "  make fmt                       # Format Go code"
+	@echo "  make vet                       # Run Go vet"
+	@echo "  make lint                      # Run linter checks"
+	@echo ""
+	@echo "�🔧 Cleanup Operations:"
 	@echo "  make clean-proto               # Clean Protocol Buffer files"
 	@echo "  make clean-mocks               # Clean mock files"
 	@echo "  make clean-wire                # Clean Wire generated code"

@@ -95,7 +95,7 @@ func NewRedisManager(cfg *config.Config) (*RedisManager, error) {
 	}
 
 	// Test initial connection with retry
-	if err := manager.testConnectionWithRetry(); err != nil {
+	if err := manager.checkConnectionWithRetry(); err != nil {
 		client.Close()
 		return nil, fmt.Errorf("failed to establish Redis connection: %w", err)
 	}
@@ -103,6 +103,17 @@ func NewRedisManager(cfg *config.Config) (*RedisManager, error) {
 	logger.Info("Redis client initialized successfully")
 
 	return manager, nil
+}
+
+// NewRedisManagerWithClient creates a new Redis manager with a provided client (for testing)
+func NewRedisManagerWithClient(client RedisClient, cfg *config.Config) *RedisManager {
+	logger := log.GetLogger().With(zap.String("component", "redis_manager"))
+
+	return &RedisManager{
+		client: client,
+		config: cfg,
+		logger: logger,
+	}
 }
 
 // GetClient returns the underlying Redis client
@@ -139,8 +150,8 @@ func (rm *RedisManager) Close() error {
 	return rm.client.Close()
 }
 
-// testConnectionWithRetry tests the Redis connection with retry logic
-func (rm *RedisManager) testConnectionWithRetry() error {
+// checkConnectionWithRetry tests the Redis connection with retry logic
+func (rm *RedisManager) checkConnectionWithRetry() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

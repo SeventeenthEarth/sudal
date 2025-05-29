@@ -325,6 +325,16 @@ redis:
 		ginkgo.BeforeEach(func() {
 			// Reset Viper to clear any previous configuration
 			config.ResetViper()
+
+			// Clear all database-related environment variables first
+			dbEnvVars := []string{
+				"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE",
+				"POSTGRES_DSN", "DB_SSL_CERT", "DB_SSL_KEY", "DB_SSL_ROOT_CERT",
+			}
+			for _, envVar := range dbEnvVars {
+				_ = os.Unsetenv(envVar)
+			}
+
 			// Set environment for production but missing required database fields
 			err := os.Setenv("APP_ENV", "production")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -347,6 +357,15 @@ redis:
 
 			err = os.Unsetenv("SERVER_PORT")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+			// Clean up database environment variables
+			dbEnvVars := []string{
+				"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE",
+				"POSTGRES_DSN", "DB_SSL_CERT", "DB_SSL_KEY", "DB_SSL_ROOT_CERT",
+			}
+			for _, envVar := range dbEnvVars {
+				_ = os.Unsetenv(envVar)
+			}
 		})
 
 		ginkgo.It("should fail validation when required database fields are missing in production", func() {
@@ -354,6 +373,175 @@ redis:
 			_, err := config.LoadConfig("")
 			gomega.Expect(err).To(gomega.HaveOccurred())
 			gomega.Expect(err.Error()).To(gomega.ContainSubstring("DB_HOST or POSTGRES_DSN"))
+		})
+
+		ginkgo.Context("when testing PORT environment variable mapping", func() {
+			ginkgo.BeforeEach(func() {
+				config.ResetViper()
+				// Set APP_ENV to dev to avoid production validation
+				err := os.Setenv("APP_ENV", "dev")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				err = os.Setenv("ENVIRONMENT", "dev")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			})
+
+			ginkgo.AfterEach(func() {
+				_ = os.Unsetenv("APP_ENV")
+				_ = os.Unsetenv("ENVIRONMENT")
+			})
+
+			ginkgo.It("should map PORT to SERVER_PORT when SERVER_PORT is not set", func() {
+				// Given
+				// Unset SERVER_PORT first to ensure it's not set
+				_ = os.Unsetenv("SERVER_PORT")
+
+				err := os.Setenv("PORT", "9090")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				defer func() { _ = os.Unsetenv("PORT") }()
+
+				// When
+				cfg, err := config.LoadConfig("")
+
+				// Then
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(cfg.ServerPort).To(gomega.Equal("9090"))
+			})
+
+			ginkgo.It("should not override SERVER_PORT when both PORT and SERVER_PORT are set", func() {
+				// Given
+				err := os.Setenv("PORT", "9090")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				defer func() { _ = os.Unsetenv("PORT") }()
+
+				err = os.Setenv("SERVER_PORT", "8080")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				defer func() { _ = os.Unsetenv("SERVER_PORT") }()
+
+				// When
+				cfg, err := config.LoadConfig("")
+
+				// Then
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(cfg.ServerPort).To(gomega.Equal("8080"))
+			})
+		})
+
+		ginkgo.Context("when testing processDatabaseConfig edge cases", func() {
+			ginkgo.BeforeEach(func() {
+				config.ResetViper()
+				// Set APP_ENV to dev to avoid production validation
+				err := os.Setenv("APP_ENV", "dev")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				err = os.Setenv("ENVIRONMENT", "dev")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			})
+
+			ginkgo.AfterEach(func() {
+				_ = os.Unsetenv("APP_ENV")
+				_ = os.Unsetenv("ENVIRONMENT")
+			})
+
+			ginkgo.It("should handle POSTGRES_DSN environment variable", func() {
+				// Given
+				err := os.Setenv("POSTGRES_DSN", "postgres://user:pass@host:5432/db?sslmode=require")
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				defer func() { _ = os.Unsetenv("POSTGRES_DSN") }()
+
+				// When
+				cfg, err := config.LoadConfig("")
+
+				// Then
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(cfg.DB.DSN).To(gomega.Equal("postgres://user:pass@host:5432/db?sslmode=require"))
+			})
+
+			ginkgo.It("should construct DSN from individual components with SSL certificates", func() {
+				// Given
+				envVars := map[string]string{
+					"DB_HOST":          "localhost",
+					"DB_PORT":          "5432",
+					"DB_USER":          "testuser",
+					"DB_PASSWORD":      "testpass",
+					"DB_NAME":          "testdb",
+					"DB_SSLMODE":       "verify-full",
+					"DB_SSL_CERT":      "/path/to/cert.pem",
+					"DB_SSL_KEY":       "/path/to/key.pem",
+					"DB_SSL_ROOT_CERT": "/path/to/ca.pem",
+				}
+
+				for key, value := range envVars {
+					err := os.Setenv(key, value)
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+					defer func(k string) { _ = os.Unsetenv(k) }(key)
+				}
+
+				// When
+				cfg, err := config.LoadConfig("")
+
+				// Then
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(cfg.DB.DSN).To(gomega.ContainSubstring("postgres://testuser:testpass@localhost:5432/testdb?sslmode=verify-full"))
+				gomega.Expect(cfg.DB.DSN).To(gomega.ContainSubstring("sslcert=/path/to/cert.pem"))
+				gomega.Expect(cfg.DB.DSN).To(gomega.ContainSubstring("sslkey=/path/to/key.pem"))
+				gomega.Expect(cfg.DB.DSN).To(gomega.ContainSubstring("sslrootcert=/path/to/ca.pem"))
+			})
+
+			ginkgo.It("should handle connection pool configuration from environment variables", func() {
+				// Given
+				envVars := map[string]string{
+					"DB_MAX_OPEN_CONNS":             "50",
+					"DB_MAX_IDLE_CONNS":             "10",
+					"DB_CONN_MAX_LIFETIME_SECONDS":  "7200",
+					"DB_CONN_MAX_IDLE_TIME_SECONDS": "600",
+					"DB_CONNECT_TIMEOUT_SECONDS":    "60",
+				}
+
+				for key, value := range envVars {
+					err := os.Setenv(key, value)
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+					defer func(k string) { _ = os.Unsetenv(k) }(key)
+				}
+
+				// When
+				cfg, err := config.LoadConfig("")
+
+				// Then
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(cfg.DB.MaxOpenConns).To(gomega.Equal(50))
+				gomega.Expect(cfg.DB.MaxIdleConns).To(gomega.Equal(10))
+				gomega.Expect(cfg.DB.ConnMaxLifetimeSeconds).To(gomega.Equal(7200))
+				gomega.Expect(cfg.DB.ConnMaxIdleTimeSeconds).To(gomega.Equal(600))
+				gomega.Expect(cfg.DB.ConnectTimeoutSeconds).To(gomega.Equal(60))
+			})
+
+			ginkgo.It("should handle invalid connection pool values gracefully", func() {
+				// Given
+				envVars := map[string]string{
+					"DB_MAX_OPEN_CONNS":             "invalid",
+					"DB_MAX_IDLE_CONNS":             "not_a_number",
+					"DB_CONN_MAX_LIFETIME_SECONDS":  "abc",
+					"DB_CONN_MAX_IDLE_TIME_SECONDS": "xyz",
+					"DB_CONNECT_TIMEOUT_SECONDS":    "def",
+				}
+
+				for key, value := range envVars {
+					err := os.Setenv(key, value)
+					gomega.Expect(err).NotTo(gomega.HaveOccurred())
+					defer func(k string) { _ = os.Unsetenv(k) }(key)
+				}
+
+				// When
+				cfg, err := config.LoadConfig("")
+
+				// Then
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				// Should use default values when parsing fails
+				gomega.Expect(cfg.DB.MaxOpenConns).To(gomega.Equal(25))
+				gomega.Expect(cfg.DB.MaxIdleConns).To(gomega.Equal(5))
+				gomega.Expect(cfg.DB.ConnMaxLifetimeSeconds).To(gomega.Equal(3600))
+				gomega.Expect(cfg.DB.ConnMaxIdleTimeSeconds).To(gomega.Equal(300))
+				gomega.Expect(cfg.DB.ConnectTimeoutSeconds).To(gomega.Equal(30))
+			})
 		})
 	})
 })

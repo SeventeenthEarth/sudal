@@ -74,5 +74,5 @@ func (r *Repository) GetDatabaseStatus(ctx context.Context) (*domain.DatabaseSta
 		}
 	}
 
-	return domain.HealthyDatabaseStatus(infraHealthStatus.Message, domainStats), nil
+	return domain.NewDatabaseStatus(infraHealthStatus.Status, infraHealthStatus.Message, domainStats), nil
 }

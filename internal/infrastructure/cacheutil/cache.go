@@ -35,6 +35,9 @@ func (c *CacheUtil) Set(key string, value string, ttl time.Duration) error {
 	}
 
 	ctx := context.Background()
+	if c.redisManager == nil {
+		return fmt.Errorf("redis client is not available")
+	}
 	client := c.redisManager.GetClient()
 	if client == nil {
 		return fmt.Errorf("redis client is not available")
@@ -76,6 +79,9 @@ func (c *CacheUtil) Get(key string) (string, error) {
 	}
 
 	ctx := context.Background()
+	if c.redisManager == nil {
+		return "", fmt.Errorf("redis client is not available")
+	}
 	client := c.redisManager.GetClient()
 	if client == nil {
 		return "", fmt.Errorf("redis client is not available")
@@ -116,6 +122,9 @@ func (c *CacheUtil) Delete(key string) error {
 	}
 
 	ctx := context.Background()
+	if c.redisManager == nil {
+		return fmt.Errorf("redis client is not available")
+	}
 	client := c.redisManager.GetClient()
 	if client == nil {
 		return fmt.Errorf("redis client is not available")
@@ -150,6 +159,9 @@ func (c *CacheUtil) DeleteByPattern(pattern string) error {
 	}
 
 	ctx := context.Background()
+	if c.redisManager == nil {
+		return fmt.Errorf("redis client is not available")
+	}
 	client := c.redisManager.GetClient()
 	if client == nil {
 		return fmt.Errorf("redis client is not available")

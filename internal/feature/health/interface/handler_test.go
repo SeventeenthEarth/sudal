@@ -207,4 +207,51 @@ var _ = ginkgo.Describe("Handler", func() {
 			}).NotTo(gomega.Panic())
 		})
 	})
+
+	ginkgo.Describe("Error handling edge cases", func() {
+		var (
+			edgeHandler  *interfaces.Handler
+			edgeRecorder *httptest.ResponseRecorder
+			edgeRequest  *http.Request
+		)
+
+		ginkgo.BeforeEach(func() {
+			edgeHandler = interfaces.NewHandler(mockService)
+			edgeRecorder = httptest.NewRecorder()
+			edgeRequest = httptest.NewRequest(http.MethodGet, "/", nil)
+		})
+
+		ginkgo.Context("when service returns nil status", func() {
+			ginkgo.BeforeEach(func() {
+				mockService.EXPECT().Ping(gomock.Any()).Return(nil, nil)
+				edgeHandler.Ping(edgeRecorder, edgeRequest)
+			})
+
+			ginkgo.It("should handle nil status gracefully", func() {
+				gomega.Expect(edgeRecorder.Code).To(gomega.Equal(http.StatusOK))
+			})
+		})
+
+		ginkgo.Context("when service returns nil database status", func() {
+			ginkgo.BeforeEach(func() {
+				mockService.EXPECT().CheckDatabase(gomock.Any()).Return(nil, nil)
+				edgeHandler.DatabaseHealth(edgeRecorder, edgeRequest)
+			})
+
+			ginkgo.It("should handle nil database status gracefully", func() {
+				gomega.Expect(edgeRecorder.Code).To(gomega.Equal(http.StatusOK))
+			})
+		})
+
+		ginkgo.Context("when service returns nil health status", func() {
+			ginkgo.BeforeEach(func() {
+				mockService.EXPECT().Check(gomock.Any()).Return(nil, nil)
+				edgeHandler.Health(edgeRecorder, edgeRequest)
+			})
+
+			ginkgo.It("should handle nil health status gracefully", func() {
+				gomega.Expect(edgeRecorder.Code).To(gomega.Equal(http.StatusOK))
+			})
+		})
+	})
 })

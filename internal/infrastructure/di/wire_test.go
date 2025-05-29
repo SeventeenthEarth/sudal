@@ -7,6 +7,8 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
+	"github.com/seventeenthearth/sudal/internal/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 var _ = ginkgo.Describe("DI", func() {
@@ -105,6 +107,312 @@ var _ = ginkgo.Describe("DI", func() {
 					di.ProvideConfig()
 				}).To(gomega.Panic())
 			})
+		})
+	})
+
+	ginkgo.Describe("ProvidePostgresManager", func() {
+		ginkgo.Context("when in test environment", func() {
+			ginkgo.It("should return nil for test environment", func() {
+				// Arrange
+				os.Setenv("GO_TEST", "1")
+				defer os.Unsetenv("GO_TEST")
+
+				// Act
+				manager, err := di.ProvidePostgresManager(originalConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when GINKGO_TEST is set", func() {
+				// Arrange
+				os.Setenv("GINKGO_TEST", "1")
+				defer os.Unsetenv("GINKGO_TEST")
+
+				// Act
+				manager, err := di.ProvidePostgresManager(originalConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when config AppEnv is test", func() {
+				// Arrange
+				testConfig := *originalConfig
+				testConfig.AppEnv = "test"
+
+				// Act
+				manager, err := di.ProvidePostgresManager(&testConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when config Environment is test", func() {
+				// Arrange
+				testConfig := *originalConfig
+				testConfig.Environment = "test"
+
+				// Act
+				manager, err := di.ProvidePostgresManager(&testConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+		})
+
+		ginkgo.Context("when not in test environment", func() {
+			ginkgo.BeforeEach(func() {
+				// Clear test environment variables
+				os.Unsetenv("GO_TEST")
+				os.Unsetenv("GINKGO_TEST")
+				// Set production config
+				prodConfig := *originalConfig
+				prodConfig.AppEnv = "production"
+				prodConfig.Environment = "production"
+				config.SetConfig(&prodConfig)
+			})
+
+			ginkgo.It("should return error for invalid configuration", func() {
+				// Arrange
+				invalidConfig := &config.Config{
+					AppEnv:      "production",
+					Environment: "production",
+					DB: config.DBConfig{
+						DSN: "", // Invalid empty DSN
+					},
+				}
+
+				// Act
+				manager, err := di.ProvidePostgresManager(invalidConfig)
+
+				// Assert
+				gomega.Expect(err).To(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+		})
+	})
+
+	ginkgo.Describe("ProvideRedisManager", func() {
+		ginkgo.Context("when in test environment", func() {
+			ginkgo.It("should return nil for test environment", func() {
+				// Arrange
+				os.Setenv("GO_TEST", "1")
+				defer os.Unsetenv("GO_TEST")
+
+				// Act
+				manager, err := di.ProvideRedisManager(originalConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when GINKGO_TEST is set", func() {
+				// Arrange
+				os.Setenv("GINKGO_TEST", "1")
+				defer os.Unsetenv("GINKGO_TEST")
+
+				// Act
+				manager, err := di.ProvideRedisManager(originalConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when config AppEnv is test", func() {
+				// Arrange
+				testConfig := *originalConfig
+				testConfig.AppEnv = "test"
+
+				// Act
+				manager, err := di.ProvideRedisManager(&testConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when config Environment is test", func() {
+				// Arrange
+				testConfig := *originalConfig
+				testConfig.Environment = "test"
+
+				// Act
+				manager, err := di.ProvideRedisManager(&testConfig)
+
+				// Assert
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+		})
+
+		ginkgo.Context("when not in test environment", func() {
+			ginkgo.BeforeEach(func() {
+				// Clear test environment variables
+				os.Unsetenv("GO_TEST")
+				os.Unsetenv("GINKGO_TEST")
+				// Set production config
+				prodConfig := *originalConfig
+				prodConfig.AppEnv = "production"
+				prodConfig.Environment = "production"
+				config.SetConfig(&prodConfig)
+			})
+
+			ginkgo.It("should return error for invalid configuration", func() {
+				// Arrange
+				invalidConfig := &config.Config{
+					AppEnv:      "production",
+					Environment: "production",
+					Redis: config.RedisConfig{
+						Addr: "", // Invalid empty address
+					},
+				}
+
+				// Act
+				manager, err := di.ProvideRedisManager(invalidConfig)
+
+				// Assert
+				gomega.Expect(err).To(gomega.HaveOccurred())
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+		})
+	})
+
+	ginkgo.Describe("ProvideCacheUtil", func() {
+		ginkgo.Context("when in test environment", func() {
+			ginkgo.It("should return nil for test environment", func() {
+				// Arrange
+				os.Setenv("GO_TEST", "1")
+				defer os.Unsetenv("GO_TEST")
+
+				// Act
+				cacheUtil := di.ProvideCacheUtil(nil)
+
+				// Assert
+				gomega.Expect(cacheUtil).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when GINKGO_TEST is set", func() {
+				// Arrange
+				os.Setenv("GINKGO_TEST", "1")
+				defer os.Unsetenv("GINKGO_TEST")
+
+				// Act
+				cacheUtil := di.ProvideCacheUtil(nil)
+
+				// Assert
+				gomega.Expect(cacheUtil).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when config AppEnv is test", func() {
+				// Arrange
+				testConfig := *originalConfig
+				testConfig.AppEnv = "test"
+				config.SetConfig(&testConfig)
+
+				// Act
+				cacheUtil := di.ProvideCacheUtil(nil)
+
+				// Assert
+				gomega.Expect(cacheUtil).To(gomega.BeNil())
+			})
+
+			ginkgo.It("should return nil when config Environment is test", func() {
+				// Arrange
+				testConfig := *originalConfig
+				testConfig.Environment = "test"
+				config.SetConfig(&testConfig)
+
+				// Act
+				cacheUtil := di.ProvideCacheUtil(nil)
+
+				// Assert
+				gomega.Expect(cacheUtil).To(gomega.BeNil())
+			})
+		})
+
+		ginkgo.Context("when not in test environment", func() {
+			ginkgo.BeforeEach(func() {
+				// Clear test environment variables
+				os.Unsetenv("GO_TEST")
+				os.Unsetenv("GINKGO_TEST")
+				// Set production config
+				prodConfig := *originalConfig
+				prodConfig.AppEnv = "production"
+				prodConfig.Environment = "production"
+				config.SetConfig(&prodConfig)
+			})
+
+			ginkgo.It("should return cache util when redis manager is nil", func() {
+				// Act
+				cacheUtil := di.ProvideCacheUtil(nil)
+
+				// Assert
+				gomega.Expect(cacheUtil).NotTo(gomega.BeNil())
+			})
+		})
+	})
+
+	ginkgo.Describe("NewDefaultDatabaseHealthInitializer", func() {
+		ginkgo.It("should create a new default database health initializer", func() {
+			// Act
+			initializer := di.NewDefaultDatabaseHealthInitializer()
+
+			// Assert
+			gomega.Expect(initializer).NotTo(gomega.BeNil())
+		})
+
+		ginkgo.It("should implement DatabaseHealthInitializer interface", func() {
+			// Act
+			initializer := di.NewDefaultDatabaseHealthInitializer()
+
+			// Assert
+			var _ di.DatabaseHealthInitializer = initializer
+			gomega.Expect(initializer).NotTo(gomega.BeNil())
+		})
+
+		ginkgo.It("should be able to initialize database health handler", func() {
+			// Arrange
+			initializer := di.NewDefaultDatabaseHealthInitializer()
+
+			// Act
+			handler, err := initializer.InitializeDatabaseHealthHandler()
+
+			// Assert
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(handler).NotTo(gomega.BeNil())
+		})
+	})
+
+	ginkgo.Describe("NewOpenAPIHandler", func() {
+		ginkgo.It("should create a new OpenAPI handler", func() {
+			// Arrange - create a mock service
+			ctrl := gomock.NewController(ginkgo.GinkgoT())
+			defer ctrl.Finish()
+
+			mockService := mocks.NewMockService(ctrl)
+
+			// Act
+			handler := di.NewOpenAPIHandler(mockService)
+
+			// Assert
+			gomega.Expect(handler).NotTo(gomega.BeNil())
+		})
+	})
+
+	ginkgo.Describe("InitializeSwaggerHandler", func() {
+		ginkgo.It("should create a new Swagger handler", func() {
+			// Act
+			handler := di.InitializeSwaggerHandler()
+
+			// Assert
+			gomega.Expect(handler).NotTo(gomega.BeNil())
 		})
 	})
 })

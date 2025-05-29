@@ -4,28 +4,28 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 )
 
-// Implementation of the domain.Repository interface
+// Implementation of the repo.HealthRepository interface
 
-// Repository is the implementation of the domain.Repository interface
-type Repository struct {
+// HealthRepository is the implementation of the repo.HealthRepository interface
+type HealthRepository struct {
 	// Database manager for performing health checks
 	dbManager database.PostgresManager
 }
 
 // NewRepository creates a new health repository
-func NewRepository(dbManager database.PostgresManager) *Repository {
-	return &Repository{
+func NewRepository(dbManager database.PostgresManager) *HealthRepository {
+	return &HealthRepository{
 		dbManager: dbManager,
 	}
 }
 
 // GetStatus retrieves the current health status
 // In a real application, this would check database connections, cache, etc.
-func (r *Repository) GetStatus(ctx context.Context) (*domain.Status, error) {
+func (r *HealthRepository) GetStatus(ctx context.Context) (*entity.HealthStatus, error) {
 	// In a real application, this would perform actual health checks
 	// For example:
 	// - Check database connection
@@ -33,14 +33,14 @@ func (r *Repository) GetStatus(ctx context.Context) (*domain.Status, error) {
 	// - Check external API dependencies
 
 	// For now, we just return a healthy status
-	return domain.HealthyStatus(), nil
+	return entity.HealthyStatus(), nil
 }
 
 // GetDatabaseStatus retrieves the current database health status
-func (r *Repository) GetDatabaseStatus(ctx context.Context) (*domain.DatabaseStatus, error) {
+func (r *HealthRepository) GetDatabaseStatus(ctx context.Context) (*entity.DatabaseStatus, error) {
 	// If no database manager is available (e.g., in tests), return a mock status
 	if r.dbManager == nil {
-		stats := &domain.ConnectionStats{
+		stats := &entity.ConnectionStats{
 			MaxOpenConnections: 25,
 			OpenConnections:    1,
 			InUse:              0,
@@ -50,19 +50,19 @@ func (r *Repository) GetDatabaseStatus(ctx context.Context) (*domain.DatabaseSta
 			MaxIdleClosed:      0,
 			MaxLifetimeClosed:  0,
 		}
-		return domain.HealthyDatabaseStatus("Mock database connection is healthy", stats), nil
+		return entity.HealthyDatabaseStatus("Mock database connection is healthy", stats), nil
 	}
 
 	// Perform actual database health check
 	infraHealthStatus, err := r.dbManager.HealthCheck(ctx)
 	if err != nil {
-		return domain.UnhealthyDatabaseStatus(fmt.Sprintf("Database health check failed: %v", err)), err
+		return entity.UnhealthyDatabaseStatus(fmt.Sprintf("Database health check failed: %v", err)), err
 	}
 
 	// Convert infrastructure health status to domain model
-	var domainStats *domain.ConnectionStats
+	var domainStats *entity.ConnectionStats
 	if infraHealthStatus.Stats != nil {
-		domainStats = &domain.ConnectionStats{
+		domainStats = &entity.ConnectionStats{
 			MaxOpenConnections: infraHealthStatus.Stats.MaxOpenConnections,
 			OpenConnections:    infraHealthStatus.Stats.OpenConnections,
 			InUse:              infraHealthStatus.Stats.InUse,
@@ -74,5 +74,5 @@ func (r *Repository) GetDatabaseStatus(ctx context.Context) (*domain.DatabaseSta
 		}
 	}
 
-	return domain.NewDatabaseStatus(infraHealthStatus.Status, infraHealthStatus.Message, domainStats), nil
+	return entity.NewDatabaseStatus(infraHealthStatus.Status, infraHealthStatus.Message, domainStats), nil
 }

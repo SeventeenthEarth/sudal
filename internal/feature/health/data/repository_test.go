@@ -10,12 +10,12 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
-var _ = ginkgo.Describe("Repository", func() {
+var _ = ginkgo.Describe("HealthRepository", func() {
 	ginkgo.Describe("NewRepository", func() {
 		ginkgo.It("should create a new repository", func() {
 			// Act
@@ -28,9 +28,9 @@ var _ = ginkgo.Describe("Repository", func() {
 
 	ginkgo.Describe("GetStatus", func() {
 		var (
-			repo   *data.Repository
+			repo   *data.HealthRepository
 			ctx    context.Context
-			status *domain.Status
+			status *entity.HealthStatus
 			err    error
 		)
 
@@ -52,9 +52,9 @@ var _ = ginkgo.Describe("Repository", func() {
 
 	ginkgo.Describe("GetDatabaseStatus", func() {
 		var (
-			repo           *data.Repository
+			repo           *data.HealthRepository
 			ctx            context.Context
-			databaseStatus *domain.DatabaseStatus
+			databaseStatus *entity.DatabaseStatus
 			err            error
 		)
 
@@ -172,9 +172,9 @@ var _ = ginkgo.Describe("Repository", func() {
 
 	ginkgo.Describe("GetStatus with different scenarios", func() {
 		var (
-			repo   *data.Repository
+			repo   *data.HealthRepository
 			ctx    context.Context
-			status *domain.Status
+			status *entity.HealthStatus
 			err    error
 		)
 

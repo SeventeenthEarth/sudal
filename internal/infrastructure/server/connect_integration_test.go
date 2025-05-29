@@ -10,7 +10,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
@@ -43,7 +43,7 @@ var _ = ginkgo.Describe("Connect Integration", func() {
 
 			// Create a mock health service that always returns healthy
 			mockHealthService := &mockHealthService{
-				status: domain.HealthyStatus(),
+				status: entity.HealthyStatus(),
 			}
 
 			// Create the Connect handler
@@ -105,21 +105,21 @@ var _ = ginkgo.Describe("Connect Integration", func() {
 
 // Mock implementation of the health service for testing
 type mockHealthService struct {
-	status *domain.Status
+	status *entity.HealthStatus
 	err    error
 }
 
-func (m *mockHealthService) Check(ctx context.Context) (*domain.Status, error) {
+func (m *mockHealthService) Check(ctx context.Context) (*entity.HealthStatus, error) {
 	return m.status, m.err
 }
 
-func (m *mockHealthService) Ping(ctx context.Context) (*domain.Status, error) {
-	return domain.OkStatus(), nil
+func (m *mockHealthService) Ping(ctx context.Context) (*entity.HealthStatus, error) {
+	return entity.OkStatus(), nil
 }
 
-func (m *mockHealthService) CheckDatabase(ctx context.Context) (*domain.DatabaseStatus, error) {
+func (m *mockHealthService) CheckDatabase(ctx context.Context) (*entity.DatabaseStatus, error) {
 	// Return a default healthy database status for tests
-	stats := &domain.ConnectionStats{
+	stats := &entity.ConnectionStats{
 		MaxOpenConnections: 25,
 		OpenConnections:    1,
 		InUse:              0,
@@ -129,5 +129,5 @@ func (m *mockHealthService) CheckDatabase(ctx context.Context) (*domain.Database
 		MaxIdleClosed:      0,
 		MaxLifetimeClosed:  0,
 	}
-	return domain.HealthyDatabaseStatus("Mock database connection is healthy", stats), m.err
+	return entity.HealthyDatabaseStatus("Mock database connection is healthy", stats), m.err
 }

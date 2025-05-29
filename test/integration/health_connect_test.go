@@ -15,7 +15,7 @@ import (
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
@@ -35,7 +35,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 
 		// Create a mock repository that can be configured for different test scenarios
 		mockRepo = &mockRepository{
-			status: domain.HealthyStatus(),
+			status: entity.HealthyStatus(),
 			err:    nil,
 		}
 
@@ -87,7 +87,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 	Describe("Check", func() {
 		Context("when the service returns a healthy status", func() {
 			BeforeEach(func() {
-				mockRepo.status = domain.HealthyStatus()
+				mockRepo.status = entity.HealthyStatus()
 				mockRepo.err = nil
 			})
 
@@ -108,7 +108,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 
 		Context("when the service returns an unhealthy status", func() {
 			BeforeEach(func() {
-				mockRepo.status = domain.NewStatus("unhealthy")
+				mockRepo.status = entity.NewHealthStatus("unhealthy")
 				mockRepo.err = nil
 			})
 
@@ -129,7 +129,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 
 		Context("when the service returns an unknown status", func() {
 			BeforeEach(func() {
-				mockRepo.status = domain.NewStatus("unknown_status")
+				mockRepo.status = entity.NewHealthStatus("unknown_status")
 				mockRepo.err = nil
 			})
 
@@ -201,25 +201,25 @@ var _ = Describe("Health Connect Service Integration", func() {
 	})
 })
 
-// mockRepository is a mock implementation of the domain.Repository interface
+// mockRepository is a mock implementation of the repo.HealthRepository interface
 type mockRepository struct {
-	status         *domain.Status
-	databaseStatus *domain.DatabaseStatus
+	status         *entity.HealthStatus
+	databaseStatus *entity.DatabaseStatus
 	err            error
 }
 
-// GetStatus implements the domain.Repository interface
-func (m *mockRepository) GetStatus(ctx context.Context) (*domain.Status, error) {
+// GetStatus implements the repo.HealthRepository interface
+func (m *mockRepository) GetStatus(ctx context.Context) (*entity.HealthStatus, error) {
 	return m.status, m.err
 }
 
-// GetDatabaseStatus implements the domain.Repository interface
-func (m *mockRepository) GetDatabaseStatus(ctx context.Context) (*domain.DatabaseStatus, error) {
+// GetDatabaseStatus implements the repo.HealthRepository interface
+func (m *mockRepository) GetDatabaseStatus(ctx context.Context) (*entity.DatabaseStatus, error) {
 	if m.databaseStatus != nil {
 		return m.databaseStatus, m.err
 	}
 	// Return a default healthy database status for tests
-	stats := &domain.ConnectionStats{
+	stats := &entity.ConnectionStats{
 		MaxOpenConnections: 25,
 		OpenConnections:    1,
 		InUse:              0,
@@ -229,5 +229,5 @@ func (m *mockRepository) GetDatabaseStatus(ctx context.Context) (*domain.Databas
 		MaxIdleClosed:      0,
 		MaxLifetimeClosed:  0,
 	}
-	return domain.HealthyDatabaseStatus("Mock database connection is healthy", stats), m.err
+	return entity.HealthyDatabaseStatus("Mock database connection is healthy", stats), m.err
 }

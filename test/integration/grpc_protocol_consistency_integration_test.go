@@ -15,7 +15,7 @@ import (
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -203,7 +203,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 			DescribeTable("should map domain status to proto status consistently",
 				func(domainStatus string, expectedProtoStatus healthv1.ServingStatus) {
 					// Given: Mock configured with specific domain status
-					customStatus := domain.NewStatus(domainStatus)
+					customStatus := entity.NewHealthStatus(domainStatus)
 					testMocks.SetCustomStatus(mockRepo, customStatus)
 
 					grpcWebClient := healthv1connect.NewHealthServiceClient(

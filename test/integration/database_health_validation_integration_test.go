@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -82,7 +82,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 		Context("when validating connection statistics consistency", func() {
 			It("should validate that OpenConnections equals InUse plus Idle", func() {
 				// Given: Mock configured with specific connection statistics
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    15,
 					InUse:              9,
@@ -92,7 +92,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				dbStatus := &domain.DatabaseStatus{
+				dbStatus := &entity.DatabaseStatus{
 					Status:  "healthy",
 					Message: "Database is healthy",
 					Stats:   stats,
@@ -108,7 +108,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -122,7 +122,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 			It("should validate that OpenConnections does not exceed MaxOpenConnections", func() {
 				// Given: Mock configured with connection statistics at limit
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: 20,
 					OpenConnections:    20,
 					InUse:              15,
@@ -132,7 +132,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					MaxIdleClosed:      2,
 					MaxLifetimeClosed:  1,
 				}
-				dbStatus := &domain.DatabaseStatus{
+				dbStatus := &entity.DatabaseStatus{
 					Status:  "healthy",
 					Message: "Database at capacity",
 					Stats:   stats,
@@ -148,7 +148,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -164,7 +164,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 			DescribeTable("should validate connection statistics for various scenarios",
 				func(maxOpen, open, inUse, idle int, waitCount int64, waitDuration time.Duration, description string) {
 					// Given: Mock configured with specific connection pool state
-					stats := &domain.ConnectionStats{
+					stats := &entity.ConnectionStats{
 						MaxOpenConnections: maxOpen,
 						OpenConnections:    open,
 						InUse:              inUse,
@@ -174,7 +174,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 						MaxIdleClosed:      0,
 						MaxLifetimeClosed:  0,
 					}
-					dbStatus := &domain.DatabaseStatus{
+					dbStatus := &entity.DatabaseStatus{
 						Status:  "healthy",
 						Message: description,
 						Stats:   stats,
@@ -190,7 +190,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 					defer resp.Body.Close()
 
-					var healthResponse domain.DetailedHealthStatus
+					var healthResponse entity.DetailedHealthStatus
 					err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -221,7 +221,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 		Context("when validating edge cases", func() {
 			It("should handle zero connections scenario", func() {
 				// Given: Mock configured with zero connections (startup scenario)
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    0,
 					InUse:              0,
@@ -231,7 +231,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				dbStatus := &domain.DatabaseStatus{
+				dbStatus := &entity.DatabaseStatus{
 					Status:  "healthy",
 					Message: "Database starting up",
 					Stats:   stats,
@@ -247,7 +247,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -261,7 +261,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 			It("should handle maximum connections scenario", func() {
 				// Given: Mock configured with maximum connections
 				maxConns := 100
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: maxConns,
 					OpenConnections:    maxConns,
 					InUse:              maxConns,
@@ -271,7 +271,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					MaxIdleClosed:      10,
 					MaxLifetimeClosed:  5,
 				}
-				dbStatus := &domain.DatabaseStatus{
+				dbStatus := &entity.DatabaseStatus{
 					Status:  "healthy",
 					Message: "Database at maximum capacity",
 					Stats:   stats,
@@ -287,7 +287,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -317,7 +317,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -395,7 +395,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 

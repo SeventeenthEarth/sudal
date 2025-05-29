@@ -13,7 +13,7 @@ import (
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	internalMocks "github.com/seventeenthearth/sudal/internal/mocks"
@@ -57,13 +57,14 @@ type IntegrationTestContext struct {
 // NewIntegrationTestContext creates a new integration test context
 func NewIntegrationTestContext() *IntegrationTestContext {
 	ctrl := gomock.NewController(nil) // Will be set properly in test setup
+	mockRedis := NewMockRedisManager()
 	return &IntegrationTestContext{
 		MockCtrl:         ctrl,
 		MockRepo:         internalMocks.NewMockHealthRepository(ctrl),
 		MockService:      NewMockService(),
 		MockPostgres:     internalMocks.NewMockPostgresManager(ctrl),
-		MockRedis:        NewMockRedisManager(),
-		MockCache:        NewMockCacheUtil(),
+		MockRedis:        mockRedis,
+		MockCache:        NewMockCacheUtilWithRedis(mockRedis),
 		ConcurrentTester: NewMockConcurrentTester(),
 		HTTPClient:       &http.Client{Timeout: 10 * time.Second},
 		TestTimeout:      5 * time.Second,
@@ -149,11 +150,11 @@ func (ctx *IntegrationTestContext) SetupGRPCClient() {
 // ConfigureMockForHealthyState configures all mocks for healthy state
 func (ctx *IntegrationTestContext) ConfigureMockForHealthyState() {
 	// Configure repository mock to return healthy status
-	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(domain.OkStatus(), nil).AnyTimes()
-	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(&domain.DatabaseStatus{
+	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(entity.OkStatus(), nil).AnyTimes()
+	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(&entity.DatabaseStatus{
 		Status:  "healthy",
 		Message: "Database connection is healthy",
-		Stats: &domain.ConnectionStats{
+		Stats: &entity.ConnectionStats{
 			MaxOpenConnections: 25,
 			OpenConnections:    5,
 			InUse:              2,
@@ -165,14 +166,14 @@ func (ctx *IntegrationTestContext) ConfigureMockForHealthyState() {
 		},
 	}, nil).AnyTimes()
 
-	ctx.MockService.PingFunc = func(context.Context) (*domain.Status, error) {
-		return domain.OkStatus(), nil
+	ctx.MockService.PingFunc = func(context.Context) (*entity.HealthStatus, error) {
+		return entity.OkStatus(), nil
 	}
-	ctx.MockService.CheckFunc = func(context.Context) (*domain.Status, error) {
-		return domain.HealthyStatus(), nil
+	ctx.MockService.CheckFunc = func(context.Context) (*entity.HealthStatus, error) {
+		return entity.HealthyStatus(), nil
 	}
-	ctx.MockService.CheckDatabaseFunc = func(context.Context) (*domain.DatabaseStatus, error) {
-		stats := &domain.ConnectionStats{
+	ctx.MockService.CheckDatabaseFunc = func(context.Context) (*entity.DatabaseStatus, error) {
+		stats := &entity.ConnectionStats{
 			MaxOpenConnections: 25,
 			OpenConnections:    5,
 			InUse:              2,
@@ -182,7 +183,7 @@ func (ctx *IntegrationTestContext) ConfigureMockForHealthyState() {
 			MaxIdleClosed:      0,
 			MaxLifetimeClosed:  0,
 		}
-		return domain.HealthyDatabaseStatus("Database is healthy", stats), nil
+		return entity.HealthyDatabaseStatus("Database is healthy", stats), nil
 	}
 
 	if ctx.ConnectGoClient != nil {
@@ -200,13 +201,13 @@ func (ctx *IntegrationTestContext) ConfigureMockForUnhealthyState(err error) {
 	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(nil, err).AnyTimes()
 	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(nil, err).AnyTimes()
 
-	ctx.MockService.PingFunc = func(context.Context) (*domain.Status, error) {
+	ctx.MockService.PingFunc = func(context.Context) (*entity.HealthStatus, error) {
 		return nil, err
 	}
-	ctx.MockService.CheckFunc = func(context.Context) (*domain.Status, error) {
+	ctx.MockService.CheckFunc = func(context.Context) (*entity.HealthStatus, error) {
 		return nil, err
 	}
-	ctx.MockService.CheckDatabaseFunc = func(context.Context) (*domain.DatabaseStatus, error) {
+	ctx.MockService.CheckDatabaseFunc = func(context.Context) (*entity.DatabaseStatus, error) {
 		return nil, err
 	}
 
@@ -222,8 +223,8 @@ func (ctx *IntegrationTestContext) ConfigureMockForUnhealthyState(err error) {
 // ConfigureMockForDegradedState configures mocks for degraded state
 func (ctx *IntegrationTestContext) ConfigureMockForDegradedState() {
 	// Configure repository mock to return degraded status
-	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(domain.NewStatus("degraded"), nil).AnyTimes()
-	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(&domain.DatabaseStatus{
+	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(entity.NewHealthStatus("degraded"), nil).AnyTimes()
+	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(&entity.DatabaseStatus{
 		Status:  "degraded",
 		Message: "Database connection is degraded",
 	}, nil).AnyTimes()

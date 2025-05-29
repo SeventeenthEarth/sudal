@@ -1,4 +1,4 @@
-package domain_test
+package entity_test
 
 import (
 	"time"
@@ -6,14 +6,14 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 var _ = ginkgo.Describe("Database Models", func() {
 	ginkgo.Describe("ConnectionStats", func() {
 		ginkgo.It("should create connection stats with correct values", func() {
 			// Arrange
-			stats := &domain.ConnectionStats{
+			stats := &entity.ConnectionStats{
 				MaxOpenConnections: 25,
 				OpenConnections:    5,
 				InUse:              2,
@@ -42,13 +42,13 @@ var _ = ginkgo.Describe("Database Models", func() {
 				// Arrange
 				expectedStatus := "healthy"
 				expectedMessage := "Database is healthy"
-				expectedStats := &domain.ConnectionStats{
+				expectedStats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    1,
 				}
 
 				// Act
-				dbStatus := domain.NewDatabaseStatus(expectedStatus, expectedMessage, expectedStats)
+				dbStatus := entity.NewDatabaseStatus(expectedStatus, expectedMessage, expectedStats)
 
 				// Assert
 				gomega.Expect(dbStatus).NotTo(gomega.BeNil())
@@ -62,13 +62,13 @@ var _ = ginkgo.Describe("Database Models", func() {
 			ginkgo.It("should create a healthy database status", func() {
 				// Arrange
 				expectedMessage := "Database connection is healthy"
-				expectedStats := &domain.ConnectionStats{
+				expectedStats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    1,
 				}
 
 				// Act
-				dbStatus := domain.HealthyDatabaseStatus(expectedMessage, expectedStats)
+				dbStatus := entity.HealthyDatabaseStatus(expectedMessage, expectedStats)
 
 				// Assert
 				gomega.Expect(dbStatus).NotTo(gomega.BeNil())
@@ -84,7 +84,7 @@ var _ = ginkgo.Describe("Database Models", func() {
 				expectedMessage := "Database connection failed"
 
 				// Act
-				dbStatus := domain.UnhealthyDatabaseStatus(expectedMessage)
+				dbStatus := entity.UnhealthyDatabaseStatus(expectedMessage)
 
 				// Assert
 				gomega.Expect(dbStatus).NotTo(gomega.BeNil())
@@ -102,10 +102,10 @@ var _ = ginkgo.Describe("Database Models", func() {
 				expectedStatus := "healthy"
 				expectedMessage := "All systems healthy"
 				expectedTimestamp := "2023-01-01T00:00:00Z"
-				expectedDatabase := domain.HealthyDatabaseStatus("DB healthy", nil)
+				expectedDatabase := entity.HealthyDatabaseStatus("DB healthy", nil)
 
 				// Act
-				detailedStatus := domain.NewDetailedHealthStatus(expectedStatus, expectedMessage, expectedTimestamp, expectedDatabase)
+				detailedStatus := entity.NewDetailedHealthStatus(expectedStatus, expectedMessage, expectedTimestamp, expectedDatabase)
 
 				// Assert
 				gomega.Expect(detailedStatus).NotTo(gomega.BeNil())

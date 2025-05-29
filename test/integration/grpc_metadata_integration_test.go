@@ -15,7 +15,7 @@ import (
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -233,11 +233,11 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 
 			It("should handle timeout errors gracefully", func() {
 				// Given: Mock that simulates slow response
-				mockRepo.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*domain.Status, error) {
+				mockRepo.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*entity.HealthStatus, error) {
 					// Simulate slow operation
 					select {
 					case <-time.After(2 * time.Second):
-						return domain.HealthyStatus(), nil
+						return entity.HealthyStatus(), nil
 					case <-ctx.Done():
 						return nil, ctx.Err()
 					}
@@ -263,7 +263,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 
 			It("should handle context cancellation appropriately", func() {
 				// Given: Mock that waits for context cancellation
-				mockRepo.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*domain.Status, error) {
+				mockRepo.EXPECT().GetStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*entity.HealthStatus, error) {
 					<-ctx.Done()
 					return nil, ctx.Err()
 				}).AnyTimes()

@@ -11,7 +11,8 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 )
 
@@ -19,7 +20,7 @@ var _ = Describe("Handler Error Scenarios Integration Tests", func() {
 	var (
 		handler *healthInterface.Handler
 		service application.Service
-		repo    domain.Repository
+		repo    repo.HealthRepository
 	)
 
 	BeforeEach(func() {
@@ -161,25 +162,25 @@ type ErrorService struct {
 	ErrorToReturn           error
 }
 
-func (e *ErrorService) Ping(ctx context.Context) (*domain.Status, error) {
+func (e *ErrorService) Ping(ctx context.Context) (*entity.HealthStatus, error) {
 	if e.ShouldFailPing {
 		return nil, e.ErrorToReturn
 	}
-	return domain.OkStatus(), nil
+	return entity.OkStatus(), nil
 }
 
-func (e *ErrorService) Check(ctx context.Context) (*domain.Status, error) {
+func (e *ErrorService) Check(ctx context.Context) (*entity.HealthStatus, error) {
 	if e.ShouldFailCheck {
 		return nil, e.ErrorToReturn
 	}
-	return domain.HealthyStatus(), nil
+	return entity.HealthyStatus(), nil
 }
 
-func (e *ErrorService) CheckDatabase(ctx context.Context) (*domain.DatabaseStatus, error) {
+func (e *ErrorService) CheckDatabase(ctx context.Context) (*entity.DatabaseStatus, error) {
 	if e.ShouldFailCheckDatabase {
 		return nil, e.ErrorToReturn
 	}
-	stats := &domain.ConnectionStats{
+	stats := &entity.ConnectionStats{
 		MaxOpenConnections: 25,
 		OpenConnections:    5,
 		InUse:              2,
@@ -189,5 +190,5 @@ func (e *ErrorService) CheckDatabase(ctx context.Context) (*domain.DatabaseStatu
 		MaxIdleClosed:      0,
 		MaxLifetimeClosed:  0,
 	}
-	return domain.HealthyDatabaseStatus("Database is healthy", stats), nil
+	return entity.HealthyDatabaseStatus("Database is healthy", stats), nil
 }

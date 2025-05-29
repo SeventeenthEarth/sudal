@@ -4,39 +4,39 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 // MockService is a mock implementation of the health.Service interface
 type MockService struct {
-	PingFunc          func(ctx context.Context) (*domain.Status, error)
-	CheckFunc         func(ctx context.Context) (*domain.Status, error)
-	CheckDatabaseFunc func(ctx context.Context) (*domain.DatabaseStatus, error)
+	PingFunc          func(ctx context.Context) (*entity.HealthStatus, error)
+	CheckFunc         func(ctx context.Context) (*entity.HealthStatus, error)
+	CheckDatabaseFunc func(ctx context.Context) (*entity.DatabaseStatus, error)
 }
 
 // Ping calls the mocked PingFunc
-func (m *MockService) Ping(ctx context.Context) (*domain.Status, error) {
+func (m *MockService) Ping(ctx context.Context) (*entity.HealthStatus, error) {
 	if m.PingFunc != nil {
 		return m.PingFunc(ctx)
 	}
-	return domain.OkStatus(), nil
+	return entity.OkStatus(), nil
 }
 
 // Check calls the mocked CheckFunc
-func (m *MockService) Check(ctx context.Context) (*domain.Status, error) {
+func (m *MockService) Check(ctx context.Context) (*entity.HealthStatus, error) {
 	if m.CheckFunc != nil {
 		return m.CheckFunc(ctx)
 	}
-	return domain.HealthyStatus(), nil
+	return entity.HealthyStatus(), nil
 }
 
 // CheckDatabase calls the mocked CheckDatabaseFunc
-func (m *MockService) CheckDatabase(ctx context.Context) (*domain.DatabaseStatus, error) {
+func (m *MockService) CheckDatabase(ctx context.Context) (*entity.DatabaseStatus, error) {
 	if m.CheckDatabaseFunc != nil {
 		return m.CheckDatabaseFunc(ctx)
 	}
 	// Return a default healthy database status for tests
-	stats := &domain.ConnectionStats{
+	stats := &entity.ConnectionStats{
 		MaxOpenConnections: 25,
 		OpenConnections:    1,
 		InUse:              0,
@@ -46,19 +46,19 @@ func (m *MockService) CheckDatabase(ctx context.Context) (*domain.DatabaseStatus
 		MaxIdleClosed:      0,
 		MaxLifetimeClosed:  0,
 	}
-	return domain.HealthyDatabaseStatus("Mock database connection is healthy", stats), nil
+	return entity.HealthyDatabaseStatus("Mock database connection is healthy", stats), nil
 }
 
 // NewMockServiceWithError returns a mock service that returns an error for all methods
 func NewMockServiceWithError() *MockService {
 	return &MockService{
-		PingFunc: func(ctx context.Context) (*domain.Status, error) {
+		PingFunc: func(ctx context.Context) (*entity.HealthStatus, error) {
 			return nil, fmt.Errorf("mock ping error")
 		},
-		CheckFunc: func(ctx context.Context) (*domain.Status, error) {
+		CheckFunc: func(ctx context.Context) (*entity.HealthStatus, error) {
 			return nil, fmt.Errorf("mock check error")
 		},
-		CheckDatabaseFunc: func(ctx context.Context) (*domain.DatabaseStatus, error) {
+		CheckDatabaseFunc: func(ctx context.Context) (*entity.DatabaseStatus, error) {
 			return nil, fmt.Errorf("mock database check error")
 		},
 	}

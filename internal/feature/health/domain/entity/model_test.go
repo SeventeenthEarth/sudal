@@ -1,19 +1,19 @@
-package domain_test
+package entity_test
 
 import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
-var _ = ginkgo.Describe("Status", func() {
-	ginkgo.Describe("NewStatus", func() {
-		ginkgo.It("should create a new status with the given status string", func() {
+var _ = ginkgo.Describe("HealthStatus", func() {
+	ginkgo.Describe("NewHealthStatus", func() {
+		ginkgo.It("should create a new health status with the given status string", func() {
 			// Arrange
 			expectedStatus := "test-status"
 
 			// Act
-			status := domain.NewStatus(expectedStatus)
+			status := entity.NewHealthStatus(expectedStatus)
 
 			// Assert
 			gomega.Expect(status).NotTo(gomega.BeNil())
@@ -24,7 +24,7 @@ var _ = ginkgo.Describe("Status", func() {
 	ginkgo.Describe("HealthyStatus", func() {
 		ginkgo.It("should create a status with 'healthy' status", func() {
 			// Act
-			status := domain.HealthyStatus()
+			status := entity.HealthyStatus()
 
 			// Assert
 			gomega.Expect(status).NotTo(gomega.BeNil())
@@ -35,7 +35,7 @@ var _ = ginkgo.Describe("Status", func() {
 	ginkgo.Describe("OkStatus", func() {
 		ginkgo.It("should create a status with 'ok' status", func() {
 			// Act
-			status := domain.OkStatus()
+			status := entity.OkStatus()
 
 			// Assert
 			gomega.Expect(status).NotTo(gomega.BeNil())

@@ -9,7 +9,7 @@ import (
 	"github.com/google/wire"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
@@ -35,7 +35,7 @@ var HealthSet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
 	data.NewRepository,
-	wire.Bind(new(domain.Repository), new(*data.Repository)),
+	wire.Bind(new(repo.HealthRepository), new(*data.HealthRepository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,
@@ -48,7 +48,7 @@ var HealthConnectSet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
 	data.NewRepository,
-	wire.Bind(new(domain.Repository), new(*data.Repository)),
+	wire.Bind(new(repo.HealthRepository), new(*data.HealthRepository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,
@@ -189,7 +189,7 @@ var OpenAPISet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
 	data.NewRepository,
-	wire.Bind(new(domain.Repository), new(*data.Repository)),
+	wire.Bind(new(repo.HealthRepository), new(*data.HealthRepository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,

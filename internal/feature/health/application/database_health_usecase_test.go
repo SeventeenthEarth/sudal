@@ -9,7 +9,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
@@ -42,8 +42,8 @@ var _ = ginkgo.Describe("DatabaseHealthUseCase", func() {
 	ginkgo.Describe("Execute", func() {
 		var (
 			ctx              context.Context
-			expectedDbStatus *domain.DatabaseStatus
-			actualDbStatus   *domain.DatabaseStatus
+			expectedDbStatus *entity.DatabaseStatus
+			actualDbStatus   *entity.DatabaseStatus
 			err              error
 		)
 
@@ -58,13 +58,13 @@ var _ = ginkgo.Describe("DatabaseHealthUseCase", func() {
 
 		ginkgo.Context("when the repository returns a successful database status", func() {
 			ginkgo.BeforeEach(func() {
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    1,
 					InUse:              0,
 					Idle:               1,
 				}
-				expectedDbStatus = domain.HealthyDatabaseStatus("Database is healthy", stats)
+				expectedDbStatus = entity.HealthyDatabaseStatus("Database is healthy", stats)
 				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(expectedDbStatus, nil)
 			})
 
@@ -95,7 +95,7 @@ var _ = ginkgo.Describe("DatabaseHealthUseCase", func() {
 
 		ginkgo.Context("when the repository returns an unhealthy database status", func() {
 			ginkgo.BeforeEach(func() {
-				expectedDbStatus = domain.UnhealthyDatabaseStatus("Database connection failed")
+				expectedDbStatus = entity.UnhealthyDatabaseStatus("Database connection failed")
 				expectedError := errors.New("database connection failed")
 				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(expectedDbStatus, expectedError)
 			})

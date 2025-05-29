@@ -7,7 +7,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	"go.uber.org/mock/gomock"
 )
@@ -43,13 +43,13 @@ var _ = ginkgo.Describe("HealthCheckUseCase", func() {
 	ginkgo.Describe("Execute", func() {
 		ginkgo.Context("when the repository returns a status successfully", func() {
 			var (
-				expectedStatus *domain.Status
-				result         *domain.Status
+				expectedStatus *entity.HealthStatus
+				result         *entity.HealthStatus
 				err            error
 			)
 
 			ginkgo.BeforeEach(func() {
-				expectedStatus = domain.NewStatus("test-healthy")
+				expectedStatus = entity.NewHealthStatus("test-healthy")
 				mockRepo.EXPECT().GetStatus(gomock.Any()).Return(expectedStatus, nil)
 				useCase = application.NewHealthCheckUseCase(mockRepo)
 			})
@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("HealthCheckUseCase", func() {
 		ginkgo.Context("when the repository returns an error", func() {
 			var (
 				expectedError error
-				result        *domain.Status
+				result        *entity.HealthStatus
 				err           error
 			)
 

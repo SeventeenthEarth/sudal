@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 var _ = Describe("Domain Function Integration Tests", func() {
@@ -19,7 +19,7 @@ var _ = Describe("Domain Function Integration Tests", func() {
 					message := "All systems operational"
 					timestamp := time.Now().UTC().Format(time.RFC3339)
 
-					stats := &domain.ConnectionStats{
+					stats := &entity.ConnectionStats{
 						MaxOpenConnections: 25,
 						OpenConnections:    10,
 						InUse:              5,
@@ -29,10 +29,10 @@ var _ = Describe("Domain Function Integration Tests", func() {
 						MaxIdleClosed:      0,
 						MaxLifetimeClosed:  0,
 					}
-					databaseStatus := domain.HealthyDatabaseStatus("Database is healthy", stats)
+					databaseStatus := entity.HealthyDatabaseStatus("Database is healthy", stats)
 
 					// When: Creating detailed health status using NewDetailedHealthStatus
-					detailedStatus := domain.NewDetailedHealthStatus(status, message, timestamp, databaseStatus)
+					detailedStatus := entity.NewDetailedHealthStatus(status, message, timestamp, databaseStatus)
 
 					// Then: Should create proper detailed health status
 					Expect(detailedStatus).NotTo(BeNil())
@@ -49,7 +49,7 @@ var _ = Describe("Domain Function Integration Tests", func() {
 					timestamp := time.Now().UTC().Format(time.RFC3339)
 
 					// When: Creating detailed health status with nil database
-					detailedStatus := domain.NewDetailedHealthStatus(status, message, timestamp, nil)
+					detailedStatus := entity.NewDetailedHealthStatus(status, message, timestamp, nil)
 
 					// Then: Should create proper detailed health status with nil database
 					Expect(detailedStatus).NotTo(BeNil())
@@ -64,10 +64,10 @@ var _ = Describe("Domain Function Integration Tests", func() {
 					status := "degraded"
 					message := "Database connection issues"
 					timestamp := time.Now().UTC().Format(time.RFC3339)
-					databaseStatus := domain.UnhealthyDatabaseStatus("Connection timeout")
+					databaseStatus := entity.UnhealthyDatabaseStatus("Connection timeout")
 
 					// When: Creating detailed health status with unhealthy database
-					detailedStatus := domain.NewDetailedHealthStatus(status, message, timestamp, databaseStatus)
+					detailedStatus := entity.NewDetailedHealthStatus(status, message, timestamp, databaseStatus)
 
 					// Then: Should create proper detailed health status
 					Expect(detailedStatus).NotTo(BeNil())
@@ -87,7 +87,7 @@ var _ = Describe("Domain Function Integration Tests", func() {
 					timestamp := ""
 
 					// When: Creating detailed health status with empty strings
-					detailedStatus := domain.NewDetailedHealthStatus(status, message, timestamp, nil)
+					detailedStatus := entity.NewDetailedHealthStatus(status, message, timestamp, nil)
 
 					// Then: Should create detailed health status with empty values
 					Expect(detailedStatus).NotTo(BeNil())
@@ -103,7 +103,7 @@ var _ = Describe("Domain Function Integration Tests", func() {
 					message := "Database performance optimal"
 					timestamp := time.Now().UTC().Format(time.RFC3339)
 
-					stats := &domain.ConnectionStats{
+					stats := &entity.ConnectionStats{
 						MaxOpenConnections: 100,
 						OpenConnections:    75,
 						InUse:              45,
@@ -113,10 +113,10 @@ var _ = Describe("Domain Function Integration Tests", func() {
 						MaxIdleClosed:      567,
 						MaxLifetimeClosed:  89,
 					}
-					databaseStatus := domain.HealthyDatabaseStatus("High performance database", stats)
+					databaseStatus := entity.HealthyDatabaseStatus("High performance database", stats)
 
 					// When: Creating detailed health status with complex stats
-					detailedStatus := domain.NewDetailedHealthStatus(status, message, timestamp, databaseStatus)
+					detailedStatus := entity.NewDetailedHealthStatus(status, message, timestamp, databaseStatus)
 
 					// Then: Should preserve all connection statistics
 					Expect(detailedStatus).NotTo(BeNil())

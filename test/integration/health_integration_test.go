@@ -18,7 +18,7 @@ var _ = ginkgo.Describe("Integration Tests", func() {
 	ginkgo.Describe("Health Endpoints", func() {
 		var (
 			handler *healthHandler.Handler
-			repo    *healthData.Repository
+			repo    *healthData.HealthRepository
 			service healthApp.Service
 		)
 

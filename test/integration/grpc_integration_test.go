@@ -15,7 +15,7 @@ import (
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -226,7 +226,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 		Context("when service returns different statuses", func() {
 			It("should return NOT_SERVING for unhealthy status", func() {
 				// Given: Mock configured to return unhealthy status
-				unhealthyStatus := domain.NewStatus("unhealthy")
+				unhealthyStatus := entity.UnhealthyStatus()
 				testMocks.SetCustomStatus(mockRepo, unhealthyStatus)
 
 				client := healthv1connect.NewHealthServiceClient(
@@ -249,7 +249,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 
 			It("should return UNKNOWN for unknown status", func() {
 				// Given: Mock configured to return unknown status
-				unknownStatus := domain.NewStatus("unknown")
+				unknownStatus := entity.UnknownStatus()
 				testMocks.SetCustomStatus(mockRepo, unknownStatus)
 
 				client := healthv1connect.NewHealthServiceClient(

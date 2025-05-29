@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -91,7 +91,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -115,7 +115,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -135,7 +135,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -155,7 +155,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -177,7 +177,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -197,7 +197,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -210,7 +210,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 		Context("when request context is cancelled", func() {
 			It("should handle context cancellation gracefully", func() {
 				// Given: Mock that waits for context cancellation
-				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*domain.DatabaseStatus, error) {
+				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*entity.DatabaseStatus, error) {
 					<-ctx.Done()
 					return nil, ctx.Err()
 				}).AnyTimes()
@@ -230,13 +230,13 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should handle request timeout", func() {
 				// Given: Mock that simulates slow database response
-				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*domain.DatabaseStatus, error) {
+				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).DoAndReturn(func(ctx context.Context) (*entity.DatabaseStatus, error) {
 					select {
 					case <-time.After(3 * time.Second):
-						return &domain.DatabaseStatus{
+						return &entity.DatabaseStatus{
 							Status:  "healthy",
 							Message: "Slow response",
-							Stats:   &domain.ConnectionStats{},
+							Stats:   &entity.ConnectionStats{},
 						}, nil
 					case <-ctx.Done():
 						return nil, ctx.Err()
@@ -267,7 +267,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -287,7 +287,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -311,7 +311,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -331,7 +331,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -353,7 +353,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 				defer resp.Body.Close()
 
-				var healthResponse domain.DetailedHealthStatus
+				var healthResponse entity.DetailedHealthStatus
 				err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -391,7 +391,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 					defer resp.Body.Close()
 
-					var healthResponse domain.DetailedHealthStatus
+					var healthResponse entity.DetailedHealthStatus
 					err = json.NewDecoder(resp.Body).Decode(&healthResponse)
 					Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Scenario: %s", scenario.name))
 

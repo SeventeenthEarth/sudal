@@ -10,7 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	connectImpl "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
@@ -39,7 +39,7 @@ var _ = Describe("HealthServiceHandler", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).
-					Return(domain.HealthyStatus(), nil)
+					Return(entity.HealthyStatus(), nil)
 			})
 
 			It("should return a SERVING status", func() {
@@ -61,7 +61,7 @@ var _ = Describe("HealthServiceHandler", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).
-					Return(domain.NewStatus("unhealthy"), nil)
+					Return(entity.UnhealthyStatus(), nil)
 			})
 
 			It("should return a NOT_SERVING status", func() {
@@ -83,7 +83,7 @@ var _ = Describe("HealthServiceHandler", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).
-					Return(domain.NewStatus("unknown_status"), nil)
+					Return(entity.UnknownStatus(), nil)
 			})
 
 			It("should return an UNKNOWN status", func() {

@@ -6,7 +6,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 var _ = ginkgo.Describe("PingUseCase", func() {
@@ -31,7 +31,7 @@ var _ = ginkgo.Describe("PingUseCase", func() {
 
 	ginkgo.Describe("Execute", func() {
 		var (
-			result *domain.Status
+			result *entity.HealthStatus
 			err    error
 		)
 

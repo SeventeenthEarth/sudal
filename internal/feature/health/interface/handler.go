@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 // Handler handles health-related HTTP requests
@@ -69,14 +69,14 @@ func (h *Handler) DatabaseHealth(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Create error response with proper structure
 		// Use the dbStatus if available (repository may return both status and error)
-		var databaseStatus *domain.DatabaseStatus
+		var databaseStatus *entity.DatabaseStatus
 		if dbStatus != nil {
 			databaseStatus = dbStatus
 		} else {
-			databaseStatus = domain.UnhealthyDatabaseStatus(err.Error())
+			databaseStatus = entity.UnhealthyDatabaseStatus(err.Error())
 		}
 
-		errorResponse := &domain.DetailedHealthStatus{
+		errorResponse := &entity.DetailedHealthStatus{
 			Status:    "error",
 			Message:   "Database health check failed",
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -92,7 +92,7 @@ func (h *Handler) DatabaseHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create successful response
-	response := &domain.DetailedHealthStatus{
+	response := &entity.DetailedHealthStatus{
 		Status:    "healthy",
 		Message:   "Database is healthy",
 		Timestamp: time.Now().UTC().Format(time.RFC3339),

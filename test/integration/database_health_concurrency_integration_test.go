@@ -14,7 +14,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -24,7 +24,7 @@ import (
 type DatabaseHealthResult struct {
 	Success    bool
 	StatusCode int
-	Response   *domain.DetailedHealthStatus
+	Response   *entity.DetailedHealthStatus
 	Error      error
 	Duration   time.Duration
 	RequestID  int
@@ -123,7 +123,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 							if resp.StatusCode == http.StatusOK {
 								defer resp.Body.Close()
-								var healthResponse domain.DetailedHealthStatus
+								var healthResponse entity.DetailedHealthStatus
 								if decodeErr := json.NewDecoder(resp.Body).Decode(&healthResponse); decodeErr == nil {
 									result.Response = &healthResponse
 								}
@@ -237,7 +237,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 							if resp.StatusCode == http.StatusOK {
 								defer resp.Body.Close()
-								var healthResponse domain.DetailedHealthStatus
+								var healthResponse entity.DetailedHealthStatus
 								if decodeErr := json.NewDecoder(resp.Body).Decode(&healthResponse); decodeErr == nil {
 									result.Response = &healthResponse
 								}
@@ -251,7 +251,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 				wg.Wait()
 
 				// Then: All responses should have consistent connection statistics
-				var firstStats *domain.ConnectionStats
+				var firstStats *entity.ConnectionStats
 				for i, result := range results {
 					Expect(result.Error).NotTo(HaveOccurred(), fmt.Sprintf("Request %d failed", result.RequestID))
 					Expect(result.Success).To(BeTrue(), fmt.Sprintf("Request %d was not successful", result.RequestID))
@@ -313,7 +313,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 							result.StatusCode = resp.StatusCode
 							defer resp.Body.Close()
 
-							var healthResponse domain.DetailedHealthStatus
+							var healthResponse entity.DetailedHealthStatus
 							if decodeErr := json.NewDecoder(resp.Body).Decode(&healthResponse); decodeErr == nil {
 								result.Response = &healthResponse
 							}

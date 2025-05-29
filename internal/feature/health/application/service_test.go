@@ -9,7 +9,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
@@ -43,7 +43,7 @@ var _ = ginkgo.Describe("Service", func() {
 
 	ginkgo.Describe("Ping", func() {
 		var (
-			result *domain.Status
+			result *entity.HealthStatus
 			err    error
 		)
 
@@ -67,7 +67,7 @@ var _ = ginkgo.Describe("Service", func() {
 
 	ginkgo.Describe("Check", func() {
 		var (
-			result *domain.Status
+			result *entity.HealthStatus
 			err    error
 		)
 
@@ -80,10 +80,10 @@ var _ = ginkgo.Describe("Service", func() {
 		})
 
 		ginkgo.Context("when the repository returns a status successfully", func() {
-			var expectedStatus *domain.Status
+			var expectedStatus *entity.HealthStatus
 
 			ginkgo.BeforeEach(func() {
-				expectedStatus = domain.NewStatus("test-healthy")
+				expectedStatus = entity.NewHealthStatus("test-healthy")
 				mockRepo.EXPECT().GetStatus(gomock.Any()).Return(expectedStatus, nil)
 			})
 
@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("Service", func() {
 	ginkgo.Describe("CheckDatabase", func() {
 		var (
 			ctx    context.Context
-			result *domain.DatabaseStatus
+			result *entity.DatabaseStatus
 			err    error
 		)
 
@@ -126,16 +126,16 @@ var _ = ginkgo.Describe("Service", func() {
 		})
 
 		ginkgo.Context("when the repository returns a database status successfully", func() {
-			var expectedDbStatus *domain.DatabaseStatus
+			var expectedDbStatus *entity.DatabaseStatus
 
 			ginkgo.BeforeEach(func() {
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    1,
 					InUse:              0,
 					Idle:               1,
 				}
-				expectedDbStatus = domain.HealthyDatabaseStatus("Database is healthy", stats)
+				expectedDbStatus = entity.HealthyDatabaseStatus("Database is healthy", stats)
 				mockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(expectedDbStatus, nil)
 			})
 

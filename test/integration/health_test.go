@@ -10,7 +10,7 @@ import (
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
 	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 
 	"github.com/seventeenthearth/sudal/test/integration/mocks"
@@ -18,7 +18,7 @@ import (
 
 var _ = ginkgo.Describe("Health Endpoints", func() {
 	var (
-		repo     *healthData.Repository
+		repo     *healthData.HealthRepository
 		service  healthApp.Service
 		handler  *healthHandler.Handler
 		recorder *httptest.ResponseRecorder
@@ -55,7 +55,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 
 			// Parse the response body
-			var pingStatus domain.Status
+			var pingStatus entity.HealthStatus
 			err := json.NewDecoder(recorder.Body).Decode(&pingStatus)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(pingStatus.Status).To(gomega.Equal("ok"))
@@ -69,7 +69,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 
 			// Parse the response body
-			var healthStatus domain.Status
+			var healthStatus entity.HealthStatus
 			err = json.NewDecoder(recorder.Body).Decode(&healthStatus)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(healthStatus.Status).To(gomega.Equal("healthy"))
@@ -97,7 +97,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 			gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
 			// Parse the response body
-			var status domain.Status
+			var status entity.HealthStatus
 			err := json.NewDecoder(recorder.Body).Decode(&status)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -140,7 +140,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 			gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
 			// Parse the response body
-			var status domain.Status
+			var status entity.HealthStatus
 			err := json.NewDecoder(recorder.Body).Decode(&status)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 

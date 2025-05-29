@@ -8,12 +8,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 var _ = Describe("Repository Database Integration Tests", func() {
 	var (
-		repo *data.Repository
+		repo *data.HealthRepository
 		ctx  context.Context
 	)
 
@@ -101,7 +101,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 
 			It("should handle concurrent access to GetDatabaseStatus", func() {
 				// Given: Multiple goroutines calling GetDatabaseStatus
-				results := make(chan *domain.DatabaseStatus, 5)
+				results := make(chan *entity.DatabaseStatus, 5)
 				errors := make(chan error, 5)
 
 				// When: Making concurrent calls

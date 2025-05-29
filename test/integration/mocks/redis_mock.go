@@ -3,6 +3,7 @@ package mocks
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -21,12 +22,19 @@ type MockRedisManager struct {
 	ShouldFailClose bool
 	CustomError     error
 	MockClient      *MockRedisClient
+
+	// Test helper state
+	isHealthy          bool
+	isUnavailable      bool
+	hasConnectionError bool
+	hasTimeoutError    bool
 }
 
 // NewMockRedisManager creates a new mock Redis manager
 func NewMockRedisManager() *MockRedisManager {
 	return &MockRedisManager{
 		MockClient: NewMockRedisClient(),
+		isHealthy:  true, // Default to healthy state
 	}
 }
 
@@ -78,6 +86,76 @@ func (m *MockRedisManager) Close() error {
 	}
 
 	return nil
+}
+
+// Test helper methods for MockRedisManager
+
+// SetHealthyStatus configures the mock to be in healthy state
+func (m *MockRedisManager) SetHealthyStatus() {
+	m.isHealthy = true
+	m.isUnavailable = false
+	m.hasConnectionError = false
+	m.hasTimeoutError = false
+	m.ShouldFailPing = false
+	m.ShouldFailClose = false
+	m.CustomError = nil
+	if m.MockClient != nil {
+		m.MockClient.ShouldFailPing = false
+		m.MockClient.ShouldFailSet = false
+		m.MockClient.ShouldFailGet = false
+		m.MockClient.ShouldFailDel = false
+		m.MockClient.ShouldFailKeys = false
+		m.MockClient.ShouldFailClose = false
+		m.MockClient.CustomError = nil
+	}
+}
+
+// SetUnavailableStatus configures the mock to simulate unavailable Redis
+func (m *MockRedisManager) SetUnavailableStatus() {
+	m.isHealthy = false
+	m.isUnavailable = true
+	m.hasConnectionError = false
+	m.hasTimeoutError = false
+	m.ShouldFailPing = true
+	m.CustomError = fmt.Errorf("redis client is not available")
+}
+
+// SetConnectionError configures the mock to simulate connection errors
+func (m *MockRedisManager) SetConnectionError() {
+	m.isHealthy = false
+	m.isUnavailable = false
+	m.hasConnectionError = true
+	m.hasTimeoutError = false
+	m.ShouldFailPing = true
+	m.ShouldFailClose = true
+	m.CustomError = fmt.Errorf("connection error")
+	if m.MockClient != nil {
+		m.MockClient.ShouldFailPing = true
+		m.MockClient.ShouldFailSet = true
+		m.MockClient.ShouldFailGet = true
+		m.MockClient.ShouldFailDel = true
+		m.MockClient.ShouldFailKeys = true
+		m.MockClient.ShouldFailClose = true
+		m.MockClient.CustomError = fmt.Errorf("connection error")
+	}
+}
+
+// SetTimeoutError configures the mock to simulate timeout errors
+func (m *MockRedisManager) SetTimeoutError() {
+	m.isHealthy = false
+	m.isUnavailable = false
+	m.hasConnectionError = false
+	m.hasTimeoutError = true
+	m.ShouldFailPing = true
+	m.CustomError = fmt.Errorf("timeout error")
+	if m.MockClient != nil {
+		m.MockClient.ShouldFailPing = true
+		m.MockClient.ShouldFailSet = true
+		m.MockClient.ShouldFailGet = true
+		m.MockClient.ShouldFailDel = true
+		m.MockClient.ShouldFailKeys = true
+		m.MockClient.CustomError = fmt.Errorf("timeout error")
+	}
 }
 
 // MockRedisClient is a mock implementation of the RedisClient interface
@@ -280,9 +358,13 @@ type MockCacheUtil struct {
 	ShouldFailDeletePattern bool
 	CustomError             error
 
-	// Internal storage for mock
+	// Internal storage for mock (with mutex for thread safety)
+	mu   sync.RWMutex
 	data map[string]string
 	ttls map[string]time.Time
+
+	// Redis manager reference for checking availability
+	redisManager *MockRedisManager
 }
 
 // NewMockCacheUtil creates a new mock cache utility
@@ -290,6 +372,15 @@ func NewMockCacheUtil() *MockCacheUtil {
 	return &MockCacheUtil{
 		data: make(map[string]string),
 		ttls: make(map[string]time.Time),
+	}
+}
+
+// NewMockCacheUtilWithRedis creates a new mock cache utility with Redis manager
+func NewMockCacheUtilWithRedis(redisManager *MockRedisManager) *MockCacheUtil {
+	return &MockCacheUtil{
+		data:         make(map[string]string),
+		ttls:         make(map[string]time.Time),
+		redisManager: redisManager,
 	}
 }
 
@@ -312,12 +403,28 @@ func (m *MockCacheUtil) Set(key string, value string, ttl time.Duration) error {
 		return m.SetFunc(key, value, ttl)
 	}
 
+	// Check Redis manager error states
+	if m.redisManager != nil {
+		if m.redisManager.hasConnectionError {
+			return fmt.Errorf("connection error")
+		}
+		if m.redisManager.hasTimeoutError {
+			return fmt.Errorf("timeout error")
+		}
+		if m.redisManager.isUnavailable {
+			return fmt.Errorf("redis client is not available")
+		}
+	}
+
 	if m.ShouldFailSet {
 		if m.CustomError != nil {
 			return m.CustomError
 		}
 		return fmt.Errorf("mock cache set failed")
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	m.data[key] = value
 	if ttl > 0 {
@@ -333,6 +440,24 @@ func (m *MockCacheUtil) Get(key string) (string, error) {
 		return m.GetFunc(key)
 	}
 
+	// Validate key
+	if key == "" {
+		return "", fmt.Errorf("key cannot be empty")
+	}
+
+	// Check Redis manager error states
+	if m.redisManager != nil {
+		if m.redisManager.hasConnectionError {
+			return "", fmt.Errorf("connection error")
+		}
+		if m.redisManager.hasTimeoutError {
+			return "", fmt.Errorf("timeout error")
+		}
+		if m.redisManager.isUnavailable {
+			return "", fmt.Errorf("redis client is not available")
+		}
+	}
+
 	if m.ShouldFailGet {
 		if m.CustomError != nil {
 			return "", m.CustomError
@@ -340,10 +465,21 @@ func (m *MockCacheUtil) Get(key string) (string, error) {
 		return "", fmt.Errorf("mock cache get failed")
 	}
 
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	// Check if key has expired
 	if expiry, exists := m.ttls[key]; exists && time.Now().After(expiry) {
-		delete(m.data, key)
-		delete(m.ttls, key)
+		// Need to upgrade to write lock for deletion
+		m.mu.RUnlock()
+		m.mu.Lock()
+		// Double-check after acquiring write lock
+		if expiry, exists := m.ttls[key]; exists && time.Now().After(expiry) {
+			delete(m.data, key)
+			delete(m.ttls, key)
+		}
+		m.mu.Unlock()
+		m.mu.RLock()
 		return "", cacheutil.ErrCacheMiss
 	}
 
@@ -360,12 +496,33 @@ func (m *MockCacheUtil) Delete(key string) error {
 		return m.DeleteFunc(key)
 	}
 
+	// Validate key
+	if key == "" {
+		return fmt.Errorf("key cannot be empty")
+	}
+
+	// Check Redis manager error states
+	if m.redisManager != nil {
+		if m.redisManager.hasConnectionError {
+			return fmt.Errorf("connection error")
+		}
+		if m.redisManager.hasTimeoutError {
+			return fmt.Errorf("timeout error")
+		}
+		if m.redisManager.isUnavailable {
+			return fmt.Errorf("redis client is not available")
+		}
+	}
+
 	if m.ShouldFailDelete {
 		if m.CustomError != nil {
 			return m.CustomError
 		}
 		return fmt.Errorf("mock cache delete failed")
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	delete(m.data, key)
 	delete(m.ttls, key)
@@ -378,12 +535,25 @@ func (m *MockCacheUtil) DeleteByPattern(pattern string) error {
 		return m.DeleteByPatternFunc(pattern)
 	}
 
+	// Validate pattern
+	if pattern == "" {
+		return fmt.Errorf("pattern cannot be empty")
+	}
+
+	// Check Redis availability
+	if m.redisManager != nil && m.redisManager.isUnavailable {
+		return fmt.Errorf("redis client is not available")
+	}
+
 	if m.ShouldFailDeletePattern {
 		if m.CustomError != nil {
 			return m.CustomError
 		}
 		return fmt.Errorf("mock cache delete by pattern failed")
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	for key := range m.data {
 		if pattern == "*" || key == pattern {
@@ -393,4 +563,40 @@ func (m *MockCacheUtil) DeleteByPattern(pattern string) error {
 	}
 
 	return nil
+}
+
+// Additional helper methods for MockRedisManager
+
+// SetMockValue sets a value in the mock Redis client for testing
+func (m *MockRedisManager) SetMockValue(key, value string) {
+	if m.MockClient != nil {
+		m.MockClient.data[key] = value
+	}
+}
+
+// SetMockValueInCache sets a value directly in the cache util for testing
+func (m *MockRedisManager) SetMockValueInCache(cache *MockCacheUtil, key, value string) {
+	if cache != nil {
+		cache.mu.Lock()
+		defer cache.mu.Unlock()
+		cache.data[key] = value
+	}
+}
+
+// SetCacheMiss configures the mock to return cache miss for a specific key
+func (m *MockRedisManager) SetCacheMiss(key string) {
+	if m.MockClient != nil {
+		delete(m.MockClient.data, key)
+	}
+}
+
+// SetPatternKeys configures the mock to return specific keys for a pattern
+func (m *MockRedisManager) SetPatternKeys(pattern string, keys []string) {
+	if m.MockClient != nil {
+		// Store the pattern and keys for later retrieval
+		// For simplicity, we'll just ensure the keys exist in data
+		for _, key := range keys {
+			m.MockClient.data[key] = "pattern_value"
+		}
+	}
 }

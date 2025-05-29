@@ -10,7 +10,7 @@ import (
 	"github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/domain"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	interfaces "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
@@ -55,10 +55,10 @@ var _ = ginkgo.Describe("Handler", func() {
 		})
 
 		ginkgo.Context("when the service returns a status successfully", func() {
-			var expectedStatus *domain.Status
+			var expectedStatus *entity.HealthStatus
 
 			ginkgo.BeforeEach(func() {
-				expectedStatus = domain.NewStatus("test-ok")
+				expectedStatus = entity.NewHealthStatus("test-ok")
 				mockService.EXPECT().Ping(gomock.Any()).Return(expectedStatus, nil)
 			})
 
@@ -66,7 +66,7 @@ var _ = ginkgo.Describe("Handler", func() {
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
-				var status domain.Status
+				var status entity.HealthStatus
 				err := json.NewDecoder(recorder.Body).Decode(&status)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(status.Status).To(gomega.Equal(expectedStatus.Status))
@@ -100,10 +100,10 @@ var _ = ginkgo.Describe("Handler", func() {
 		})
 
 		ginkgo.Context("when the service returns a status successfully", func() {
-			var expectedStatus *domain.Status
+			var expectedStatus *entity.HealthStatus
 
 			ginkgo.BeforeEach(func() {
-				expectedStatus = domain.NewStatus("test-healthy")
+				expectedStatus = entity.NewHealthStatus("test-healthy")
 				mockService.EXPECT().Check(gomock.Any()).Return(expectedStatus, nil)
 			})
 
@@ -111,7 +111,7 @@ var _ = ginkgo.Describe("Handler", func() {
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
-				var status domain.Status
+				var status entity.HealthStatus
 				err := json.NewDecoder(recorder.Body).Decode(&status)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(status.Status).To(gomega.Equal(expectedStatus.Status))
@@ -145,16 +145,16 @@ var _ = ginkgo.Describe("Handler", func() {
 		})
 
 		ginkgo.Context("when the service returns a database status successfully", func() {
-			var expectedDbStatus *domain.DatabaseStatus
+			var expectedDbStatus *entity.DatabaseStatus
 
 			ginkgo.BeforeEach(func() {
-				stats := &domain.ConnectionStats{
+				stats := &entity.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    1,
 					InUse:              0,
 					Idle:               1,
 				}
-				expectedDbStatus = domain.HealthyDatabaseStatus("Database is healthy", stats)
+				expectedDbStatus = entity.HealthyDatabaseStatus("Database is healthy", stats)
 				mockService.EXPECT().CheckDatabase(gomock.Any()).Return(expectedDbStatus, nil)
 			})
 
@@ -162,7 +162,7 @@ var _ = ginkgo.Describe("Handler", func() {
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
-				var response domain.DetailedHealthStatus
+				var response entity.DetailedHealthStatus
 				err := json.NewDecoder(recorder.Body).Decode(&response)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(response.Status).To(gomega.Equal("healthy"))
@@ -184,7 +184,7 @@ var _ = ginkgo.Describe("Handler", func() {
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusServiceUnavailable))
 				gomega.Expect(recorder.Header().Get("Content-Type")).To(gomega.Equal("application/json"))
 
-				var response domain.DetailedHealthStatus
+				var response entity.DetailedHealthStatus
 				err := json.NewDecoder(recorder.Body).Decode(&response)
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 				gomega.Expect(response.Status).To(gomega.Equal("error"))

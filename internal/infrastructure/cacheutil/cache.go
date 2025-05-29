@@ -13,15 +13,33 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
-// CacheUtil provides simple key-value caching operations using Redis
-type CacheUtil struct {
-	redisManager *database.RedisManager
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_cache_util.go -package=mocks -mock_names=CacheUtil=MockCacheUtil github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil CacheUtil
+
+// CacheUtil defines the interface for cache operations
+// This interface abstracts cache operations for better testability
+type CacheUtil interface {
+	// Set stores a key-value pair with an optional TTL
+	Set(key string, value string, ttl time.Duration) error
+
+	// Get retrieves the value for a given key
+	Get(key string) (string, error)
+
+	// Delete removes a key-value pair from the cache
+	Delete(key string) error
+
+	// DeleteByPattern deletes all keys matching a pattern
+	DeleteByPattern(pattern string) error
+}
+
+// CacheUtilImpl provides simple key-value caching operations using Redis
+type CacheUtilImpl struct {
+	redisManager database.RedisManager
 	logger       *zap.Logger
 }
 
 // NewCacheUtil creates a new cache utility instance
-func NewCacheUtil(redisManager *database.RedisManager) *CacheUtil {
-	return &CacheUtil{
+func NewCacheUtil(redisManager database.RedisManager) CacheUtil {
+	return &CacheUtilImpl{
 		redisManager: redisManager,
 		logger:       log.GetLogger().With(zap.String("component", "cache_util")),
 	}
@@ -29,7 +47,7 @@ func NewCacheUtil(redisManager *database.RedisManager) *CacheUtil {
 
 // Set stores a key-value pair with an optional TTL
 // If ttl is zero or negative, the key will persist indefinitely
-func (c *CacheUtil) Set(key string, value string, ttl time.Duration) error {
+func (c *CacheUtilImpl) Set(key string, value string, ttl time.Duration) error {
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
@@ -73,7 +91,7 @@ func (c *CacheUtil) Set(key string, value string, ttl time.Duration) error {
 
 // Get retrieves the value for a given key
 // Returns ErrCacheMiss if the key is not found or has expired
-func (c *CacheUtil) Get(key string) (string, error) {
+func (c *CacheUtilImpl) Get(key string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("key cannot be empty")
 	}
@@ -116,7 +134,7 @@ func (c *CacheUtil) Get(key string) (string, error) {
 }
 
 // Delete removes a key-value pair from the cache
-func (c *CacheUtil) Delete(key string) error {
+func (c *CacheUtilImpl) Delete(key string) error {
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
@@ -153,7 +171,7 @@ func (c *CacheUtil) Delete(key string) error {
 
 // DeleteByPattern deletes all keys matching a pattern
 // This is useful for test cleanup
-func (c *CacheUtil) DeleteByPattern(pattern string) error {
+func (c *CacheUtilImpl) DeleteByPattern(pattern string) error {
 	if pattern == "" {
 		return fmt.Errorf("pattern cannot be empty")
 	}

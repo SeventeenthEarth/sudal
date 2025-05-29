@@ -8,17 +8,17 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
-	"github.com/seventeenthearth/sudal/test/integration/mocks"
+	testMocks "github.com/seventeenthearth/sudal/internal/mocks"
 )
 
 var _ = Describe("Cache Utilities Integration Tests", func() {
 	var (
-		testCtx     *mocks.IntegrationTestContext
-		mockCache   *mocks.MockCacheUtil
-		mockRedis   *mocks.MockRedisManager
+		ctrl        *gomock.Controller
+		mockCache   *testMocks.MockCacheUtil
 		testKeyBase string
 	)
 
@@ -26,29 +26,19 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 		// Initialize logger to avoid race conditions
 		log.Init(log.InfoLevel)
 
-		// Initialize test context
-		testCtx = mocks.NewIntegrationTestContext()
-		mockCache = testCtx.MockCache
-		mockRedis = testCtx.MockRedis
+		// Initialize gomock controller
+		ctrl = gomock.NewController(GinkgoT())
+		mockCache = testMocks.NewMockCacheUtil(ctrl)
 		testKeyBase = fmt.Sprintf("test:cache:integration:%d", time.Now().UnixNano())
 
-		// Ensure mock cache is available
+		// Ensure mock is available
 		Expect(mockCache).NotTo(BeNil())
-		Expect(mockRedis).NotTo(BeNil())
-
-		// Reset mock cache state
-		mockCache.ShouldFailSet = false
-		mockCache.ShouldFailGet = false
-		mockCache.ShouldFailDelete = false
-		mockCache.ShouldFailDeletePattern = false
-		mockCache.CustomError = nil
 	})
 
 	AfterEach(func() {
-		// Cleanup test keys
-		if mockCache != nil {
-			pattern := testKeyBase + "*"
-			_ = mockCache.DeleteByPattern(pattern)
+		// Cleanup gomock controller
+		if ctrl != nil {
+			ctrl.Finish()
 		}
 	})
 
@@ -58,6 +48,9 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: A cache utility is available
 				key := testKeyBase + ":basic_set"
 				value := "test_value"
+
+				// Configure mock to succeed
+				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(nil)
 
 				// When: Setting a cache key without TTL
 				err := mockCache.Set(key, value, 0)
@@ -72,6 +65,9 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "ttl_value"
 				ttl := 5 * time.Second
 
+				// Configure mock to succeed
+				mockCache.EXPECT().Set(key, value, ttl).Return(nil)
+
 				// When: Setting a cache key with TTL
 				err := mockCache.Set(key, value, ttl)
 
@@ -85,8 +81,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "test_value"
 
 				// Configure mock to fail
-				mockCache.ShouldFailSet = true
-				mockCache.CustomError = fmt.Errorf("cache operation failed")
+				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(fmt.Errorf("cache operation failed"))
 
 				// When: Setting a cache key
 				err := mockCache.Set(key, value, 0)
@@ -104,8 +99,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				expectedValue := "existing_value"
 
 				// Configure mock to return the value
-				mockRedis.SetHealthyStatus()
-				mockRedis.SetMockValueInCache(mockCache, key, expectedValue)
+				mockCache.EXPECT().Get(key).Return(expectedValue, nil)
 
 				// When: Getting the cache key
 				value, err := mockCache.Get(key)
@@ -120,8 +114,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":nonexistent"
 
 				// Configure mock to return cache miss
-				mockRedis.SetHealthyStatus()
-				mockRedis.SetCacheMiss(key)
+				mockCache.EXPECT().Get(key).Return("", cacheutil.ErrCacheMiss)
 
 				// When: Getting the non-existent cache key
 				value, err := mockCache.Get(key)
@@ -134,6 +127,9 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 
 			It("should return error when key is empty", func() {
 				// Given: A cache utility is available
+
+				// Configure mock to return error for empty key
+				mockCache.EXPECT().Get("").Return("", fmt.Errorf("key cannot be empty"))
 
 				// When: Getting a cache key with empty key
 				value, err := mockCache.Get("")
@@ -148,8 +144,8 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: Redis client is unavailable
 				key := testKeyBase + ":unavailable_get"
 
-				// Configure mock to return nil client
-				mockRedis.SetUnavailableStatus()
+				// Configure mock to return client unavailable error
+				mockCache.EXPECT().Get(key).Return("", fmt.Errorf("redis client is not available"))
 
 				// When: Getting a cache key
 				value, err := mockCache.Get(key)
@@ -167,7 +163,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":delete_existing"
 
 				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
+				mockCache.EXPECT().Delete(key).Return(nil)
 
 				// When: Deleting the cache key
 				err := mockCache.Delete(key)
@@ -181,7 +177,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":delete_nonexistent"
 
 				// Configure mock to succeed (Redis DELETE succeeds even for non-existent keys)
-				mockRedis.SetHealthyStatus()
+				mockCache.EXPECT().Delete(key).Return(nil)
 
 				// When: Deleting the non-existent cache key
 				err := mockCache.Delete(key)
@@ -192,6 +188,9 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 
 			It("should return error when key is empty", func() {
 				// Given: A cache utility is available
+
+				// Configure mock to return error for empty key
+				mockCache.EXPECT().Delete("").Return(fmt.Errorf("key cannot be empty"))
 
 				// When: Deleting a cache key with empty key
 				err := mockCache.Delete("")
@@ -205,8 +204,8 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: Redis client is unavailable
 				key := testKeyBase + ":unavailable_delete"
 
-				// Configure mock to return nil client
-				mockRedis.SetUnavailableStatus()
+				// Configure mock to return client unavailable error
+				mockCache.EXPECT().Delete(key).Return(fmt.Errorf("redis client is not available"))
 
 				// When: Deleting a cache key
 				err := mockCache.Delete(key)
@@ -226,8 +225,8 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "ttl_value"
 				ttl := 1 * time.Second
 
-				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
+				// Configure mock to succeed for Set operation
+				mockCache.EXPECT().Set(key, value, ttl).Return(nil)
 
 				// When: Setting a key with TTL
 				err := mockCache.Set(key, value, ttl)
@@ -236,7 +235,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// And: Key should be retrievable immediately
-				mockRedis.SetMockValueInCache(mockCache, key, value)
+				mockCache.EXPECT().Get(key).Return(value, nil)
 				retrievedValue, err := mockCache.Get(key)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(retrievedValue).To(Equal(value))
@@ -248,7 +247,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "persistent_value"
 
 				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
+				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(nil)
 
 				// When: Setting a key with zero TTL
 				err := mockCache.Set(key, value, 0)
@@ -263,7 +262,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "negative_ttl_value"
 
 				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
+				mockCache.EXPECT().Set(key, value, -1*time.Second).Return(nil)
 
 				// When: Setting a key with negative TTL
 				err := mockCache.Set(key, value, -1*time.Second)
@@ -281,11 +280,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				pattern := testKeyBase + ":pattern:*"
 
 				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
-				mockRedis.SetPatternKeys(pattern, []string{
-					testKeyBase + ":pattern:key1",
-					testKeyBase + ":pattern:key2",
-				})
+				mockCache.EXPECT().DeleteByPattern(pattern).Return(nil)
 
 				// When: Deleting keys by pattern
 				err := mockCache.DeleteByPattern(pattern)
@@ -296,6 +291,9 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 
 			It("should return error when pattern is empty", func() {
 				// Given: A cache utility is available
+
+				// Configure mock to return error for empty pattern
+				mockCache.EXPECT().DeleteByPattern("").Return(fmt.Errorf("pattern cannot be empty"))
 
 				// When: Deleting keys with empty pattern
 				err := mockCache.DeleteByPattern("")
@@ -309,8 +307,8 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: Redis client is unavailable
 				pattern := testKeyBase + ":unavailable:*"
 
-				// Configure mock to return nil client
-				mockRedis.SetUnavailableStatus()
+				// Configure mock to return client unavailable error
+				mockCache.EXPECT().DeleteByPattern(pattern).Return(fmt.Errorf("redis client is not available"))
 
 				// When: Deleting keys by pattern
 				err := mockCache.DeleteByPattern(pattern)
@@ -330,8 +328,12 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				var wg sync.WaitGroup
 				errors := make([]error, numGoroutines)
 
-				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
+				// Configure mock to succeed for all Set operations
+				for i := 0; i < numGoroutines; i++ {
+					key := fmt.Sprintf("%s:concurrent:set:%d", testKeyBase, i)
+					value := fmt.Sprintf("value_%d", i)
+					mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(nil)
+				}
 
 				// When: Performing concurrent Set operations
 				for i := 0; i < numGoroutines; i++ {
@@ -359,12 +361,11 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				results := make([]string, numGoroutines)
 				errors := make([]error, numGoroutines)
 
-				// Configure mock to succeed and return values
-				mockRedis.SetHealthyStatus()
+				// Configure mock to succeed and return values for all Get operations
 				for i := 0; i < numGoroutines; i++ {
 					key := fmt.Sprintf("%s:concurrent:get:%d", testKeyBase, i)
 					expectedValue := fmt.Sprintf("value_%d", i)
-					mockRedis.SetMockValueInCache(mockCache, key, expectedValue)
+					mockCache.EXPECT().Get(key).Return(expectedValue, nil)
 				}
 
 				// When: Performing concurrent Get operations
@@ -393,8 +394,11 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				var wg sync.WaitGroup
 				errors := make([]error, numGoroutines)
 
-				// Configure mock to succeed
-				mockRedis.SetHealthyStatus()
+				// Configure mock to succeed for all Delete operations
+				for i := 0; i < numGoroutines; i++ {
+					key := fmt.Sprintf("%s:concurrent:delete:%d", testKeyBase, i)
+					mockCache.EXPECT().Delete(key).Return(nil)
+				}
 
 				// When: Performing concurrent Delete operations
 				for i := 0; i < numGoroutines; i++ {
@@ -424,7 +428,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "test_value"
 
 				// Configure mock to simulate connection error
-				mockRedis.SetConnectionError()
+				connectionErr := fmt.Errorf("connection refused")
+				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(connectionErr)
+				mockCache.EXPECT().Get(key).Return("", connectionErr)
+				mockCache.EXPECT().Delete(key).Return(connectionErr)
 
 				// When: Attempting cache operations
 				setErr := mockCache.Set(key, value, 0)
@@ -443,7 +450,9 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "test_value"
 
 				// Configure mock to simulate timeout
-				mockRedis.SetTimeoutError()
+				timeoutErr := fmt.Errorf("operation timed out")
+				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(timeoutErr)
+				mockCache.EXPECT().Get(key).Return("", timeoutErr)
 
 				// When: Attempting cache operations
 				setErr := mockCache.Set(key, value, 0)

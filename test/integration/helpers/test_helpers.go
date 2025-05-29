@@ -1,4 +1,4 @@
-package mocks
+package helpers
 
 import (
 	"context"
@@ -20,6 +20,109 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+// ConcurrentTestResult represents the result of a concurrent test operation
+type ConcurrentTestResult struct {
+	Success  bool
+	Error    error
+	Duration time.Duration
+	Protocol string
+	Metadata map[string]string
+}
+
+// ConcurrentTestHelper provides utilities for testing concurrent operations
+type ConcurrentTestHelper struct {
+	Results []ConcurrentTestResult
+	mutex   sync.Mutex
+}
+
+// NewConcurrentTestHelper creates a new concurrent test helper
+func NewConcurrentTestHelper() *ConcurrentTestHelper {
+	return &ConcurrentTestHelper{
+		Results: make([]ConcurrentTestResult, 0),
+	}
+}
+
+// AddResult adds a test result (thread-safe)
+func (h *ConcurrentTestHelper) AddResult(result ConcurrentTestResult) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	h.Results = append(h.Results, result)
+}
+
+// GetResults returns all test results (thread-safe)
+func (h *ConcurrentTestHelper) GetResults() []ConcurrentTestResult {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	resultsCopy := make([]ConcurrentTestResult, len(h.Results))
+	copy(resultsCopy, h.Results)
+	return resultsCopy
+}
+
+// GetSuccessCount returns the number of successful operations
+func (h *ConcurrentTestHelper) GetSuccessCount() int {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	count := 0
+	for _, result := range h.Results {
+		if result.Success {
+			count++
+		}
+	}
+	return count
+}
+
+// GetErrorCount returns the number of failed operations
+func (h *ConcurrentTestHelper) GetErrorCount() int {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	count := 0
+	for _, result := range h.Results {
+		if !result.Success {
+			count++
+		}
+	}
+	return count
+}
+
+// Clear clears all results
+func (h *ConcurrentTestHelper) Clear() {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+	h.Results = h.Results[:0]
+}
+
+// ProtocolTestScenarioHelper represents a test scenario for different protocols
+type ProtocolTestScenarioHelper struct {
+	Name           string
+	Protocol       string
+	ExpectedStatus healthv1.ServingStatus
+	ShouldSucceed  bool
+	Metadata       map[string]string
+	Timeout        time.Duration
+}
+
+// NewProtocolTestScenarioHelper creates a new protocol test scenario helper
+func NewProtocolTestScenarioHelper(name, protocol string, expectedStatus healthv1.ServingStatus, shouldSucceed bool) ProtocolTestScenarioHelper {
+	return ProtocolTestScenarioHelper{
+		Name:           name,
+		Protocol:       protocol,
+		ExpectedStatus: expectedStatus,
+		ShouldSucceed:  shouldSucceed,
+		Metadata:       make(map[string]string),
+		Timeout:        5 * time.Second,
+	}
+}
+
+// AddMetadata adds metadata to the test scenario
+func (p *ProtocolTestScenarioHelper) AddMetadata(key, value string) {
+	p.Metadata[key] = value
+}
+
+// SetTimeout sets the timeout for the test scenario
+func (p *ProtocolTestScenarioHelper) SetTimeout(timeout time.Duration) {
+	p.Timeout = timeout
+}
+
 // IntegrationTestContext holds the context for integration tests
 type IntegrationTestContext struct {
 	// Server components
@@ -29,10 +132,10 @@ type IntegrationTestContext struct {
 
 	// Mocks
 	MockRepo     *internalMocks.MockHealthRepository
-	MockService  *MockService
+	MockService  *internalMocks.MockService
 	MockPostgres *internalMocks.MockPostgresManager
-	MockRedis    *MockRedisManager
-	MockCache    *MockCacheUtil
+	MockRedis    *internalMocks.MockRedisManager
+	MockCache    *internalMocks.MockCacheUtil
 
 	// Mock controller for gomock
 	MockCtrl *gomock.Controller
@@ -42,12 +145,12 @@ type IntegrationTestContext struct {
 	HealthConnectHandler *healthConnect.HealthServiceHandler
 
 	// Clients
-	ConnectGoClient *MockConnectGoClient
-	GRPCClient      *MockGRPCClient
-	HTTPClient      *http.Client
+	ConnectGoClientHelper *ConnectGoMockHelper
+	GRPCClientHelper      *GRPCMockHelper
+	HTTPClient            *http.Client
 
 	// Test utilities
-	ConcurrentTester *MockConcurrentTester
+	ConcurrentTester *ConcurrentTestHelper
 
 	// Configuration
 	TestTimeout time.Duration
@@ -57,15 +160,15 @@ type IntegrationTestContext struct {
 // NewIntegrationTestContext creates a new integration test context
 func NewIntegrationTestContext() *IntegrationTestContext {
 	ctrl := gomock.NewController(nil) // Will be set properly in test setup
-	mockRedis := NewMockRedisManager()
+	mockRedis := internalMocks.NewMockRedisManager(ctrl)
 	return &IntegrationTestContext{
 		MockCtrl:         ctrl,
 		MockRepo:         internalMocks.NewMockHealthRepository(ctrl),
-		MockService:      NewMockService(),
+		MockService:      internalMocks.NewMockService(ctrl),
 		MockPostgres:     internalMocks.NewMockPostgresManager(ctrl),
 		MockRedis:        mockRedis,
-		MockCache:        NewMockCacheUtilWithRedis(mockRedis),
-		ConcurrentTester: NewMockConcurrentTester(),
+		MockCache:        internalMocks.NewMockCacheUtil(ctrl),
+		ConcurrentTester: NewConcurrentTestHelper(),
 		HTTPClient:       &http.Client{Timeout: 10 * time.Second},
 		TestTimeout:      5 * time.Second,
 		Protocol:         "http",
@@ -139,12 +242,12 @@ func (ctx *IntegrationTestContext) TeardownTestServer() error {
 // SetupConnectGoClient sets up a Connect-Go client with specified protocol
 func (ctx *IntegrationTestContext) SetupConnectGoClient(protocol string) {
 	ctx.Protocol = protocol
-	ctx.ConnectGoClient = NewMockConnectGoClient(protocol)
+	ctx.ConnectGoClientHelper = NewConnectGoMockHelper(ctx.MockCtrl, protocol)
 }
 
 // SetupGRPCClient sets up a native gRPC client
 func (ctx *IntegrationTestContext) SetupGRPCClient() {
-	ctx.GRPCClient = NewMockGRPCClient()
+	ctx.GRPCClientHelper = NewGRPCMockHelper(ctx.MockCtrl)
 }
 
 // ConfigureMockForHealthyState configures all mocks for healthy state
@@ -166,32 +269,26 @@ func (ctx *IntegrationTestContext) ConfigureMockForHealthyState() {
 		},
 	}, nil).AnyTimes()
 
-	ctx.MockService.PingFunc = func(context.Context) (*entity.HealthStatus, error) {
-		return entity.OkStatus(), nil
+	ctx.MockService.EXPECT().Ping(gomock.Any()).Return(entity.OkStatus(), nil).AnyTimes()
+	ctx.MockService.EXPECT().Check(gomock.Any()).Return(entity.HealthyStatus(), nil).AnyTimes()
+	stats := &entity.ConnectionStats{
+		MaxOpenConnections: 25,
+		OpenConnections:    5,
+		InUse:              2,
+		Idle:               3,
+		WaitCount:          0,
+		WaitDuration:       0,
+		MaxIdleClosed:      0,
+		MaxLifetimeClosed:  0,
 	}
-	ctx.MockService.CheckFunc = func(context.Context) (*entity.HealthStatus, error) {
-		return entity.HealthyStatus(), nil
-	}
-	ctx.MockService.CheckDatabaseFunc = func(context.Context) (*entity.DatabaseStatus, error) {
-		stats := &entity.ConnectionStats{
-			MaxOpenConnections: 25,
-			OpenConnections:    5,
-			InUse:              2,
-			Idle:               3,
-			WaitCount:          0,
-			WaitDuration:       0,
-			MaxIdleClosed:      0,
-			MaxLifetimeClosed:  0,
-		}
-		return entity.HealthyDatabaseStatus("Database is healthy", stats), nil
+	ctx.MockService.EXPECT().CheckDatabase(gomock.Any()).Return(entity.HealthyDatabaseStatus("Database is healthy", stats), nil).AnyTimes()
+
+	if ctx.ConnectGoClientHelper != nil {
+		ctx.ConnectGoClientHelper.SetServingStatus()
 	}
 
-	if ctx.ConnectGoClient != nil {
-		ctx.ConnectGoClient.SetServingStatus()
-	}
-
-	if ctx.GRPCClient != nil {
-		ctx.GRPCClient.SetServingStatus()
+	if ctx.GRPCClientHelper != nil {
+		ctx.GRPCClientHelper.SetServingStatus()
 	}
 }
 
@@ -201,22 +298,16 @@ func (ctx *IntegrationTestContext) ConfigureMockForUnhealthyState(err error) {
 	ctx.MockRepo.EXPECT().GetStatus(gomock.Any()).Return(nil, err).AnyTimes()
 	ctx.MockRepo.EXPECT().GetDatabaseStatus(gomock.Any()).Return(nil, err).AnyTimes()
 
-	ctx.MockService.PingFunc = func(context.Context) (*entity.HealthStatus, error) {
-		return nil, err
-	}
-	ctx.MockService.CheckFunc = func(context.Context) (*entity.HealthStatus, error) {
-		return nil, err
-	}
-	ctx.MockService.CheckDatabaseFunc = func(context.Context) (*entity.DatabaseStatus, error) {
-		return nil, err
+	ctx.MockService.EXPECT().Ping(gomock.Any()).Return(nil, err).AnyTimes()
+	ctx.MockService.EXPECT().Check(gomock.Any()).Return(nil, err).AnyTimes()
+	ctx.MockService.EXPECT().CheckDatabase(gomock.Any()).Return(nil, err).AnyTimes()
+
+	if ctx.ConnectGoClientHelper != nil {
+		ctx.ConnectGoClientHelper.SetError(err)
 	}
 
-	if ctx.ConnectGoClient != nil {
-		ctx.ConnectGoClient.SetError(err)
-	}
-
-	if ctx.GRPCClient != nil {
-		ctx.GRPCClient.SetError(err)
+	if ctx.GRPCClientHelper != nil {
+		ctx.GRPCClientHelper.SetError(err)
 	}
 }
 
@@ -229,12 +320,12 @@ func (ctx *IntegrationTestContext) ConfigureMockForDegradedState() {
 		Message: "Database connection is degraded",
 	}, nil).AnyTimes()
 
-	if ctx.ConnectGoClient != nil {
-		ctx.ConnectGoClient.SetNotServingStatus()
+	if ctx.ConnectGoClientHelper != nil {
+		ctx.ConnectGoClientHelper.SetNotServingStatus()
 	}
 
-	if ctx.GRPCClient != nil {
-		ctx.GRPCClient.SetNotServingStatus()
+	if ctx.GRPCClientHelper != nil {
+		ctx.GRPCClientHelper.SetNotServingStatus()
 	}
 }
 
@@ -251,16 +342,16 @@ func (ctx *IntegrationTestContext) RunConcurrentConnectGoRequests(numRequests in
 
 			start := time.Now()
 
-			// Create a unique client for this request to avoid race conditions
-			client := NewMockConnectGoClient(ctx.Protocol)
-			client.SetServingStatus()
+			// Create a unique client helper for this request to avoid race conditions
+			clientHelper := NewConnectGoMockHelper(ctx.MockCtrl, ctx.Protocol)
+			clientHelper.SetServingStatus()
 
 			// Make request
 			reqCtx, cancel := context.WithTimeout(context.Background(), ctx.TestTimeout)
 			defer cancel()
 
 			req := connect.NewRequest(&healthv1.CheckRequest{})
-			resp, err := client.Check(reqCtx, req)
+			resp, err := clientHelper.GetMock().Check(reqCtx, req)
 
 			duration := time.Since(start)
 
@@ -300,16 +391,16 @@ func (ctx *IntegrationTestContext) RunConcurrentGRPCRequests(numRequests int) {
 
 			start := time.Now()
 
-			// Create a unique client for this request
-			client := NewMockGRPCClient()
-			client.SetServingStatus()
+			// Create a unique client helper for this request
+			clientHelper := NewGRPCMockHelper(ctx.MockCtrl)
+			clientHelper.SetServingStatus()
 
 			// Make request
 			reqCtx, cancel := context.WithTimeout(context.Background(), ctx.TestTimeout)
 			defer cancel()
 
 			req := &healthv1.CheckRequest{}
-			resp, err := client.Check(reqCtx, req)
+			resp, err := clientHelper.GetMock().Check(reqCtx, req)
 
 			duration := time.Since(start)
 

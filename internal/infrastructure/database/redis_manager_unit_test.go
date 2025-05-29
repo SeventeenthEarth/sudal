@@ -20,7 +20,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 	var (
 		ctrl         *gomock.Controller
 		mockClient   *mocks.MockRedisClient
-		redisManager *database.RedisManager
+		redisManager database.RedisManager
 		ctx          context.Context
 		cfg          *config.Config
 	)

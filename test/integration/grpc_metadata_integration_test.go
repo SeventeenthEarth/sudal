@@ -18,7 +18,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
+	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {

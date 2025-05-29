@@ -7,7 +7,7 @@ import (
 
 var _ = ginkgo.Describe("CacheUtil", func() {
 	var (
-		cacheUtil *CacheUtil
+		cacheUtil CacheUtil
 	)
 
 	ginkgo.Describe("NewCacheUtil", func() {
@@ -18,8 +18,14 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 				// Then
 				gomega.Expect(cacheUtil).NotTo(gomega.BeNil())
-				gomega.Expect(cacheUtil.redisManager).To(gomega.BeNil())
-				gomega.Expect(cacheUtil.logger).NotTo(gomega.BeNil())
+
+				// Type assert to access internal fields
+				if impl, ok := cacheUtil.(*CacheUtilImpl); ok {
+					gomega.Expect(impl.redisManager).To(gomega.BeNil())
+					gomega.Expect(impl.logger).NotTo(gomega.BeNil())
+				} else {
+					ginkgo.Fail("Expected CacheUtilImpl implementation")
+				}
 			})
 		})
 	})

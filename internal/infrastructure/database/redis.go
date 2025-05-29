@@ -16,6 +16,7 @@ import (
 )
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_redis_client.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database RedisClient
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_redis_manager.go -package=mocks -mock_names=RedisManager=MockRedisManager github.com/seventeenthearth/sudal/internal/infrastructure/database RedisManager
 
 // RedisClient defines the interface for Redis client operations
 // This interface abstracts Redis operations for better testability
@@ -30,15 +31,37 @@ type RedisClient interface {
 	PoolStats() *redis.PoolStats
 }
 
-// RedisManager manages Redis client connections
-type RedisManager struct {
+// RedisManager defines the interface for Redis connection management
+// This interface abstracts Redis manager operations for better testability
+type RedisManager interface {
+	// GetClient returns the underlying Redis client
+	GetClient() *redis.Client
+
+	// Ping performs a health check on the Redis connection
+	Ping(ctx context.Context) error
+
+	// Close closes the Redis connection
+	Close() error
+
+	// GetConnectionPoolStats returns Redis connection pool statistics
+	GetConnectionPoolStats() *redis.PoolStats
+
+	// LogConnectionPoolStats logs the current Redis connection pool statistics
+	LogConnectionPoolStats()
+
+	// ExecuteWithRetry provides a public interface for executing Redis operations with retry logic
+	ExecuteWithRetry(ctx context.Context, operation string, fn func() error) error
+}
+
+// RedisManagerImpl manages Redis client connections
+type RedisManagerImpl struct {
 	client RedisClient
 	config *config.Config
 	logger *zap.Logger
 }
 
 // NewRedisManager creates a new Redis connection manager with comprehensive configuration
-func NewRedisManager(cfg *config.Config) (*RedisManager, error) {
+func NewRedisManager(cfg *config.Config) (RedisManager, error) {
 	logger := log.GetLogger().With(zap.String("component", "redis_manager"))
 
 	if cfg.Redis.Addr == "" {
@@ -88,7 +111,7 @@ func NewRedisManager(cfg *config.Config) (*RedisManager, error) {
 	client := redis.NewClient(options)
 
 	// Test the connection with retry logic
-	manager := &RedisManager{
+	manager := &RedisManagerImpl{
 		client: client,
 		config: cfg,
 		logger: logger,
@@ -106,10 +129,10 @@ func NewRedisManager(cfg *config.Config) (*RedisManager, error) {
 }
 
 // NewRedisManagerWithClient creates a new Redis manager with a provided client (for testing)
-func NewRedisManagerWithClient(client RedisClient, cfg *config.Config) *RedisManager {
+func NewRedisManagerWithClient(client RedisClient, cfg *config.Config) RedisManager {
 	logger := log.GetLogger().With(zap.String("component", "redis_manager"))
 
-	return &RedisManager{
+	return &RedisManagerImpl{
 		client: client,
 		config: cfg,
 		logger: logger,
@@ -118,7 +141,7 @@ func NewRedisManagerWithClient(client RedisClient, cfg *config.Config) *RedisMan
 
 // GetClient returns the underlying Redis client
 // This should be used sparingly and only when direct access to *redis.Client is needed
-func (rm *RedisManager) GetClient() *redis.Client {
+func (rm *RedisManagerImpl) GetClient() *redis.Client {
 	if client, ok := rm.client.(*redis.Client); ok {
 		return client
 	}
@@ -126,7 +149,7 @@ func (rm *RedisManager) GetClient() *redis.Client {
 }
 
 // Ping performs a health check on the Redis connection with retry logic
-func (rm *RedisManager) Ping(ctx context.Context) error {
+func (rm *RedisManagerImpl) Ping(ctx context.Context) error {
 	rm.logger.Debug("Performing Redis health check")
 
 	err := rm.executeWithRetry(ctx, "health_check", func() error {
@@ -145,13 +168,13 @@ func (rm *RedisManager) Ping(ctx context.Context) error {
 }
 
 // Close closes the Redis connection
-func (rm *RedisManager) Close() error {
+func (rm *RedisManagerImpl) Close() error {
 	rm.logger.Info("Closing Redis connection")
 	return rm.client.Close()
 }
 
 // checkConnectionWithRetry tests the Redis connection with retry logic
-func (rm *RedisManager) checkConnectionWithRetry() error {
+func (rm *RedisManagerImpl) checkConnectionWithRetry() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -161,7 +184,7 @@ func (rm *RedisManager) checkConnectionWithRetry() error {
 }
 
 // executeWithRetry executes a Redis operation with retry logic
-func (rm *RedisManager) executeWithRetry(ctx context.Context, operation string, fn func() error) error {
+func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation string, fn func() error) error {
 	var lastErr error
 	maxRetries := rm.config.Redis.MaxRetries
 	minBackoff := time.Duration(rm.config.Redis.MinRetryBackoff) * time.Millisecond
@@ -232,7 +255,7 @@ func (rm *RedisManager) executeWithRetry(ctx context.Context, operation string, 
 }
 
 // isRetryableError determines if an error is retryable
-func (rm *RedisManager) isRetryableError(err error) bool {
+func (rm *RedisManagerImpl) isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -305,7 +328,7 @@ func (rm *RedisManager) isRetryableError(err error) bool {
 }
 
 // GetConnectionPoolStats returns Redis connection pool statistics
-func (rm *RedisManager) GetConnectionPoolStats() *redis.PoolStats {
+func (rm *RedisManagerImpl) GetConnectionPoolStats() *redis.PoolStats {
 	if rm.client == nil {
 		return nil
 	}
@@ -314,7 +337,7 @@ func (rm *RedisManager) GetConnectionPoolStats() *redis.PoolStats {
 }
 
 // LogConnectionPoolStats logs the current Redis connection pool statistics
-func (rm *RedisManager) LogConnectionPoolStats() {
+func (rm *RedisManagerImpl) LogConnectionPoolStats() {
 	stats := rm.GetConnectionPoolStats()
 	if stats == nil {
 		rm.logger.Warn("Unable to retrieve Redis connection pool statistics")
@@ -333,6 +356,6 @@ func (rm *RedisManager) LogConnectionPoolStats() {
 
 // ExecuteWithRetry provides a public interface for executing Redis operations with retry logic
 // This can be used by other parts of the application that need retry functionality
-func (rm *RedisManager) ExecuteWithRetry(ctx context.Context, operation string, fn func() error) error {
+func (rm *RedisManagerImpl) ExecuteWithRetry(ctx context.Context, operation string, fn func() error) error {
 	return rm.executeWithRetry(ctx, operation, fn)
 }

@@ -97,7 +97,7 @@ func ProvidePostgresManager(cfg *config.Config) (database.PostgresManager, error
 }
 
 // ProvideRedisManager provides a Redis connection manager
-func ProvideRedisManager(cfg *config.Config) (*database.RedisManager, error) {
+func ProvideRedisManager(cfg *config.Config) (database.RedisManager, error) {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil, nil
@@ -106,7 +106,7 @@ func ProvideRedisManager(cfg *config.Config) (*database.RedisManager, error) {
 }
 
 // ProvideCacheUtil provides a cache utility instance
-func ProvideCacheUtil(redisManager *database.RedisManager) *cacheutil.CacheUtil {
+func ProvideCacheUtil(redisManager database.RedisManager) cacheutil.CacheUtil {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil
@@ -160,13 +160,13 @@ func InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
 }
 
 // InitializeRedisManager initializes and returns a Redis connection manager
-func InitializeRedisManager() (*database.RedisManager, error) {
+func InitializeRedisManager() (database.RedisManager, error) {
 	wire.Build(RedisSet)
 	return nil, nil // Wire will fill this in
 }
 
 // InitializeCacheUtil initializes and returns a cache utility
-func InitializeCacheUtil() (*cacheutil.CacheUtil, error) {
+func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
 	wire.Build(CacheSet)
 	return nil, nil // Wire will fill this in
 }

@@ -48,7 +48,7 @@ func (ctx *CacheTestContext) CleanupTestKeys() {
 		defer mu.Unlock()
 	}
 
-	if cacheUtil, ok := ctx.CacheUtil.(*cacheutil.CacheUtil); ok {
+	if cacheUtil, ok := ctx.CacheUtil.(cacheutil.CacheUtil); ok {
 		for _, key := range ctx.CreatedKeys {
 			_ = cacheUtil.Delete(key) // Ignore errors during cleanup
 		}
@@ -57,15 +57,15 @@ func (ctx *CacheTestContext) CleanupTestKeys() {
 }
 
 // Helper function to get cache utility with type assertion
-func getCacheUtil(ctx *CacheTestContext) *cacheutil.CacheUtil {
-	if cacheUtil, ok := ctx.CacheUtil.(*cacheutil.CacheUtil); ok {
+func getCacheUtil(ctx *CacheTestContext) cacheutil.CacheUtil {
+	if cacheUtil, ok := ctx.CacheUtil.(cacheutil.CacheUtil); ok {
 		return cacheUtil
 	}
 	return nil
 }
 
 // GetCacheUtil is a public helper function to get cache utility from test context
-func GetCacheUtil(ctx *CacheTestContext) *cacheutil.CacheUtil {
+func GetCacheUtil(ctx *CacheTestContext) cacheutil.CacheUtil {
 	return getCacheUtil(ctx)
 }
 

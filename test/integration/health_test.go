@@ -2,18 +2,21 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
 	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	internalMocks "github.com/seventeenthearth/sudal/internal/mocks"
 
-	"github.com/seventeenthearth/sudal/test/integration/mocks"
+	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = ginkgo.Describe("Health Endpoints", func() {
@@ -108,7 +111,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 		ginkgo.Context("when JSON encoding fails", func() {
 			ginkgo.It("should handle encoding errors", func() {
 				// Create a failing response writer
-				frw := mocks.NewFailingResponseWriter()
+				frw := testMocks.NewFailingResponseWriter()
 
 				// Call the ping handler with the failing response writer
 				handler.Ping(frw, req)
@@ -150,14 +153,17 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 
 		ginkgo.Context("when the service returns an error", func() {
 			var (
-				mockService  *mocks.MockService
+				mockService  *internalMocks.MockService
 				mockHandler  *healthHandler.Handler
 				mockRecorder *httptest.ResponseRecorder
+				ctrl         *gomock.Controller
 			)
 
 			ginkgo.BeforeEach(func() {
 				// Create a mock service that returns an error
-				mockService = mocks.NewMockServiceWithError()
+				ctrl = gomock.NewController(ginkgo.GinkgoT())
+				mockService = internalMocks.NewMockService(ctrl)
+				mockService.EXPECT().Check(gomock.Any()).Return(nil, fmt.Errorf("service error")).AnyTimes()
 
 				// Create a handler with the mock service
 				mockHandler = healthHandler.NewHandler(mockService)
@@ -167,6 +173,10 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 
 				// Call the health handler
 				mockHandler.Health(mockRecorder, req)
+			})
+
+			ginkgo.AfterEach(func() {
+				ctrl.Finish()
 			})
 
 			ginkgo.It("should return a 500 Internal Server Error", func() {

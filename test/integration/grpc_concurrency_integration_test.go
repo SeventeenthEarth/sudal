@@ -18,7 +18,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
+	"github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("gRPC Concurrency Integration Tests", func() {
@@ -81,11 +81,11 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when making multiple concurrent requests", func() {
 			It("should handle 10 concurrent gRPC-Web requests successfully", func() {
 				// Given: Service configured for healthy state
-				testMocks.SetHealthyStatus(mockRepo)
+				helpers.SetHealthyStatus(mockRepo)
 
 				// Given: Multiple clients with gRPC-Web protocol
 				numRequests := 10
-				results := make([]testMocks.ConcurrentTestResult, numRequests)
+				results := make([]helpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests
@@ -110,7 +110,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[index] = testMocks.ConcurrentTestResult{
+						results[index] = helpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -147,11 +147,11 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 			It("should handle 25 concurrent gRPC-Web requests with consistent performance", func() {
 				// Given: Service configured for healthy state
-				testMocks.SetHealthyStatus(mockRepo)
+				helpers.SetHealthyStatus(mockRepo)
 
 				// Given: High number of concurrent clients
 				numRequests := 25
-				results := make([]testMocks.ConcurrentTestResult, numRequests)
+				results := make([]helpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making many concurrent requests
@@ -177,7 +177,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						requestDuration := time.Since(requestStart)
 
-						results[index] = testMocks.ConcurrentTestResult{
+						results[index] = helpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil,
 							Error:    err,
 							Duration: requestDuration,
@@ -214,11 +214,11 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when making multiple concurrent requests", func() {
 			It("should handle 15 concurrent HTTP/JSON requests successfully", func() {
 				// Given: Service configured for healthy state
-				testMocks.SetHealthyStatus(mockRepo)
+				helpers.SetHealthyStatus(mockRepo)
 
 				// Given: Multiple clients with HTTP/JSON protocol
 				numRequests := 15
-				results := make([]testMocks.ConcurrentTestResult, numRequests)
+				results := make([]helpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests
@@ -243,7 +243,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[index] = testMocks.ConcurrentTestResult{
+						results[index] = helpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -268,12 +268,12 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when making concurrent requests with different protocols", func() {
 			It("should handle mixed gRPC-Web and HTTP/JSON requests consistently", func() {
 				// Given: Service configured for healthy state
-				testMocks.SetHealthyStatus(mockRepo)
+				helpers.SetHealthyStatus(mockRepo)
 
 				// Given: Mixed protocol clients
 				numRequestsPerProtocol := 10
 				totalRequests := numRequestsPerProtocol * 2
-				results := make([]testMocks.ConcurrentTestResult, totalRequests)
+				results := make([]helpers.ConcurrentTestResult, totalRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests with different protocols
@@ -299,7 +299,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[index] = testMocks.ConcurrentTestResult{
+						results[index] = helpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -329,7 +329,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[numRequestsPerProtocol+index] = testMocks.ConcurrentTestResult{
+						results[numRequestsPerProtocol+index] = helpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -366,10 +366,10 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when service becomes unhealthy during concurrent requests", func() {
 			It("should handle service errors consistently across concurrent requests", func() {
 				// Given: Service that will fail
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("service unavailable"))
+				helpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("service unavailable"))
 
 				numRequests := 8
-				results := make([]testMocks.ConcurrentTestResult, numRequests)
+				results := make([]helpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests to failing service
@@ -390,7 +390,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 						req := connect.NewRequest(&healthv1.CheckRequest{})
 						resp, err := client.Check(ctx, req)
 
-						results[index] = testMocks.ConcurrentTestResult{
+						results[index] = helpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil,
 							Error:    err,
 							Duration: 0,

@@ -16,7 +16,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/mocks"
+	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Database Health Integration Tests", func() {

@@ -3,10 +3,10 @@ package database_test
 import (
 	"context"
 	"errors"
-	"testing"
 
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	"github.com/redis/go-redis/v9"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
@@ -14,183 +14,184 @@ import (
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
-func TestNewRedisManager(t *testing.T) {
-	tests := []struct {
-		name        string
-		config      *config.Config
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name: "should fail when Redis address is empty",
-			config: &config.Config{
-				Redis: config.RedisConfig{
-					Addr:     "",
-					Password: "",
-				},
-			},
-			expectError: true,
-			errorMsg:    "redis address is required",
-		},
-	}
+var _ = ginkgo.Describe("Redis Tests", func() {
+	var (
+		ctrl       *gomock.Controller
+		mockClient *mocks.MockRedisClient
+		ctx        context.Context
+	)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			manager, err := database.NewRedisManager(tt.config)
+	ginkgo.BeforeEach(func() {
+		ctrl = gomock.NewController(ginkgo.GinkgoT())
+		mockClient = mocks.NewMockRedisClient(ctrl)
+		ctx = context.Background()
+	})
 
-			if tt.expectError {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errorMsg)
-				assert.Nil(t, manager)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, manager)
-			}
+	ginkgo.AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	ginkgo.Describe("NewRedisManager", func() {
+		ginkgo.Context("when Redis configuration is invalid", func() {
+			ginkgo.It("should fail when Redis address is empty", func() {
+				// Given
+				config := &config.Config{
+					Redis: config.RedisConfig{
+						Addr:     "",
+						Password: "",
+					},
+				}
+
+				// When
+				manager, err := database.NewRedisManager(config)
+
+				// Then
+				gomega.Expect(err).To(gomega.HaveOccurred())
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("redis address is required"))
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
 		})
-	}
-}
-
-func TestMockRedisClient(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockClient := mocks.NewMockRedisClient(ctrl)
-	ctx := context.Background()
-
-	t.Run("should mock Ping method successfully", func(t *testing.T) {
-		// Create a successful status command
-		statusCmd := redis.NewStatusCmd(ctx)
-		statusCmd.SetVal("PONG")
-
-		mockClient.EXPECT().
-			Ping(ctx).
-			Return(statusCmd).
-			Times(1)
-
-		// Test the mock
-		result := mockClient.Ping(ctx)
-		assert.NotNil(t, result)
-		assert.Equal(t, "PONG", result.Val())
-		assert.NoError(t, result.Err())
 	})
 
-	t.Run("should mock Ping method with error", func(t *testing.T) {
-		// Create a failed status command
-		statusCmd := redis.NewStatusCmd(ctx)
-		statusCmd.SetErr(errors.New("connection failed"))
+	ginkgo.Describe("MockRedisClient", func() {
+		ginkgo.Context("when testing Ping functionality", func() {
+			ginkgo.It("should mock Ping method successfully", func() {
+				// Given
+				statusCmd := redis.NewStatusCmd(ctx)
+				statusCmd.SetVal("PONG")
+				mockClient.EXPECT().
+					Ping(ctx).
+					Return(statusCmd).
+					Times(1)
 
-		mockClient.EXPECT().
-			Ping(ctx).
-			Return(statusCmd).
-			Times(1)
+				// When
+				result := mockClient.Ping(ctx)
 
-		// Test the mock
-		result := mockClient.Ping(ctx)
-		assert.NotNil(t, result)
-		assert.Error(t, result.Err())
-		assert.Contains(t, result.Err().Error(), "connection failed")
+				// Then
+				gomega.Expect(result).ToNot(gomega.BeNil())
+				gomega.Expect(result.Val()).To(gomega.Equal("PONG"))
+				gomega.Expect(result.Err()).ToNot(gomega.HaveOccurred())
+			})
+
+			ginkgo.It("should mock Ping method with error", func() {
+				// Given
+				statusCmd := redis.NewStatusCmd(ctx)
+				statusCmd.SetErr(errors.New("connection failed"))
+				mockClient.EXPECT().
+					Ping(ctx).
+					Return(statusCmd).
+					Times(1)
+
+				// When
+				result := mockClient.Ping(ctx)
+
+				// Then
+				gomega.Expect(result).ToNot(gomega.BeNil())
+				gomega.Expect(result.Err()).To(gomega.HaveOccurred())
+				gomega.Expect(result.Err().Error()).To(gomega.ContainSubstring("connection failed"))
+			})
+		})
+
+		ginkgo.Context("when testing Close functionality", func() {
+			ginkgo.It("should mock Close method successfully", func() {
+				// Given
+				mockClient.EXPECT().
+					Close().
+					Return(nil).
+					Times(1)
+
+				// When
+				err := mockClient.Close()
+
+				// Then
+				gomega.Expect(err).ToNot(gomega.HaveOccurred())
+			})
+		})
+
+		ginkgo.Context("when testing PoolStats functionality", func() {
+			ginkgo.It("should mock PoolStats method successfully", func() {
+				// Given
+				expectedStats := &redis.PoolStats{
+					Hits:       10,
+					Misses:     2,
+					Timeouts:   0,
+					TotalConns: 5,
+					IdleConns:  3,
+					StaleConns: 0,
+				}
+				mockClient.EXPECT().
+					PoolStats().
+					Return(expectedStats).
+					Times(1)
+
+				// When
+				stats := mockClient.PoolStats()
+
+				// Then
+				gomega.Expect(stats).ToNot(gomega.BeNil())
+				gomega.Expect(stats.Hits).To(gomega.Equal(uint32(10)))
+				gomega.Expect(stats.Misses).To(gomega.Equal(uint32(2)))
+				gomega.Expect(stats.TotalConns).To(gomega.Equal(uint32(5)))
+			})
+		})
 	})
 
-	t.Run("should mock Close method", func(t *testing.T) {
-		mockClient.EXPECT().
-			Close().
-			Return(nil).
-			Times(1)
+	ginkgo.Describe("RedisManagerConfiguration", func() {
+		ginkgo.Context("when Redis configuration is invalid", func() {
+			ginkgo.It("should fail with empty address", func() {
+				// Given
+				config := &config.Config{
+					Redis: config.RedisConfig{
+						Addr:     "",
+						Password: "",
+					},
+				}
 
-		// Test the mock
-		err := mockClient.Close()
-		assert.NoError(t, err)
-	})
+				// When
+				manager, err := database.NewRedisManager(config)
 
-	t.Run("should mock PoolStats method", func(t *testing.T) {
-		expectedStats := &redis.PoolStats{
-			Hits:       10,
-			Misses:     2,
-			Timeouts:   0,
-			TotalConns: 5,
-			IdleConns:  3,
-			StaleConns: 0,
-		}
+				// Then
+				gomega.Expect(err).To(gomega.HaveOccurred())
+				gomega.Expect(err.Error()).To(gomega.ContainSubstring("redis address is required"))
+				gomega.Expect(manager).To(gomega.BeNil())
+			})
+		})
 
-		mockClient.EXPECT().
-			PoolStats().
-			Return(expectedStats).
-			Times(1)
+		ginkgo.Context("when Redis configuration is valid", func() {
+			ginkgo.It("should validate Redis configuration parameters structure", func() {
+				// Given
+				config := &config.Config{
+					Redis: config.RedisConfig{
+						Addr:            "localhost:6379",
+						Password:        "secret",
+						DB:              1,
+						PoolSize:        10,
+						MinIdleConns:    2,
+						PoolTimeout:     4,
+						IdleTimeout:     300,
+						DialTimeout:     5,
+						ReadTimeout:     3,
+						WriteTimeout:    3,
+						MaxRetries:      3,
+						MinRetryBackoff: 8,
+						MaxRetryBackoff: 512,
+					},
+				}
 
-		// Test the mock
-		stats := mockClient.PoolStats()
-		assert.NotNil(t, stats)
-		assert.Equal(t, uint32(10), stats.Hits)
-		assert.Equal(t, uint32(2), stats.Misses)
-		assert.Equal(t, uint32(5), stats.TotalConns)
-	})
-}
-
-// TestRedisManagerConfiguration tests Redis configuration validation
-func TestRedisManagerConfiguration(t *testing.T) {
-	tests := []struct {
-		name        string
-		config      *config.Config
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name: "should fail with empty address",
-			config: &config.Config{
-				Redis: config.RedisConfig{
-					Addr:     "",
-					Password: "",
-				},
-			},
-			expectError: true,
-			errorMsg:    "redis address is required",
-		},
-		{
-			name: "should validate Redis configuration parameters structure",
-			config: &config.Config{
-				Redis: config.RedisConfig{
-					Addr:            "localhost:6379",
-					Password:        "secret",
-					DB:              1,
-					PoolSize:        10,
-					MinIdleConns:    2,
-					PoolTimeout:     4,
-					IdleTimeout:     300,
-					DialTimeout:     5,
-					ReadTimeout:     3,
-					WriteTimeout:    3,
-					MaxRetries:      3,
-					MinRetryBackoff: 8,
-					MaxRetryBackoff: 512,
-				},
-			},
-			expectError: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.expectError {
-				// Test configuration validation that should fail
-				manager, err := database.NewRedisManager(tt.config)
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errorMsg)
-				assert.Nil(t, manager)
-			} else {
-				// Test configuration structure validation (without actual connection)
-				assert.NotEmpty(t, tt.config.Redis.Addr)
-				assert.GreaterOrEqual(t, tt.config.Redis.PoolSize, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.MaxRetries, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.MinIdleConns, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.PoolTimeout, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.IdleTimeout, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.DialTimeout, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.ReadTimeout, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.WriteTimeout, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.MinRetryBackoff, 0)
-				assert.GreaterOrEqual(t, tt.config.Redis.MaxRetryBackoff, 0)
+				// When & Then - Test configuration structure validation (without actual connection)
+				gomega.Expect(config.Redis.Addr).ToNot(gomega.BeEmpty())
+				gomega.Expect(config.Redis.PoolSize).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.MaxRetries).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.MinIdleConns).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.PoolTimeout).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.IdleTimeout).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.DialTimeout).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.ReadTimeout).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.WriteTimeout).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.MinRetryBackoff).To(gomega.BeNumerically(">=", 0))
+				gomega.Expect(config.Redis.MaxRetryBackoff).To(gomega.BeNumerically(">=", 0))
 				// Note: Actual connection testing would be done in integration tests
-			}
+			})
 		})
-	}
-}
+	})
+})

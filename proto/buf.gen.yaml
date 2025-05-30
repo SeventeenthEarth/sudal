@@ -6,6 +6,7 @@ plugins:
     opt:
       - paths=source_relative
       - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
+      - Muser/v1/user.proto=github.com/seventeenthearth/sudal/gen/go/user/v1
 
   # Generate Connect-go service interfaces, clients, and handlers
   - plugin: connect-go
@@ -13,6 +14,7 @@ plugins:
     opt:
       - paths=source_relative
       - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
+      - Muser/v1/user.proto=github.com/seventeenthearth/sudal/gen/go/user/v1
 
   # Generate gRPC Go service interfaces and clients
   - plugin: go-grpc
@@ -20,6 +22,7 @@ plugins:
     opt:
       - paths=source_relative
       - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
+      - Muser/v1/user.proto=github.com/seventeenthearth/sudal/gen/go/user/v1
 
   # Generate OpenAPI v2 specifications from Protocol Buffers
   - plugin: openapiv2

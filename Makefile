@@ -15,7 +15,7 @@ GOLANGCILINT := $(shell command -v golangci-lint 2> /dev/null)
 GINKGO := $(shell command -v ginkgo 2> /dev/null)
 MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 
-.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run buf-generate buf-lint buf-breaking buf-setup wire-gen generate-mocks ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
+.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
 
 .DEFAULT_GOAL := help
 
@@ -53,9 +53,15 @@ help: ## Show this help message
 	@echo "  make migrate-drop              # Drop all database objects (DANGEROUS)"
 	@echo "  make migrate-fresh             # Fresh migration setup"
 	@echo ""
-	@echo "� Buf Operations:"
+	@echo "🔧 Code Generation:"
+	@echo "  make generate-buf              # Generate protobuf code"
+	@echo "  make generate-ogen             # Generate OpenAPI server code"
+	@echo "  make generate-wire             # Generate dependency injection code"
+	@echo "  make generate-mocks            # Generate mocks"
+	@echo "  make generate-ginkgo           # Bootstrap Ginkgo test suites"
+	@echo ""
+	@echo "📦 Buf Operations:"
 	@echo "  make buf-setup                 # Setup buf configuration files"
-	@echo "  make buf-generate              # Generate protobuf code"
 	@echo "  make buf-lint                  # Lint protobuf files"
 	@echo "  make buf-breaking              # Check for breaking changes"
 	@echo ""
@@ -145,7 +151,7 @@ endif
 	@echo "✅ Linter completed"
 
 # Code generation targets (simplified - use scripts for advanced operations)
-generate: ginkgo-bootstrap buf-generate wire-gen generate-mocks ## Generate all code (test suites, proto, wire, mocks)
+generate: generate-ginkgo generate-buf generate-wire generate-mocks generate-ogen ## Generate all code (test suites, proto, wire, mocks, openapi)
 	@echo "✅ All code generation completed"
 
 buf-setup: ## Setup buf configuration files
@@ -153,10 +159,13 @@ buf-setup: ## Setup buf configuration files
 	@./scripts/setup-buf.sh setup
 	@echo "✅ Buf configuration setup completed"
 
-buf-generate: ## Generate protobuf code
+generate-buf: ## Generate protobuf code
 	@echo "🔧 Generating protobuf code..."
 	@./scripts/setup-buf.sh generate
 	@echo "✅ Protobuf code generation completed"
+
+# Legacy alias for backward compatibility
+buf-generate: generate-buf
 
 buf-lint: ## Lint protobuf files
 	@echo "🔍 Linting protobuf files..."
@@ -168,7 +177,7 @@ buf-breaking: ## Check for breaking changes in protobuf
 	@./scripts/setup-buf.sh breaking
 	@echo "✅ Breaking change check completed"
 
-wire-gen: ## Generate dependency injection code
+generate-wire: ## Generate dependency injection code
 	@echo "🔧 Generating Wire dependency injection code..."
 	@if ! command -v wire >/dev/null 2>&1; then \
 		echo "Installing wire..."; \
@@ -176,6 +185,9 @@ wire-gen: ## Generate dependency injection code
 	fi
 	@cd internal/infrastructure/di && wire
 	@echo "✅ Wire code generation completed"
+
+# Legacy alias for backward compatibility
+wire-gen: generate-wire
 
 generate-mocks: ## Generate mocks
 	@echo "🔧 Generating mocks..."
@@ -186,10 +198,29 @@ endif
 	@go generate ./... || echo "⚠️  Warning: Some mock generation may have failed, but continuing..."
 	@echo "✅ Mock generation completed"
 
-ginkgo-bootstrap: ## Bootstrap Ginkgo test suites
+generate-ogen: ## Generate OpenAPI server code from specification
+	@echo "🔧 Generating OpenAPI server code..."
+	@if ! command -v ogen >/dev/null 2>&1; then \
+		echo "Installing ogen..."; \
+		GOPROXY=direct go install github.com/ogen-go/ogen/cmd/ogen@latest; \
+	fi
+	@go run github.com/ogen-go/ogen/cmd/ogen \
+		-target internal/infrastructure/openapi \
+		-package openapi \
+		-clean \
+		api/openapi.yaml
+	@echo "✅ OpenAPI server code generation completed"
+
+# Legacy alias for backward compatibility
+ogen-generate: generate-ogen
+
+generate-ginkgo: ## Bootstrap Ginkgo test suites
 	@echo "🔧 Bootstrapping Ginkgo test suites..."
 	@./scripts/setup_tests.sh
 	@echo "✅ Ginkgo test suites bootstrapped"
+
+# Legacy alias for backward compatibility
+ginkgo-bootstrap: generate-ginkgo
 
 # Cleanup targets - all operations available via make
 clean: ## Clean build artifacts and generated files (standard cleanup)

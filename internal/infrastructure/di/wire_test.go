@@ -54,17 +54,6 @@ var _ = ginkgo.Describe("DI", func() {
 		os.Unsetenv("APP_ENV")     // nolint:errcheck
 	})
 
-	ginkgo.Describe("InitializeHealthHandler", func() {
-		ginkgo.It("should return a non-nil handler", func() {
-			// Act
-			handler, err := di.InitializeHealthHandler()
-
-			// Assert
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(handler).NotTo(gomega.BeNil())
-		})
-	})
-
 	ginkgo.Describe("InitializeHealthConnectHandler", func() {
 		ginkgo.It("should return a non-nil Connect handler", func() {
 			// Act

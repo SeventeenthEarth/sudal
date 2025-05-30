@@ -51,6 +51,76 @@ When using Protocol Buffers with Connect-go, be aware of the following JSON seri
 
 These behaviors should be considered when writing client code that consumes the API or when writing tests that verify API responses.
 
+## Protocol Architecture
+
+Sudal implements a **dual-protocol architecture** that separates concerns between operational monitoring and business functionality:
+
+### REST API - Health & Monitoring Only
+REST endpoints are exclusively used for **health checks and operational monitoring**:
+
+- **`GET /api/ping`** - Simple health check
+- **`GET /api/healthz`** - Comprehensive health check
+- **`GET /api/health/database`** - Database connectivity check
+- **`GET /docs`** - API documentation (Swagger UI)
+- **`GET /api/openapi.yaml`** - OpenAPI specification
+
+These endpoints are designed for:
+- Load balancer health checks
+- Monitoring systems (Prometheus, etc.)
+- DevOps tooling and automation
+- API documentation and exploration
+
+### gRPC - Business Logic Only
+All **business logic and core functionality** is exclusively provided via gRPC:
+
+- **`health.v1.HealthService/Check`** - gRPC health check (for gRPC clients)
+- **`user.v1.UserService/*`** - All user management operations
+- **Future services** - Quiz, authentication, etc.
+
+### Protocol Filtering Middleware
+
+To enforce this separation, Sudal includes a **Protocol Filter Middleware** that:
+
+- **Blocks HTTP/JSON requests** to gRPC-only endpoints (returns 404 Not Found)
+- **Allows gRPC requests** (gRPC, gRPC-Web, HTTP/2 with gRPC indicators)
+- **Preserves REST access** to health and documentation endpoints
+
+#### Security Benefits
+
+**Protocol-Level Security:**
+- **Endpoint Discovery Protection**: HTTP/JSON requests to business endpoints return 404, hiding their existence
+- **Binary Protocol Obfuscation**: gRPC uses binary Protocol Buffers, making traffic analysis more difficult
+- **Schema Requirement**: Attackers need .proto files to understand request/response structures
+- **HTTP/2 Complexity**: More sophisticated protocol reduces casual exploration attempts
+
+**Architectural Security:**
+- **Protocol Enforcement**: Ensures business logic is only accessible via gRPC
+- **Clear API Boundaries**: Prevents accidental REST usage for business operations
+- **Reduced Attack Surface**: Fewer discoverable endpoints compared to traditional REST APIs
+
+#### Testing Protocol Separation
+
+```bash
+# ✅ REST health endpoints work
+curl http://localhost:8080/api/ping
+curl http://localhost:8080/api/healthz
+
+# ❌ HTTP/JSON to business endpoints blocked (404)
+curl -X POST -H "Content-Type: application/json" \
+  http://localhost:8080/user.v1.UserService/RegisterUser
+
+# ✅ gRPC to business endpoints works
+grpcurl -plaintext -proto proto/user/v1/user.proto \
+  localhost:8080 user.v1.UserService/RegisterUser
+```
+
+This architecture ensures:
+- **Operational simplicity** for monitoring (REST)
+- **Type safety and performance** for business logic (gRPC)
+- **Clear separation of concerns** between infrastructure and business domains
+
+For detailed information about the Protocol Filter Middleware implementation, configuration, and testing, see the [Middleware Documentation](docs/middleware.md).
+
 ## Quick Start
 
 ### Prerequisites
@@ -192,11 +262,13 @@ The project provides interactive API documentation through Swagger UI, generated
    http://localhost:8080/docs
    ```
 
-#### Available Endpoints
+#### Available REST Endpoints (Health & Monitoring Only)
 
 - `GET /api/ping` - Simple health check
 - `GET /api/healthz` - Comprehensive health check
 - `GET /api/health/database` - Database health check
+
+**Note**: Business logic endpoints are exclusively available via gRPC. See the [Protocol Architecture](#protocol-architecture) section for details.
 
 #### Code Generation
 

@@ -80,8 +80,8 @@ func (h *OpenAPIHandler) Health(ctx context.Context) (HealthRes, error) {
 func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes, error) {
 	log.InfoContext(ctx, "OpenAPI database health check requested")
 
-	// Call the application service to perform the health check
-	status, err := h.healthService.Check(ctx)
+	// Call the application service to perform the database-specific health check
+	dbStatus, err := h.healthService.CheckDatabase(ctx)
 	if err != nil {
 		log.ErrorContext(ctx, "OpenAPI database health check failed", zap.Error(err))
 
@@ -95,38 +95,40 @@ func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes,
 
 	// Map the domain status to the OpenAPI status
 	var apiStatus DatabaseHealthResponseStatus
-	var dbStatus DatabaseHealthResponseDatabase
+	var dbConnectionStatus DatabaseHealthResponseDatabase
 
-	switch status.Status {
+	switch dbStatus.Status {
 	case "healthy":
 		apiStatus = DatabaseHealthResponseStatusHealthy
-		dbStatus = DatabaseHealthResponseDatabaseConnected
+		dbConnectionStatus = DatabaseHealthResponseDatabaseConnected
 	case "unhealthy":
 		apiStatus = DatabaseHealthResponseStatusUnhealthy
-		dbStatus = DatabaseHealthResponseDatabaseDisconnected
+		dbConnectionStatus = DatabaseHealthResponseDatabaseDisconnected
 	default:
 		apiStatus = DatabaseHealthResponseStatusUnhealthy
-		dbStatus = DatabaseHealthResponseDatabaseDisconnected
+		dbConnectionStatus = DatabaseHealthResponseDatabaseDisconnected
 	}
 
 	// Determine response type based on status
 	if apiStatus == DatabaseHealthResponseStatusHealthy {
 		response := &DatabaseHealthOK{
 			Status:   apiStatus,
-			Database: dbStatus,
+			Database: dbConnectionStatus,
 		}
 		log.InfoContext(ctx, "OpenAPI database health check completed",
 			zap.String("status", string(apiStatus)),
-			zap.String("database", string(dbStatus)))
+			zap.String("database", string(dbConnectionStatus)),
+			zap.String("message", dbStatus.Message))
 		return response, nil
 	} else {
 		response := &DatabaseHealthServiceUnavailable{
 			Status:   apiStatus,
-			Database: dbStatus,
+			Database: dbConnectionStatus,
 		}
 		log.InfoContext(ctx, "OpenAPI database health check completed",
 			zap.String("status", string(apiStatus)),
-			zap.String("database", string(dbStatus)))
+			zap.String("database", string(dbConnectionStatus)),
+			zap.String("message", dbStatus.Message))
 		return response, nil
 	}
 }

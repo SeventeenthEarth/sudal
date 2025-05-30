@@ -24,10 +24,4 @@ plugins:
       - Mhealth/v1/health.proto=github.com/seventeenthearth/sudal/gen/go/health/v1
       - Muser/v1/user.proto=github.com/seventeenthearth/sudal/gen/go/user/v1
 
-  # Generate OpenAPI v2 specifications from Protocol Buffers
-  - plugin: openapiv2
-    out: ../gen/openapi
-    opt:
-      - output_format=yaml
-      - allow_merge=true
-      - merge_file_name=api
+

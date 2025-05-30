@@ -14,6 +14,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
+	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
@@ -62,17 +63,17 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
 	// Initialize handlers using dependency injection
-	healthHandler, err := di.InitializeHealthHandler()
-	if err != nil {
-		return fmt.Errorf("failed to initialize health handler: %w", err)
-	}
-	// Initialize Connect-go health service handler
+	// Initialize Connect-go health service handler (gRPC only)
 	healthConnectHandler, err := di.InitializeHealthConnectHandler()
 	if err != nil {
 		return fmt.Errorf("failed to initialize health connect handler: %w", err)
 	}
-	// Note: Database health is now handled by the unified health handler
-	// Initialize OpenAPI handler using DI
+	// Initialize Connect-go user service handler (gRPC only)
+	userConnectHandler, err := di.InitializeUserConnectHandler()
+	if err != nil {
+		return fmt.Errorf("failed to initialize user connect handler: %w", err)
+	}
+	// Initialize OpenAPI handler for REST endpoints
 	openAPIHandler, err := di.InitializeOpenAPIHandler()
 	if err != nil {
 		return fmt.Errorf("failed to initialize OpenAPI handler: %w", err)
@@ -80,15 +81,12 @@ func (s *Server) Start() error {
 	// Initialize Swagger UI handler
 	swaggerHandler := di.InitializeSwaggerHandler()
 
-	// Register REST routes (includes database health check)
-	healthHandler.RegisterRoutes(mux)
-
-	// Register OpenAPI routes
+	// Register OpenAPI routes for REST endpoints (/api/ping, /api/healthz, /api/health/database)
 	openAPIServer, err := openapi.NewServer(openAPIHandler)
 	if err != nil {
 		return fmt.Errorf("failed to create OpenAPI server: %w", err)
 	}
-	mux.Handle("/api/", http.StripPrefix("/api", openAPIServer))
+	mux.Handle("/api/", openAPIServer)
 
 	// Register Swagger UI routes
 	mux.HandleFunc("/docs", swaggerHandler.ServeSwaggerUI)
@@ -96,12 +94,19 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/openapi.yaml", swaggerHandler.ServeOpenAPISpec)
 
 	// Register Connect-go routes with gRPC support
-	// This path pattern will handle gRPC, gRPC-Web, and HTTP/JSON requests
-	path, handler := healthv1connect.NewHealthServiceHandler(healthConnectHandler)
-	mux.Handle(path, handler)
+	// These are restricted to gRPC-only via middleware
+	healthPath, healthConnectHTTPHandler := healthv1connect.NewHealthServiceHandler(healthConnectHandler)
+	mux.Handle(healthPath, healthConnectHTTPHandler)
 
-	// Apply middleware
-	httpHandler := middleware.RequestLogger(mux)
+	// Register UserService Connect-go routes
+	userPath, userHTTPHandler := userv1connect.NewUserServiceHandler(userConnectHandler)
+	mux.Handle(userPath, userHTTPHandler)
+
+	// Apply middleware stack
+	// 1. Protocol filtering for specified paths (gRPC-only restriction)
+	protocolFilterHandler := middleware.ProtocolFilterMiddleware(middleware.GetGRPCOnlyPaths())(mux)
+	// 2. Request logging
+	httpHandler := middleware.RequestLogger(protocolFilterHandler)
 
 	// Configure HTTP/2 server for gRPC support
 	h2s := &http2.Server{

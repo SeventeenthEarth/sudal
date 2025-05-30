@@ -10,12 +10,17 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
-	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
+	userRepo "github.com/seventeenthearth/sudal/internal/feature/user/data/repo"
+	userDomainRepo "github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
+	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
+	"go.uber.org/zap"
 )
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_di_initializer.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/di DatabaseHealthInitializer
@@ -30,20 +35,7 @@ var ConfigSet = wire.NewSet(
 	ProvideConfig,
 )
 
-// HealthSet is a Wire provider set for health-related dependencies
-var HealthSet = wire.NewSet(
-	ProvideConfig,
-	ProvidePostgresManager,
-	data.NewRepository,
-	wire.Bind(new(repo.HealthRepository), new(*data.HealthRepository)),
-	application.NewPingUseCase,
-	application.NewHealthCheckUseCase,
-	application.NewDatabaseHealthUseCase,
-	application.NewService,
-	healthInterface.NewHandler,
-)
-
-// HealthConnectSet is a Wire provider set for Connect-go health service
+// HealthConnectSet is a Wire provider set for Connect-go health service (gRPC only)
 var HealthConnectSet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
@@ -82,6 +74,15 @@ var CacheSet = wire.NewSet(
 	ProvideCacheUtil,
 )
 
+// UserSet is a Wire provider set for user-related dependencies (gRPC only)
+var UserSet = wire.NewSet(
+	ProvideConfig,
+	ProvidePostgresManager,
+	ProvideLogger,
+	ProvideUserRepository,
+	userConnect.NewUserService,
+)
+
 // ProvideConfig provides the application configuration
 func ProvideConfig() *config.Config {
 	return config.GetConfig()
@@ -114,6 +115,20 @@ func ProvideCacheUtil(redisManager database.RedisManager) cacheutil.CacheUtil {
 	return cacheutil.NewCacheUtil(redisManager)
 }
 
+// ProvideLogger provides a logger instance
+func ProvideLogger() *zap.Logger {
+	return log.GetLogger()
+}
+
+// ProvideUserRepository provides a user repository instance
+func ProvideUserRepository(pgManager database.PostgresManager, logger *zap.Logger) userDomainRepo.UserRepository {
+	// Check if we're in test environment and return nil to use mock
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	return userRepo.NewUserRepoImpl(pgManager.GetDB(), logger)
+}
+
 // isTestEnvironmentWire checks if we're running in a test environment for wire
 func isTestEnvironmentWire() bool {
 	// Check environment variables that indicate test mode
@@ -135,13 +150,7 @@ func isTestEnvironmentWire() bool {
 	return false
 }
 
-// InitializeHealthHandler initializes and returns a health handler with all its dependencies
-func InitializeHealthHandler() (*healthInterface.Handler, error) {
-	wire.Build(HealthSet)
-	return nil, nil // Wire will fill this in
-}
-
-// InitializeHealthConnectHandler initializes and returns a Connect-go health service handler
+// InitializeHealthConnectHandler initializes and returns a Connect-go health service handler (gRPC only)
 func InitializeHealthConnectHandler() (*healthConnect.HealthServiceHandler, error) {
 	wire.Build(HealthConnectSet)
 	return nil, nil // Wire will fill this in
@@ -171,6 +180,12 @@ func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
 	return nil, nil // Wire will fill this in
 }
 
+// InitializeUserConnectHandler initializes and returns a Connect-go user service handler (gRPC only)
+func InitializeUserConnectHandler() (*userConnect.UserService, error) {
+	wire.Build(UserSet)
+	return nil, nil // Wire will fill this in
+}
+
 // DefaultDatabaseHealthInitializer is the default implementation of DatabaseHealthInitializer
 type DefaultDatabaseHealthInitializer struct{}
 
@@ -184,7 +199,7 @@ func (d *DefaultDatabaseHealthInitializer) InitializeDatabaseHealthHandler() (*D
 	return InitializeDatabaseHealthHandler()
 }
 
-// OpenAPISet is a Wire provider set for OpenAPI-related dependencies
+// OpenAPISet is a Wire provider set for OpenAPI-related dependencies (REST API)
 var OpenAPISet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
@@ -202,7 +217,7 @@ func NewOpenAPIHandler(service application.HealthService) *openapi.OpenAPIHandle
 	return openapi.NewOpenAPIHandler(service)
 }
 
-// InitializeOpenAPIHandler initializes and returns an OpenAPI handler
+// InitializeOpenAPIHandler initializes and returns an OpenAPI handler (REST API)
 func InitializeOpenAPIHandler() (*openapi.OpenAPIHandler, error) {
 	wire.Build(OpenAPISet)
 	return nil, nil // Wire will fill this in

@@ -118,11 +118,11 @@ func (r *Repository) WithTx(tx *sql.Tx) *Repository {
 }
 
 // GetDB returns the underlying database connection or transaction
-// This method provides access to the raw database interface for operations
+// This method provides access to the raw database protocol for operations
 // that require direct database access beyond the standard repository patterns.
 //
 // Returns:
-//   - interface{}: The database connection (*sql.DB) or transaction (*sql.Tx)
+//   - protocol{}: The database connection (*sql.DB) or transaction (*sql.Tx)
 //
 // Note: This method should be used sparingly and only when the standard
 // repository patterns are insufficient for the required operation.

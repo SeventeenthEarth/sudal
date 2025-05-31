@@ -1,6 +1,13 @@
-# API Interfaces Documentation
+# API Protocol Documentation
 
-This document provides a comprehensive overview of the API interfaces available in the Sudal application. The application supports both REST API and gRPC interfaces.
+This document provides a comprehensive overview of the API protocols available in the Sudal application. The application supports both REST API and gRPC interfaces.
+
+## Protocol Layer Structure
+
+The protocol layer in the clean architecture is responsible for handling external communication. Each feature's protocol layer typically contains:
+
+- **grpc_manager.go**: Handles gRPC protocol communication
+- **rest_handler.go**: Handles REST API endpoints (may not exist for features that don't use REST)
 
 ## REST API Endpoints
 

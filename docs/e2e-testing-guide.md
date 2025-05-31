@@ -57,13 +57,13 @@ test/e2e/
 │   ├── user_steps.go                   # User service steps
 │   ├── cache_steps.go                  # Cache utility steps
 │   └── database_steps.go               # Database health specific steps
-├── connect_protocols_test.go           # Connect-Go protocol tests
-├── grpc_health_service_test.go         # gRPC health service tests
-├── grpc_user_service_test.go           # gRPC user service tests
-├── rest_database_health_test.go        # REST database health tests
-├── rest_health_service_test.go         # REST health service tests
-├── rest_monitoring_test.go             # REST monitoring endpoint tests
-├── rest_user_service_test.go           # REST user service tests
+├── connect_protocols_test.go           # Tests using both gRPC and REST protocols
+├── grpc_health_service_test.go         # Tests using only gRPC protocol
+├── grpc_user_service_test.go           # Tests using only gRPC protocol
+├── rest_database_health_test.go        # Tests using only REST protocol
+├── rest_health_service_test.go         # Tests using only REST protocol
+├── rest_monitoring_test.go             # Tests using only REST protocol
+├── rest_user_service_test.go           # Tests using only REST protocol
 ├── cache_utility_test.go               # Cache utility tests
 └── const.go                            # Test constants
 ```
@@ -239,7 +239,15 @@ func TestMultipleScenarios(t *testing.T) {
 - `ThenCachedDataShouldBeRetrieved(ctx)`: Cache hit validation
 - `ThenCacheShouldBeEmpty(ctx)`: Cache miss validation
 
-## Test Categories
+## Test Categories and Naming Conventions
+
+E2E tests follow a specific naming convention based on the protocol they use:
+
+- **grpc_**: Tests that use only the gRPC protocol
+- **rest_**: Tests that use only the REST protocol
+- **connect_**: Tests that use both gRPC and REST protocols
+
+This naming convention helps to clearly identify the protocol being tested and ensures consistency across the test suite.
 
 ### Connect-Go Protocol Tests
 - HTTP/JSON over Connect-Go
@@ -305,6 +313,10 @@ ctx.AllConcurrentRequestsShouldSucceed()
 ctx.TheGRPCResponseShouldBeSuccessful()
 ctx.TheConnectGoResponseShouldBeSuccessful()
 ```
+
+## Test Coverage
+
+Unlike unit and integration tests, end-to-end tests do not generate coverage reports. This is because the tests are running against a server in a Docker container, and the coverage data cannot be collected from the running container. The e2e tests focus on verifying that the system works correctly as a whole, rather than measuring code coverage.
 
 ## Troubleshooting
 

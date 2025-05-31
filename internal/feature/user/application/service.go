@@ -10,7 +10,7 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_user_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/user/application UserService
 
-// UserService defines the user service interface
+// UserService defines the user service protocol
 // This service acts as a facade for user-related business operations
 type UserService interface {
 	// RegisterUser creates a new user account after Firebase authentication

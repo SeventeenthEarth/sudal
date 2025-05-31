@@ -173,6 +173,31 @@ Advanced cleanup operations.
 ./scripts/clean-all.sh --help
 ```
 
+### ./scripts/run-e2e-tests.sh
+Run end-to-end tests with server availability check.
+
+```bash
+# Run all E2E tests
+./scripts/run-e2e-tests.sh
+
+# Run a specific test
+./scripts/run-e2e-tests.sh TestConnectGoHealthService
+
+# Skip server availability check
+./scripts/run-e2e-tests.sh --skip-check
+
+# Show help
+./scripts/run-e2e-tests.sh --help
+```
+
+### ./scripts/setup_tests.sh
+Set up the test environment by installing required tools and bootstrapping Ginkgo test suites.
+
+```bash
+# Set up the test environment
+./scripts/setup_tests.sh
+```
+
 ## 🌟 Best Practices
 
 1. **Use make targets for common operations** - They provide consistent output and error handling
@@ -202,7 +227,7 @@ Advanced cleanup operations.
    ```bash
    # Check status first
    make migrate-status
-   
+
    # If needed, force set version
    make migrate-force VERSION=0
    ```

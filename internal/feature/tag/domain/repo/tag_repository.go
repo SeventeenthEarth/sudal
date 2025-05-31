@@ -8,8 +8,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_tag_repository.go -package=mocks -mock_names=TagRepository=MockTagRepository github.com/seventeenthearth/sudal/internal/feature/tag/domain/repo TagRepository
 
-// TagRepository defines the interface for tag data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// TagRepository defines the protocol for tag data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

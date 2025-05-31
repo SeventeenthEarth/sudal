@@ -10,12 +10,12 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_get_user_profile_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/user/application GetUserProfileUseCase
 
-// GetUserProfileUseCase defines the interface for user profile retrieval functionality
+// GetUserProfileUseCase defines the protocol for user profile retrieval functionality
 type GetUserProfileUseCase interface {
 	Execute(ctx context.Context, userID uuid.UUID) (*entity.User, error)
 }
 
-// getUserProfileUseCase implements the GetUserProfileUseCase interface
+// getUserProfileUseCase implements the GetUserProfileUseCase protocol
 type getUserProfileUseCase struct {
 	repo repo.UserRepository
 }

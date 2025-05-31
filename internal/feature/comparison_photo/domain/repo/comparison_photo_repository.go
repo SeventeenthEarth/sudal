@@ -10,8 +10,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_comparison_photo_repository.go -package=mocks -mock_names=ComparisonPhotoRepository=MockComparisonPhotoRepository github.com/seventeenthearth/sudal/internal/feature/comparison_photo/domain/repo ComparisonPhotoRepository
 
-// ComparisonPhotoRepository defines the interface for comparison photo data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// ComparisonPhotoRepository defines the protocol for comparison photo data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

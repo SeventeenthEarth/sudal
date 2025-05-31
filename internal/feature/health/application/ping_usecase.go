@@ -8,12 +8,12 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_ping_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application PingUseCase
 
-// PingUseCase defines the interface for the ping functionality
+// PingUseCase defines the protocol for the ping functionality
 type PingUseCase interface {
 	Execute(ctx context.Context) (*entity.HealthStatus, error)
 }
 
-// pingUseCase implements the PingUseCase interface
+// pingUseCase implements the PingUseCase protocol
 type pingUseCase struct {
 	// No dependencies needed for this simple use case
 }

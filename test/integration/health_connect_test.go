@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"errors"
+	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"net"
 	"net/http"
 	"strings"
@@ -16,7 +17,6 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
@@ -43,7 +43,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 		service := application.NewService(mockRepo)
 
 		// Create the Connect handler
-		healthHandler := healthConnect.NewHealthServiceHandler(service)
+		healthHandler := healthConnect.NewHealthAdapter(service)
 		path, handler := healthv1connect.NewHealthServiceHandler(healthHandler)
 
 		// Create a router and register the Connect handler
@@ -201,19 +201,19 @@ var _ = Describe("Health Connect Service Integration", func() {
 	})
 })
 
-// mockRepository is a mock implementation of the repo.HealthRepository interface
+// mockRepository is a mock implementation of the repo.HealthRepository protocol
 type mockRepository struct {
 	status         *entity.HealthStatus
 	databaseStatus *entity.DatabaseStatus
 	err            error
 }
 
-// GetStatus implements the repo.HealthRepository interface
+// GetStatus implements the repo.HealthRepository protocol
 func (m *mockRepository) GetStatus(ctx context.Context) (*entity.HealthStatus, error) {
 	return m.status, m.err
 }
 
-// GetDatabaseStatus implements the repo.HealthRepository interface
+// GetDatabaseStatus implements the repo.HealthRepository protocol
 func (m *mockRepository) GetDatabaseStatus(ctx context.Context) (*entity.DatabaseStatus, error) {
 	if m.databaseStatus != nil {
 		return m.databaseStatus, m.err

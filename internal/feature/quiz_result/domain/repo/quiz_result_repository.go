@@ -10,8 +10,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_quiz_result_repository.go -package=mocks -mock_names=QuizResultRepository=MockQuizResultRepository github.com/seventeenthearth/sudal/internal/feature/quiz_result/domain/repo QuizResultRepository
 
-// QuizResultRepository defines the interface for quiz result data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// QuizResultRepository defines the protocol for quiz result data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

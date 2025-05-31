@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/gomega"
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
-	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 )
 
 var _ = ginkgo.Describe("Integration Tests", func() {

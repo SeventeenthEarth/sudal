@@ -15,7 +15,7 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_postgres_manager.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres PostgresManager
 
-// PostgresManager defines the interface for PostgreSQL database connection management
+// PostgresManager defines the protocol for PostgreSQL database connection management
 type PostgresManager interface {
 	// GetDB returns the underlying database connection
 	GetDB() *sql.DB

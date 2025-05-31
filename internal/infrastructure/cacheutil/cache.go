@@ -15,8 +15,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_cache_util.go -package=mocks -mock_names=CacheUtil=MockCacheUtil github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil CacheUtil
 
-// CacheUtil defines the interface for cache operations
-// This interface abstracts cache operations for better testability
+// CacheUtil defines the protocol for cache operations
+// This protocol abstracts cache operations for better testability
 type CacheUtil interface {
 	// Set stores a key-value pair with an optional TTL
 	Set(key string, value string, ttl time.Duration) error

@@ -97,40 +97,7 @@ The project follows a Behavior-Driven Development (BDD) approach to testing usin
 
 ## End-to-End Tests
 
-End-to-end tests verify that the entire system works correctly by testing against a running server using a **custom BDD framework optimized for gRPC testing**. These tests:
-
-1. Use pure BDD style with natural language assertions for enhanced readability
-2. Require the server to be running in Docker (using `make run` in a separate terminal)
-3. Connect to the server and verify that it responds correctly using custom BDD assertions
-4. Test actual functionality by making requests to the server with gRPC-optimized testing
-5. Support both Connect-Go and native gRPC protocols
-6. Fail if the server is not accessible or not functioning correctly
-
-To run end-to-end tests:
-
-```bash
-# First, start the server in a separate terminal
-make run
-
-# Then, in another terminal, run the e2e tests
-make test.e2e
-```
-
-### BDD Style E2E Testing
-
-E2E tests use a custom BDD framework with natural language assertions:
-
-```go
-// BDD Style - Natural Language
-ctx.TheResponseStatusCodeShouldBe(200)
-ctx.TheJSONResponseShouldContainField("status", "SERVING_STATUS_SERVING")
-ctx.TheGRPCResponseShouldBeSuccessful()
-ctx.AllConcurrentRequestsShouldSucceed()
-```
-
-### Coverage for End-to-End Tests
-
-Unlike unit and integration tests, end-to-end tests do not generate coverage reports. This is because the tests are running against a server in a Docker container, and the coverage data cannot be collected from the running container. The e2e tests focus on verifying that the system works correctly as a whole, rather than measuring code coverage.
+For detailed information about end-to-end tests, including how to run them, naming conventions, BDD style testing, and test coverage, please refer to the [E2E Testing Guide](e2e-testing-guide.md).
 
 ## Writing BDD Tests
 

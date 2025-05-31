@@ -10,8 +10,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_candy_transaction_repository.go -package=mocks -mock_names=CandyTransactionRepository=MockCandyTransactionRepository github.com/seventeenthearth/sudal/internal/feature/candy_transaction/domain/repo CandyTransactionRepository
 
-// CandyTransactionRepository defines the interface for candy transaction data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// CandyTransactionRepository defines the protocol for candy transaction data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

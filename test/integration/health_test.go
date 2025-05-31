@@ -13,7 +13,7 @@ import (
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	internalMocks "github.com/seventeenthearth/sudal/internal/mocks"
 
 	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"

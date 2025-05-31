@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"fmt"
+	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"net"
 	"net/http"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
@@ -26,7 +26,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 		ctrl     *gomock.Controller
 		mockRepo *mocks.MockHealthRepository
 		service  application.HealthService
-		handler  *healthConnect.HealthServiceHandler
+		handler  *healthConnect.HealthManager
 		server   *http.Server
 		listener net.Listener
 		baseURL  string
@@ -39,7 +39,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 
 		// Create service with mock repository
 		service = application.NewService(mockRepo)
-		handler = healthConnect.NewHealthServiceHandler(service)
+		handler = healthConnect.NewHealthAdapter(service)
 
 		// Setup test server
 		mux := http.NewServeMux()

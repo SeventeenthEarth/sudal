@@ -10,12 +10,12 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_register_user_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/user/application RegisterUserUseCase
 
-// RegisterUserUseCase defines the interface for user registration functionality
+// RegisterUserUseCase defines the protocol for user registration functionality
 type RegisterUserUseCase interface {
 	Execute(ctx context.Context, firebaseUID, displayName, authProvider string) (*entity.User, error)
 }
 
-// registerUserUseCase implements the RegisterUserUseCase interface
+// registerUserUseCase implements the RegisterUserUseCase protocol
 type registerUserUseCase struct {
 	repo repo.UserRepository
 }

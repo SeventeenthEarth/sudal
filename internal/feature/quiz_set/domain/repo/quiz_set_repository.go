@@ -8,8 +8,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_quiz_set_repository.go -package=mocks -mock_names=QuizSetRepository=MockQuizSetRepository github.com/seventeenthearth/sudal/internal/feature/quiz_set/domain/repo QuizSetRepository
 
-// QuizSetRepository defines the interface for quiz set data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// QuizSetRepository defines the protocol for quiz set data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

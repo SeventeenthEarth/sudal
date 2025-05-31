@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// OpenAPIHandler implements the ogen-generated Handler interface
+// OpenAPIHandler implements the ogen-generated Handler protocol
 type OpenAPIHandler struct {
 	healthService application.HealthService
 }

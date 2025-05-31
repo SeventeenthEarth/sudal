@@ -357,7 +357,7 @@ var _ = ginkgo.Describe("DI", func() {
 			gomega.Expect(initializer).NotTo(gomega.BeNil())
 		})
 
-		ginkgo.It("should implement DatabaseHealthInitializer interface", func() {
+		ginkgo.It("should implement DatabaseHealthInitializer protocol", func() {
 			// Act
 			initializer := di.NewDefaultDatabaseHealthInitializer()
 

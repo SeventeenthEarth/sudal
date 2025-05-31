@@ -1,4 +1,4 @@
-package interfaces_test
+package protocol_test
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	interfaces "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	interfaces "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 

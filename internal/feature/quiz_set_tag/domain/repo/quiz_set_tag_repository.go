@@ -9,8 +9,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_quiz_set_tag_repository.go -package=mocks -mock_names=QuizSetTagRepository=MockQuizSetTagRepository github.com/seventeenthearth/sudal/internal/feature/quiz_set_tag/domain/repo QuizSetTagRepository
 
-// QuizSetTagRepository defines the interface for quiz set tag association data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// QuizSetTagRepository defines the protocol for quiz set tag association data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

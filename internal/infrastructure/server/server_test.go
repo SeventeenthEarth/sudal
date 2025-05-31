@@ -205,7 +205,7 @@ var _ = ginkgo.Describe("Server", func() {
 
 		ginkgo.Context("when shutdown fails", func() {
 			// Since we can't easily mock the http.Server's Shutdown method, we'll remove this test
-			// A better approach would be to refactor the server to use an interface for the HTTP server
+			// A better approach would be to refactor the server to use an protocol for the HTTP server
 			// that could be easily mocked for testing
 		})
 	})

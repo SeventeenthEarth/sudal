@@ -11,12 +11,12 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_update_user_profile_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/user/application UpdateUserProfileUseCase
 
-// UpdateUserProfileUseCase defines the interface for user profile update functionality
+// UpdateUserProfileUseCase defines the protocol for user profile update functionality
 type UpdateUserProfileUseCase interface {
 	Execute(ctx context.Context, userID uuid.UUID, displayName, avatarURL *string) (*entity.User, error)
 }
 
-// updateUserProfileUseCase implements the UpdateUserProfileUseCase interface
+// updateUserProfileUseCase implements the UpdateUserProfileUseCase protocol
 type updateUserProfileUseCase struct {
 	repo repo.UserRepository
 }

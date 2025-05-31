@@ -9,7 +9,7 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_health_service.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application HealthService
 
-// HealthService defines the health check service interface
+// HealthService defines the health check service protocol
 type HealthService interface {
 	Ping(ctx context.Context) (*entity.HealthStatus, error)
 	Check(ctx context.Context) (*entity.HealthStatus, error)

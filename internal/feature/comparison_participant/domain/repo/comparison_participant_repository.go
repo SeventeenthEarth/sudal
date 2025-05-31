@@ -10,8 +10,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_comparison_participant_repository.go -package=mocks -mock_names=ComparisonParticipantRepository=MockComparisonParticipantRepository github.com/seventeenthearth/sudal/internal/feature/comparison_participant/domain/repo ComparisonParticipantRepository
 
-// ComparisonParticipantRepository defines the interface for comparison participant data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// ComparisonParticipantRepository defines the protocol for comparison participant data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

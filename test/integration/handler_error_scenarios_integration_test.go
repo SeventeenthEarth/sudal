@@ -13,7 +13,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
-	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 )
 
 var _ = Describe("HealthHandler Error Scenarios Integration Tests", func() {

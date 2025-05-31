@@ -8,9 +8,9 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
-// Implementation of the repo.HealthRepository interface
+// Implementation of the repo.HealthRepository protocol
 
-// HealthRepository is the implementation of the repo.HealthRepository interface
+// HealthRepository is the implementation of the repo.HealthRepository protocol
 type HealthRepository struct {
 	// Database manager for performing health checks
 	dbManager postgres.PostgresManager

@@ -1,4 +1,4 @@
-package connect
+package protocol
 
 import (
 	"context"
@@ -13,9 +13,9 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// UserHandler implements the Connect-go user service
+// UserManager implements the Connect-go user service
 // This handler handles user-related operations including registration, profile retrieval, and updates
-type UserHandler struct {
+type UserManager struct {
 	userv1connect.UnimplementedUserServiceHandler
 	userService application.UserService
 	logger      *zap.Logger
@@ -23,19 +23,19 @@ type UserHandler struct {
 
 // NewUserHandler creates a new user handler with the provided dependencies
 // It validates that the logger is not nil, but allows nil userService for testing
-func NewUserHandler(userService application.UserService, logger *zap.Logger) *UserHandler {
+func NewUserHandler(userService application.UserService, logger *zap.Logger) *UserManager {
 	if logger == nil {
 		panic("Logger cannot be nil")
 	}
 
-	return &UserHandler{
+	return &UserManager{
 		userService: userService,
 		logger:      logger,
 	}
 }
 
 // RegisterUser implements the RegisterUser RPC method
-func (h *UserHandler) RegisterUser(
+func (h *UserManager) RegisterUser(
 	ctx context.Context,
 	req *connect.Request[userv1.RegisterUserRequest],
 ) (*connect.Response[userv1.RegisterUserResponse], error) {
@@ -80,7 +80,7 @@ func (h *UserHandler) RegisterUser(
 }
 
 // GetUserProfile implements the GetUserProfile RPC method
-func (h *UserHandler) GetUserProfile(
+func (h *UserManager) GetUserProfile(
 	ctx context.Context,
 	req *connect.Request[userv1.GetUserProfileRequest],
 ) (*connect.Response[userv1.UserProfile], error) {
@@ -125,7 +125,7 @@ func (h *UserHandler) GetUserProfile(
 }
 
 // UpdateUserProfile implements the UpdateUserProfile RPC method
-func (h *UserHandler) UpdateUserProfile(
+func (h *UserManager) UpdateUserProfile(
 	ctx context.Context,
 	req *connect.Request[userv1.UpdateUserProfileRequest],
 ) (*connect.Response[userv1.UpdateUserProfileResponse], error) {

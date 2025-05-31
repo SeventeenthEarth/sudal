@@ -1,29 +1,29 @@
-package connect
+package protocol
 
 import (
+	"connectrpc.com/connect"
 	"context"
 
-	"connectrpc.com/connect"
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"go.uber.org/zap"
 )
 
-// HealthServiceHandler implements the Connect-go health service
-type HealthServiceHandler struct {
+// HealthManager implements the Connect-go health service
+type HealthManager struct {
 	healthService application.HealthService
 }
 
-// NewHealthServiceHandler creates a new health service handler
-func NewHealthServiceHandler(service application.HealthService) *HealthServiceHandler {
-	return &HealthServiceHandler{
+// NewHealthAdapter creates a new health service handler
+func NewHealthAdapter(service application.HealthService) *HealthManager {
+	return &HealthManager{
 		healthService: service,
 	}
 }
 
 // Check implements the Check RPC method
-func (h *HealthServiceHandler) Check(
+func (h *HealthManager) Check(
 	ctx context.Context,
 	req *connect.Request[healthv1.CheckRequest],
 ) (*connect.Response[healthv1.CheckResponse], error) {

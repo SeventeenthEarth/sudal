@@ -14,7 +14,7 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
+	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
 )

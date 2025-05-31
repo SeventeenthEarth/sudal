@@ -106,7 +106,7 @@ func getUserStepContext(ctx *TestContext) *UserStepContext {
 		}
 	}
 	if ctx.UserTestContext.ConcurrentResults != nil {
-		// Convert []interface{} to []UserResult
+		// Convert []protocol{} to []UserResult
 		userResults := make([]UserResult, len(ctx.UserTestContext.ConcurrentResults))
 		for i, result := range ctx.UserTestContext.ConcurrentResults {
 			if userResult, ok := result.(UserResult); ok {
@@ -142,7 +142,7 @@ func setUserStepContext(ctx *TestContext, userCtx *UserStepContext) {
 	ctx.UserTestContext.UpdateUserProfileRequest = userCtx.UpdateUserProfileRequest
 	ctx.UserTestContext.UpdateUserProfileResponse = userCtx.UpdateUserProfileResponse
 
-	// Convert []UserResult to []interface{}
+	// Convert []UserResult to []protocol{}
 	if userCtx.ConcurrentResults != nil {
 		interfaceResults := make([]interface{}, len(userCtx.ConcurrentResults))
 		for i, result := range userCtx.ConcurrentResults {

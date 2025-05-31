@@ -1,32 +1,31 @@
-package connect_test
+package protocol_test
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
-
-	"connectrpc.com/connect"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"go.uber.org/mock/gomock"
 
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	connectImpl "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
-var _ = Describe("HealthServiceHandler", func() {
+var _ = Describe("HealthManager", func() {
 	var (
 		mockCtrl      *gomock.Controller
 		mockService   *mocks.MockHealthService
-		healthHandler *connectImpl.HealthServiceHandler
+		healthHandler *protocol.HealthManager
 		ctx           context.Context
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockService = mocks.NewMockHealthService(mockCtrl)
-		healthHandler = connectImpl.NewHealthServiceHandler(mockService)
+		healthHandler = protocol.NewHealthAdapter(mockService)
 		ctx = context.Background()
 	})
 
@@ -35,7 +34,7 @@ var _ = Describe("HealthServiceHandler", func() {
 	})
 
 	Describe("Check", func() {
-		Context("when the service returns a healthy status", func() {
+		Context("when the manager returns a healthy status", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).
@@ -57,7 +56,7 @@ var _ = Describe("HealthServiceHandler", func() {
 			})
 		})
 
-		Context("when the service returns an unhealthy status", func() {
+		Context("when the manager returns an unhealthy status", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).
@@ -79,7 +78,7 @@ var _ = Describe("HealthServiceHandler", func() {
 			})
 		})
 
-		Context("when the service returns an unknown status", func() {
+		Context("when the manager returns an unknown status", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).
@@ -101,7 +100,7 @@ var _ = Describe("HealthServiceHandler", func() {
 			})
 		})
 
-		Context("when the service returns an error", func() {
+		Context("when the manager returns an error", func() {
 			BeforeEach(func() {
 				mockService.EXPECT().
 					Check(gomock.Any()).

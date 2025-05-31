@@ -14,8 +14,7 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
-	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
+	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	internalMocks "github.com/seventeenthearth/sudal/internal/mocks"
 	"go.uber.org/mock/gomock"
 )
@@ -142,7 +141,7 @@ type IntegrationTestContext struct {
 
 	// Handlers
 	HealthHandler        *healthInterface.HealthHandler
-	HealthConnectHandler *healthConnect.HealthServiceHandler
+	HealthConnectHandler *healthInterface.HealthManager
 
 	// Clients
 	ConnectGoClientHelper *ConnectGoMockHelper
@@ -182,7 +181,7 @@ func (ctx *IntegrationTestContext) SetupTestServer() error {
 
 	// Create handlers
 	ctx.HealthHandler = healthInterface.NewHealthHandler(service)
-	ctx.HealthConnectHandler = healthConnect.NewHealthServiceHandler(service)
+	ctx.HealthConnectHandler = healthInterface.NewHealthAdapter(service)
 
 	// Create router
 	mux := http.NewServeMux()

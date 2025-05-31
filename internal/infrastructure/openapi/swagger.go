@@ -20,7 +20,7 @@ func NewSwaggerHandler(specPath string) *SwaggerHandler {
 	}
 }
 
-// ServeSwaggerUI serves the Swagger UI interface
+// ServeSwaggerUI serves the Swagger UI protocol
 func (h *SwaggerHandler) ServeSwaggerUI(w http.ResponseWriter, r *http.Request) {
 	log.Info("Serving Swagger UI", zap.String("path", r.URL.Path))
 

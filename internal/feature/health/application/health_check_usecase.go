@@ -9,12 +9,12 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_health_check_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application HealthCheckUseCase
 
-// HealthCheckUseCase defines the interface for the health check functionality
+// HealthCheckUseCase defines the protocol for the health check functionality
 type HealthCheckUseCase interface {
 	Execute(ctx context.Context) (*entity.HealthStatus, error)
 }
 
-// healthCheckUseCase implements the HealthCheckUseCase interface
+// healthCheckUseCase implements the HealthCheckUseCase protocol
 type healthCheckUseCase struct {
 	repo repo.HealthRepository
 }

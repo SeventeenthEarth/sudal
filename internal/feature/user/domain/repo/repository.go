@@ -9,8 +9,8 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../../mocks/mock_user_repository.go -package=mocks -mock_names=UserRepository=MockUserRepository github.com/seventeenthearth/sudal/internal/feature/user/domain/repo UserRepository
 
-// UserRepository defines the interface for user data access operations
-// This interface abstracts the data layer and supports both PostgreSQL and Redis implementations
+// UserRepository defines the protocol for user data access operations
+// This protocol abstracts the data layer and supports both PostgreSQL and Redis implementations
 // following the Repository Pattern to maintain clean separation between domain and data layers.
 //
 // Implementation Strategy:

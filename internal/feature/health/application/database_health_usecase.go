@@ -9,12 +9,12 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_database_health_usecase.go -package=mocks github.com/seventeenthearth/sudal/internal/feature/health/application DatabaseHealthUseCase
 
-// DatabaseHealthUseCase defines the interface for the database health check functionality
+// DatabaseHealthUseCase defines the protocol for the database health check functionality
 type DatabaseHealthUseCase interface {
 	Execute(ctx context.Context) (*entity.DatabaseStatus, error)
 }
 
-// databaseHealthUseCase implements the DatabaseHealthUseCase interface
+// databaseHealthUseCase implements the DatabaseHealthUseCase protocol
 type databaseHealthUseCase struct {
 	repo repo.HealthRepository
 }

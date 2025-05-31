@@ -154,7 +154,7 @@ func FormatError(err error) zap.Field {
 		return zap.Skip()
 	}
 
-	// Check if the error implements stacktracer interface (from pkg/errors)
+	// Check if the error implements stacktracer protocol (from pkg/errors)
 	type stackTracer interface {
 		StackTrace() []uintptr
 	}

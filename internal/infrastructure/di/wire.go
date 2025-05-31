@@ -5,6 +5,8 @@ package di
 
 import (
 	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
+	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
+	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
 	"os"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
@@ -14,11 +16,9 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
 
-	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
 	userApplication "github.com/seventeenthearth/sudal/internal/feature/user/application"
 	userRepo "github.com/seventeenthearth/sudal/internal/feature/user/data/repo"
 	userDomainRepo "github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
-	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
@@ -28,7 +28,7 @@ import (
 
 //go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_di_initializer.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/di DatabaseHealthInitializer
 
-// DatabaseHealthInitializer interface for dependency injection initialization
+// DatabaseHealthInitializer protocol for dependency injection initialization
 type DatabaseHealthInitializer interface {
 	InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error)
 }
@@ -48,7 +48,7 @@ var HealthConnectSet = wire.NewSet(
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,
 	application.NewService,
-	healthConnect.NewHealthServiceHandler,
+	healthConnect.NewHealthAdapter,
 )
 
 // DatabaseSet is a Wire provider set for database-related dependencies
@@ -164,7 +164,7 @@ func isTestEnvironmentWire() bool {
 }
 
 // InitializeHealthConnectHandler initializes and returns a Connect-go health service handler (gRPC only)
-func InitializeHealthConnectHandler() (*healthConnect.HealthServiceHandler, error) {
+func InitializeHealthConnectHandler() (*healthConnect.HealthManager, error) {
 	wire.Build(HealthConnectSet)
 	return nil, nil // Wire will fill this in
 }
@@ -194,7 +194,7 @@ func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
 }
 
 // InitializeUserConnectHandler initializes and returns a Connect-go user handler (gRPC only)
-func InitializeUserConnectHandler() (*userConnect.UserHandler, error) {
+func InitializeUserConnectHandler() (*userConnect.UserManager, error) {
 	wire.Build(UserSet)
 	return nil, nil // Wire will fill this in
 }
@@ -207,7 +207,7 @@ func NewDefaultDatabaseHealthInitializer() DatabaseHealthInitializer {
 	return &DefaultDatabaseHealthInitializer{}
 }
 
-// InitializeDatabaseHealthHandler implements DatabaseHealthInitializer interface
+// InitializeDatabaseHealthHandler implements DatabaseHealthInitializer protocol
 func (d *DefaultDatabaseHealthInitializer) InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
 	return InitializeDatabaseHealthHandler()
 }

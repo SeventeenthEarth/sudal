@@ -14,7 +14,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/repository/postgres"
 )
 
-// userRepoImpl is the PostgreSQL implementation of the UserRepository interface
+// userRepoImpl is the PostgreSQL implementation of the UserRepository protocol
 // It embeds the shared postgres.Repository to leverage common database functionality
 // while implementing user-specific data access operations.
 //
@@ -32,14 +32,14 @@ type userRepoImpl struct {
 
 // NewUserRepoImpl creates a new PostgreSQL-based user repository implementation
 // This constructor initializes the repository with the shared PostgreSQL infrastructure
-// and returns an instance that satisfies the user.UserRepository interface.
+// and returns an instance that satisfies the user.UserRepository protocol.
 //
 // Parameters:
 //   - db: The database connection pool (*sql.DB) for executing queries
 //   - logger: Structured logger for recording repository operations and errors
 //
 // Returns:
-//   - repo.UserRepository: A repository instance that implements the user domain interface
+//   - repo.UserRepository: A repository instance that implements the user domain protocol
 //
 // Example Usage:
 //

@@ -13,7 +13,11 @@ The project follows a clean architecture approach with a feature-centric structu
 
 - **Domain:** Core business entities and rules.
 - **Application:** Use cases orchestrating the flow of data.
-- **Interfaces:** Adapters connecting the application to external elements (Handlers, Repository Interfaces).
+- **Protocol:** Adapters connecting the application to external elements (gRPC Managers, REST Handlers).
+
+The protocol layer typically contains:
+- **grpc_manager.go**: Handles gRPC protocol communication
+- **rest_handler.go**: Handles REST API endpoints (may not exist for features that don't use REST)
 
 The following components are independent from features:
 

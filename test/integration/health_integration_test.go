@@ -3,6 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	"net/http"
 	"net/http/httptest"
 
@@ -10,23 +11,22 @@ import (
 	"github.com/onsi/gomega"
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
-	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data"
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 )
 
 var _ = ginkgo.Describe("Integration Tests", func() {
 	ginkgo.Describe("Health Endpoints", func() {
 		var (
-			handler *healthHandler.Handler
+			handler *healthHandler.HealthHandler
 			repo    *healthData.HealthRepository
 			service healthApp.HealthService
 		)
 
 		ginkgo.BeforeEach(func() {
 			// 실제 서버 대신 핸들러를 직접 테스트
-			repo = healthData.NewRepository(nil) // nil for test environment
+			repo = healthData.NewHealthRepository(nil) // nil for test environment
 			service = healthApp.NewService(repo)
-			handler = healthHandler.NewHandler(service)
+			handler = healthHandler.NewHealthHandler(service)
 		})
 
 		ginkgo.Context("Ping Endpoint", func() {

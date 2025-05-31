@@ -2,19 +2,19 @@ package integration_test
 
 import (
 	"context"
+	"github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
 var _ = Describe("Repository Database Integration Tests", func() {
 	var (
-		repo *data.HealthRepository
-		ctx  context.Context
+		localRepo *repo.HealthRepository
+		ctx       context.Context
 	)
 
 	BeforeEach(func() {
@@ -25,12 +25,12 @@ var _ = Describe("Repository Database Integration Tests", func() {
 		Context("when database manager is nil", func() {
 			BeforeEach(func() {
 				// Create repository with nil database manager to test the nil path
-				repo = data.NewRepository(nil)
+				localRepo = repo.NewHealthRepository(nil)
 			})
 
 			It("should return mock status for nil database manager", func() {
 				// When: Calling GetDatabaseStatus with nil database manager
-				dbStatus, err := repo.GetDatabaseStatus(ctx)
+				dbStatus, err := localRepo.GetDatabaseStatus(ctx)
 
 				// Then: Should return mock healthy status
 				Expect(err).NotTo(HaveOccurred())
@@ -50,8 +50,8 @@ var _ = Describe("Repository Database Integration Tests", func() {
 
 			It("should handle multiple calls consistently", func() {
 				// When: Calling GetDatabaseStatus multiple times
-				dbStatus1, err1 := repo.GetDatabaseStatus(ctx)
-				dbStatus2, err2 := repo.GetDatabaseStatus(ctx)
+				dbStatus1, err1 := localRepo.GetDatabaseStatus(ctx)
+				dbStatus2, err2 := localRepo.GetDatabaseStatus(ctx)
 
 				// Then: Should return consistent results
 				Expect(err1).NotTo(HaveOccurred())
@@ -69,7 +69,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 				cancel() // Cancel immediately
 
 				// When: Calling GetDatabaseStatus with cancelled context
-				dbStatus, err := repo.GetDatabaseStatus(cancelledCtx)
+				dbStatus, err := localRepo.GetDatabaseStatus(cancelledCtx)
 
 				// Then: Should still return mock status (nil manager doesn't check context)
 				Expect(err).NotTo(HaveOccurred())
@@ -90,7 +90,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 
 				// When: Calling GetDatabaseStatus with cancelled context
 				// Create a new repository instance to avoid nil pointer issues
-				localRepo := data.NewRepository(nil)
+				localRepo := repo.NewHealthRepository(nil)
 				dbStatus, err := localRepo.GetDatabaseStatus(timeoutCtx)
 
 				// Then: Should still return mock status (nil manager doesn't check context)
@@ -108,7 +108,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 				for i := 0; i < 5; i++ {
 					go func() {
 						// Create a new repository instance for each goroutine to avoid race conditions
-						localRepo := data.NewRepository(nil)
+						localRepo := repo.NewHealthRepository(nil)
 						dbStatus, err := localRepo.GetDatabaseStatus(ctx)
 						results <- dbStatus
 						errors <- err
@@ -136,7 +136,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 
 			It("should return consistent stats structure", func() {
 				// Create a new repository instance to avoid nil pointer issues
-				localRepo := data.NewRepository(nil)
+				localRepo := repo.NewHealthRepository(nil)
 
 				// When: Calling GetDatabaseStatus multiple times
 				dbStatus1, err1 := localRepo.GetDatabaseStatus(ctx)
@@ -165,7 +165,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 		Context("when testing database manager path coverage", func() {
 			It("should demonstrate that the database manager path exists but cannot be easily tested", func() {
 				// Given: Repository with nil database manager (current test setup)
-				repoWithNilDB := data.NewRepository(nil)
+				repoWithNilDB := repo.NewHealthRepository(nil)
 
 				// When: Calling GetDatabaseStatus
 				dbStatus, err := repoWithNilDB.GetDatabaseStatus(ctx)
@@ -184,7 +184,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 
 			It("should verify the nil database manager path thoroughly", func() {
 				// Given: Repository with nil database manager
-				repoWithNilDB := data.NewRepository(nil)
+				repoWithNilDB := repo.NewHealthRepository(nil)
 
 				// When: Calling GetDatabaseStatus multiple times
 				for i := 0; i < 3; i++ {
@@ -209,7 +209,7 @@ var _ = Describe("Repository Database Integration Tests", func() {
 
 			It("should test edge cases for nil database manager path", func() {
 				// Given: Repository with nil database manager
-				repoWithNilDB := data.NewRepository(nil)
+				repoWithNilDB := repo.NewHealthRepository(nil)
 
 				// Test with different context scenarios
 				testCases := []struct {

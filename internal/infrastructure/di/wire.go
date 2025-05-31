@@ -4,6 +4,7 @@
 package di
 
 import (
+	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	"os"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/google/wire"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
 
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
@@ -42,8 +42,8 @@ var ConfigSet = wire.NewSet(
 var HealthConnectSet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
-	data.NewRepository,
-	wire.Bind(new(repo.HealthRepository), new(*data.HealthRepository)),
+	repo2.NewHealthRepository,
+	wire.Bind(new(repo.HealthRepository), new(*repo2.HealthRepository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,
@@ -216,8 +216,8 @@ func (d *DefaultDatabaseHealthInitializer) InitializeDatabaseHealthHandler() (*D
 var OpenAPISet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
-	data.NewRepository,
-	wire.Bind(new(repo.HealthRepository), new(*data.HealthRepository)),
+	repo2.NewHealthRepository,
+	wire.Bind(new(repo.HealthRepository), new(*repo2.HealthRepository)),
 	application.NewPingUseCase,
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,

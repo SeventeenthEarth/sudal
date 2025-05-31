@@ -3,6 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	"net/http"
 	"net/http/httptest"
 
@@ -11,7 +12,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	healthApp "github.com/seventeenthearth/sudal/internal/feature/health/application"
-	healthData "github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 	internalMocks "github.com/seventeenthearth/sudal/internal/mocks"
@@ -23,19 +23,19 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 	var (
 		repo     *healthData.HealthRepository
 		service  healthApp.HealthService
-		handler  *healthHandler.Handler
+		handler  *healthHandler.HealthHandler
 		recorder *httptest.ResponseRecorder
 	)
 
 	ginkgo.BeforeEach(func() {
 		// Create a new health repository
-		repo = healthData.NewRepository(nil) // nil for test environment
+		repo = healthData.NewHealthRepository(nil) // nil for test environment
 
 		// Create a new health service
 		service = healthApp.NewService(repo)
 
 		// Create a new health handler
-		handler = healthHandler.NewHandler(service)
+		handler = healthHandler.NewHealthHandler(service)
 
 		// Create a new recorder to capture the response
 		recorder = httptest.NewRecorder()
@@ -154,7 +154,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 		ginkgo.Context("when the service returns an error", func() {
 			var (
 				mockService  *internalMocks.MockHealthService
-				mockHandler  *healthHandler.Handler
+				mockHandler  *healthHandler.HealthHandler
 				mockRecorder *httptest.ResponseRecorder
 				ctrl         *gomock.Controller
 			)
@@ -166,7 +166,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 				mockService.EXPECT().Check(gomock.Any()).Return(nil, fmt.Errorf("service error")).AnyTimes()
 
 				// Create a handler with the mock service
-				mockHandler = healthHandler.NewHandler(mockService)
+				mockHandler = healthHandler.NewHealthHandler(mockService)
 
 				// Create a new recorder to capture the response
 				mockRecorder = httptest.NewRecorder()

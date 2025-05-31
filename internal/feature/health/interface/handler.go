@@ -9,27 +9,27 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
 
-// Handler handles health-related HTTP requests
-type Handler struct {
+// HealthHandler handles health-related HTTP requests
+type HealthHandler struct {
 	service application.HealthService
 }
 
-// NewHandler creates a new health handler
-func NewHandler(service application.HealthService) *Handler {
-	return &Handler{
+// NewHealthHandler creates a new health handler
+func NewHealthHandler(service application.HealthService) *HealthHandler {
+	return &HealthHandler{
 		service: service,
 	}
 }
 
 // RegisterRoutes registers the health check routes
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+func (h *HealthHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ping", h.Ping)
 	mux.HandleFunc("GET /healthz", h.Health)
 	mux.HandleFunc("GET /health/database", h.DatabaseHealth)
 }
 
 // Ping handles the ping endpoint
-func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	status, err := h.service.Ping(ctx)
 	if err != nil {
@@ -46,7 +46,7 @@ func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 }
 
 // Health handles the health check endpoint
-func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	status, err := h.service.Check(ctx)
 	if err != nil {
@@ -63,7 +63,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 // DatabaseHealth handles the database health check endpoint
-func (h *Handler) DatabaseHealth(w http.ResponseWriter, r *http.Request) {
+func (h *HealthHandler) DatabaseHealth(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	dbStatus, err := h.service.CheckDatabase(ctx)
 	if err != nil {

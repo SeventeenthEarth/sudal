@@ -26,7 +26,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should return SERVING status when making a health check request using native gRPC client",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientIsConnected(ctx, ServerURL)
+				steps.GivenGRPCClientIsConnected(ctx, GRPCServerURL)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeGRPCHealthCheckRequest(ctx)
@@ -41,7 +41,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should handle multiple concurrent gRPC requests successfully",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientIsConnected(ctx, ServerURL)
+				steps.GivenGRPCClientIsConnected(ctx, GRPCServerURL)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeConcurrentGRPCHealthCheckRequests(ctx, 10)
@@ -56,7 +56,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should handle connection timeout gracefully",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientWithTimeout(ctx, ServerURL, 1*time.Second)
+				steps.GivenGRPCClientWithTimeout(ctx, GRPCServerURL, 1*time.Second)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeGRPCHealthCheckRequest(ctx)
@@ -70,7 +70,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should handle gRPC metadata correctly",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientIsConnected(ctx, ServerURL)
+				steps.GivenGRPCClientIsConnected(ctx, GRPCServerURL)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeGRPCHealthCheckRequestWithMetadata(ctx)
@@ -130,7 +130,7 @@ func TestGRPCHealthServiceTableDriven(t *testing.T) {
 		Given: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(GRPCTestCase)
 			steps.GivenServerIsRunning(ctx)
-			steps.GivenGRPCClientWithTimeout(ctx, ServerURL, testCase.Timeout)
+			steps.GivenGRPCClientWithTimeout(ctx, GRPCServerURL, testCase.Timeout)
 		},
 		When: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(GRPCTestCase)
@@ -183,7 +183,7 @@ func TestGRPCHealthServiceConcurrency(t *testing.T) {
 		Name: "gRPC concurrency scenarios",
 		Given: func(ctx *steps.TestContext, testData interface{}) {
 			steps.GivenServerIsRunning(ctx)
-			steps.GivenGRPCClientIsConnected(ctx, ServerURL)
+			steps.GivenGRPCClientIsConnected(ctx, GRPCServerURL)
 		},
 		When: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(ConcurrencyTestCase)

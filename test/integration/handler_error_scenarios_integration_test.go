@@ -3,6 +3,7 @@ package integration_test
 import (
 	"context"
 	"fmt"
+	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	"net/http"
 	"net/http/httptest"
 
@@ -10,24 +11,23 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/interface"
 )
 
-var _ = Describe("Handler Error Scenarios Integration Tests", func() {
+var _ = Describe("HealthHandler Error Scenarios Integration Tests", func() {
 	var (
-		handler *healthInterface.Handler
+		handler *healthInterface.HealthHandler
 		service application.HealthService
 		repo    repo.HealthRepository
 	)
 
 	BeforeEach(func() {
 		// Create repository and service
-		repo = data.NewRepository(nil)
+		repo = repo2.NewHealthRepository(nil)
 		service = application.NewService(repo)
-		handler = healthInterface.NewHandler(service)
+		handler = healthInterface.NewHealthHandler(service)
 	})
 
 	Describe("JSON Encoding Error Scenarios", func() {
@@ -83,7 +83,7 @@ var _ = Describe("Handler Error Scenarios Integration Tests", func() {
 					ShouldFailCheckDatabase: true,
 					ErrorToReturn:           fmt.Errorf("database connection failed"),
 				}
-				errorHandler := healthInterface.NewHandler(errorService)
+				errorHandler := healthInterface.NewHealthHandler(errorService)
 
 				req := httptest.NewRequest("GET", "/health/database", nil)
 				failingWriter := &FailingJSONWriter{
@@ -106,7 +106,7 @@ var _ = Describe("Handler Error Scenarios Integration Tests", func() {
 					ShouldFailPing: true,
 					ErrorToReturn:  fmt.Errorf("ping service error"),
 				}
-				errorHandler := healthInterface.NewHandler(errorService)
+				errorHandler := healthInterface.NewHealthHandler(errorService)
 
 				req := httptest.NewRequest("GET", "/ping", nil)
 				recorder := httptest.NewRecorder()
@@ -124,7 +124,7 @@ var _ = Describe("Handler Error Scenarios Integration Tests", func() {
 					ShouldFailCheck: true,
 					ErrorToReturn:   fmt.Errorf("health check service error"),
 				}
-				errorHandler := healthInterface.NewHandler(errorService)
+				errorHandler := healthInterface.NewHealthHandler(errorService)
 
 				req := httptest.NewRequest("GET", "/healthz", nil)
 				recorder := httptest.NewRecorder()

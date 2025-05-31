@@ -15,7 +15,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
-var _ = ginkgo.Describe("Handler", func() {
+var _ = ginkgo.Describe("HealthHandler", func() {
 	var (
 		ctrl        *gomock.Controller
 		mockService *mocks.MockHealthService
@@ -30,10 +30,10 @@ var _ = ginkgo.Describe("Handler", func() {
 		ctrl.Finish()
 	})
 
-	ginkgo.Describe("NewHandler", func() {
+	ginkgo.Describe("NewHealthHandler", func() {
 		ginkgo.It("should create a new handler", func() {
 			// Act
-			handler := interfaces.NewHandler(mockService)
+			handler := interfaces.NewHealthHandler(mockService)
 
 			// Assert
 			gomega.Expect(handler).NotTo(gomega.BeNil())
@@ -42,13 +42,13 @@ var _ = ginkgo.Describe("Handler", func() {
 
 	ginkgo.Describe("Ping", func() {
 		var (
-			handler  *interfaces.Handler
+			handler  *interfaces.HealthHandler
 			req      *http.Request
 			recorder *httptest.ResponseRecorder
 		)
 
 		ginkgo.JustBeforeEach(func() {
-			handler = interfaces.NewHandler(mockService)
+			handler = interfaces.NewHealthHandler(mockService)
 			req = httptest.NewRequest("GET", "/ping", nil)
 			recorder = httptest.NewRecorder()
 			handler.Ping(recorder, req)
@@ -87,13 +87,13 @@ var _ = ginkgo.Describe("Handler", func() {
 
 	ginkgo.Describe("Health", func() {
 		var (
-			handler  *interfaces.Handler
+			handler  *interfaces.HealthHandler
 			req      *http.Request
 			recorder *httptest.ResponseRecorder
 		)
 
 		ginkgo.JustBeforeEach(func() {
-			handler = interfaces.NewHandler(mockService)
+			handler = interfaces.NewHealthHandler(mockService)
 			req = httptest.NewRequest("GET", "/healthz", nil)
 			recorder = httptest.NewRecorder()
 			handler.Health(recorder, req)
@@ -132,13 +132,13 @@ var _ = ginkgo.Describe("Handler", func() {
 
 	ginkgo.Describe("DatabaseHealth", func() {
 		var (
-			handler  *interfaces.Handler
+			handler  *interfaces.HealthHandler
 			req      *http.Request
 			recorder *httptest.ResponseRecorder
 		)
 
 		ginkgo.JustBeforeEach(func() {
-			handler = interfaces.NewHandler(mockService)
+			handler = interfaces.NewHealthHandler(mockService)
 			req = httptest.NewRequest("GET", "/health/database", nil)
 			recorder = httptest.NewRecorder()
 			handler.DatabaseHealth(recorder, req)
@@ -198,7 +198,7 @@ var _ = ginkgo.Describe("Handler", func() {
 	ginkgo.Describe("RegisterRoutes", func() {
 		ginkgo.It("should register routes without panicking", func() {
 			// Arrange
-			handler := interfaces.NewHandler(mockService)
+			handler := interfaces.NewHealthHandler(mockService)
 			mux := http.NewServeMux()
 
 			// Act & Assert - This should not panic
@@ -210,13 +210,13 @@ var _ = ginkgo.Describe("Handler", func() {
 
 	ginkgo.Describe("Error handling edge cases", func() {
 		var (
-			edgeHandler  *interfaces.Handler
+			edgeHandler  *interfaces.HealthHandler
 			edgeRecorder *httptest.ResponseRecorder
 			edgeRequest  *http.Request
 		)
 
 		ginkgo.BeforeEach(func() {
-			edgeHandler = interfaces.NewHandler(mockService)
+			edgeHandler = interfaces.NewHealthHandler(mockService)
 			edgeRecorder = httptest.NewRecorder()
 			edgeRequest = httptest.NewRequest(http.MethodGet, "/", nil)
 		})

@@ -35,7 +35,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 		ctrl       *gomock.Controller
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
-		handler    *healthInterface.Handler
+		handler    *healthInterface.HealthHandler
 		server     *http.Server
 		listener   net.Listener
 		baseURL    string
@@ -50,7 +50,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 		// Create service with mock repository
 		service = application.NewService(mockRepo)
-		handler = healthInterface.NewHandler(service)
+		handler = healthInterface.NewHealthHandler(service)
 
 		// Setup test server
 		mux := http.NewServeMux()

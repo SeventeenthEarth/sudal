@@ -1,4 +1,4 @@
-package data
+package repo
 
 import (
 	"context"
@@ -16,8 +16,8 @@ type HealthRepository struct {
 	dbManager postgres.PostgresManager
 }
 
-// NewRepository creates a new health repository
-func NewRepository(dbManager postgres.PostgresManager) *HealthRepository {
+// NewHealthRepository creates a new health repository
+func NewHealthRepository(dbManager postgres.PostgresManager) *HealthRepository {
 	return &HealthRepository{
 		dbManager: dbManager,
 	}

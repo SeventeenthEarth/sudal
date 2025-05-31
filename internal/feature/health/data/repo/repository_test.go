@@ -1,46 +1,46 @@
-package data_test
+package repo_test
 
 import (
 	"context"
 	"errors"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/internal/feature/health/data"
+	"github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
 var _ = ginkgo.Describe("HealthRepository", func() {
-	ginkgo.Describe("NewRepository", func() {
+	ginkgo.Describe("NewHealthRepository", func() {
 		ginkgo.It("should create a new repository", func() {
 			// Act
-			repo := data.NewRepository(nil) // nil for test environment
+			localRepo := repo.NewHealthRepository(nil) // nil for test environment
 
 			// Assert
-			gomega.Expect(repo).NotTo(gomega.BeNil())
+			gomega.Expect(localRepo).NotTo(gomega.BeNil())
 		})
 	})
 
 	ginkgo.Describe("GetStatus", func() {
 		var (
-			repo   *data.HealthRepository
-			ctx    context.Context
-			status *entity.HealthStatus
-			err    error
+			localRepo *repo.HealthRepository
+			ctx       context.Context
+			status    *entity.HealthStatus
+			err       error
 		)
 
 		ginkgo.BeforeEach(func() {
-			repo = data.NewRepository(nil) // nil for test environment
+			localRepo = repo.NewHealthRepository(nil) // nil for test environment
 			ctx = context.Background()
 		})
 
 		ginkgo.JustBeforeEach(func() {
-			status, err = repo.GetStatus(ctx)
+			status, err = localRepo.GetStatus(ctx)
 		})
 
 		ginkgo.It("should return a healthy status without error", func() {
@@ -52,19 +52,19 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 
 	ginkgo.Describe("GetDatabaseStatus", func() {
 		var (
-			repo           *data.HealthRepository
+			localRepo      *repo.HealthRepository
 			ctx            context.Context
 			databaseStatus *entity.DatabaseStatus
 			err            error
 		)
 
 		ginkgo.BeforeEach(func() {
-			repo = data.NewRepository(nil) // nil for test environment
+			localRepo = repo.NewHealthRepository(nil) // nil for test environment
 			ctx = context.Background()
 		})
 
 		ginkgo.JustBeforeEach(func() {
-			databaseStatus, err = repo.GetDatabaseStatus(ctx)
+			databaseStatus, err = localRepo.GetDatabaseStatus(ctx)
 		})
 
 		ginkgo.It("should return a healthy database status without error", func() {
@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 			ginkgo.BeforeEach(func() {
 				ctrl = gomock.NewController(ginkgo.GinkgoT())
 				mockDB = mocks.NewMockPostgresManager(ctrl)
-				repo = data.NewRepository(mockDB)
+				localRepo = repo.NewHealthRepository(mockDB)
 				testError = errors.New("database connection failed")
 			})
 
@@ -172,10 +172,10 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 
 	ginkgo.Describe("GetStatus with different scenarios", func() {
 		var (
-			repo   *data.HealthRepository
-			ctx    context.Context
-			status *entity.HealthStatus
-			err    error
+			localRepo *repo.HealthRepository
+			ctx       context.Context
+			status    *entity.HealthStatus
+			err       error
 		)
 
 		ginkgo.BeforeEach(func() {
@@ -183,12 +183,12 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 		})
 
 		ginkgo.JustBeforeEach(func() {
-			status, err = repo.GetStatus(ctx)
+			status, err = localRepo.GetStatus(ctx)
 		})
 
 		ginkgo.Context("when repository is created with nil database manager", func() {
 			ginkgo.BeforeEach(func() {
-				repo = data.NewRepository(nil)
+				localRepo = repo.NewHealthRepository(nil)
 			})
 
 			ginkgo.It("should return healthy status", func() {
@@ -207,7 +207,7 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 			ginkgo.BeforeEach(func() {
 				ctrl = gomock.NewController(ginkgo.GinkgoT())
 				mockDB = mocks.NewMockPostgresManager(ctrl)
-				repo = data.NewRepository(mockDB)
+				localRepo = repo.NewHealthRepository(mockDB)
 			})
 
 			ginkgo.AfterEach(func() {
@@ -225,7 +225,7 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 			var cancelledCtx context.Context
 
 			ginkgo.BeforeEach(func() {
-				repo = data.NewRepository(nil)
+				localRepo = repo.NewHealthRepository(nil)
 				var cancel context.CancelFunc
 				cancelledCtx, cancel = context.WithCancel(context.Background())
 				cancel() // Cancel immediately

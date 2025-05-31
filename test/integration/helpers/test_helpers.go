@@ -141,7 +141,7 @@ type IntegrationTestContext struct {
 	MockCtrl *gomock.Controller
 
 	// Handlers
-	HealthHandler        *healthInterface.Handler
+	HealthHandler        *healthInterface.HealthHandler
 	HealthConnectHandler *healthConnect.HealthServiceHandler
 
 	// Clients
@@ -181,7 +181,7 @@ func (ctx *IntegrationTestContext) SetupTestServer() error {
 	service := application.NewService(ctx.MockRepo)
 
 	// Create handlers
-	ctx.HealthHandler = healthInterface.NewHandler(service)
+	ctx.HealthHandler = healthInterface.NewHealthHandler(service)
 	ctx.HealthConnectHandler = healthConnect.NewHealthServiceHandler(service)
 
 	// Create router

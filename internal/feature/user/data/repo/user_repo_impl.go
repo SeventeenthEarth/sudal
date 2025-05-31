@@ -7,9 +7,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/seventeenthearth/sudal/infrastructure/persistence/postgres"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/persistence/postgres"
 )
 
 // userRepoImpl is the PostgreSQL implementation of the UserRepository interface

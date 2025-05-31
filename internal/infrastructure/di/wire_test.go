@@ -348,37 +348,6 @@ var _ = ginkgo.Describe("DI", func() {
 		})
 	})
 
-	ginkgo.Describe("NewDefaultDatabaseHealthInitializer", func() {
-		ginkgo.It("should create a new default database health initializer", func() {
-			// Act
-			initializer := di.NewDefaultDatabaseHealthInitializer()
-
-			// Assert
-			gomega.Expect(initializer).NotTo(gomega.BeNil())
-		})
-
-		ginkgo.It("should implement DatabaseHealthInitializer protocol", func() {
-			// Act
-			initializer := di.NewDefaultDatabaseHealthInitializer()
-
-			// Assert
-			var _ di.DatabaseHealthInitializer = initializer // nolint:staticcheck
-			gomega.Expect(initializer).NotTo(gomega.BeNil())
-		})
-
-		ginkgo.It("should be able to initialize database health handler", func() {
-			// Arrange
-			initializer := di.NewDefaultDatabaseHealthInitializer()
-
-			// Act
-			handler, err := initializer.InitializeDatabaseHealthHandler()
-
-			// Assert
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(handler).NotTo(gomega.BeNil())
-		})
-	})
-
 	ginkgo.Describe("NewOpenAPIHandler", func() {
 		ginkgo.It("should create a new OpenAPI handler", func() {
 			// Arrange - create a mock service

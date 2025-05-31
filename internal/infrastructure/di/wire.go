@@ -4,10 +4,11 @@
 package di
 
 import (
+	"os"
+
 	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
-	"os"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
@@ -25,13 +26,6 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 	"go.uber.org/zap"
 )
-
-//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_di_initializer.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/di DatabaseHealthInitializer
-
-// DatabaseHealthInitializer protocol for dependency injection initialization
-type DatabaseHealthInitializer interface {
-	InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error)
-}
 
 // ConfigSet is a Wire provider set for configuration
 var ConfigSet = wire.NewSet(
@@ -61,7 +55,6 @@ var DatabaseSet = wire.NewSet(
 var DatabaseHealthSet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
-	NewDatabaseHealthHandler,
 )
 
 // RedisSet is a Wire provider set for Redis-related dependencies
@@ -175,12 +168,6 @@ func InitializePostgresManager() (postgres.PostgresManager, error) {
 	return nil, nil // Wire will fill this in
 }
 
-// InitializeDatabaseHealthHandler initializes and returns a database health handler
-func InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
-	wire.Build(DatabaseHealthSet)
-	return nil, nil // Wire will fill this in
-}
-
 // InitializeRedisManager initializes and returns a Redis connection manager
 func InitializeRedisManager() (redis.RedisManager, error) {
 	wire.Build(RedisSet)
@@ -197,19 +184,6 @@ func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
 func InitializeUserConnectHandler() (*userConnect.UserManager, error) {
 	wire.Build(UserSet)
 	return nil, nil // Wire will fill this in
-}
-
-// DefaultDatabaseHealthInitializer is the default implementation of DatabaseHealthInitializer
-type DefaultDatabaseHealthInitializer struct{}
-
-// NewDefaultDatabaseHealthInitializer creates a new default database health initializer
-func NewDefaultDatabaseHealthInitializer() DatabaseHealthInitializer {
-	return &DefaultDatabaseHealthInitializer{}
-}
-
-// InitializeDatabaseHealthHandler implements DatabaseHealthInitializer protocol
-func (d *DefaultDatabaseHealthInitializer) InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
-	return InitializeDatabaseHealthHandler()
 }
 
 // OpenAPISet is a Wire provider set for OpenAPI-related dependencies (REST API)

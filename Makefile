@@ -15,7 +15,7 @@ GOLANGCILINT := $(shell command -v golangci-lint 2> /dev/null)
 GINKGO := $(shell command -v ginkgo 2> /dev/null)
 MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 
-.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
+.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only test.e2e.run fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
 
 .DEFAULT_GOAL := help
 
@@ -31,7 +31,7 @@ help: ## Show this help message
 	@echo "  make run           # Run the application"
 	@echo ""
 	@echo "📋 Available targets:"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_.-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_.:-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo ""
 	@echo "� Code Quality:"
 	@echo "  make fmt                       # Format Go code"
@@ -108,7 +108,7 @@ endif
 	@go tool cover -html=coverage.unit.out -o coverage.unit.html
 	@echo "✅ Unit tests completed - coverage report: coverage.unit.html"
 
-test.int: ## Run integration tests (excludes infrastructure - use test.unit.infra for infrastructure coverage)
+test.int: ## Run integration tests (excludes infrastructure - mock infrastructure is used)
 	@echo "🧪 Running integration tests..."
 ifeq ($(GINKGO),)
 	@go test -v -race -coverprofile=coverage.int.out -coverpkg=github.com/seventeenthearth/sudal/internal/feature/... ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
@@ -118,17 +118,27 @@ endif
 	@go tool cover -func=coverage.int.out
 	@go tool cover -html=coverage.int.out -o coverage.int.html
 	@echo "✅ Integration tests completed - coverage report: coverage.int.html"
-	@echo "ℹ️  Note: Infrastructure coverage is measured separately via 'make test.unit.infra'"
+	@echo "ℹ️  Note: Infrastructure coverage is not measured because mock infrastructure is used."
 
 test.e2e: ## Run end-to-end tests
 	@echo "🧪 Running end-to-end tests..."
-	@echo "⚠️  Note: Make sure the server is running (make run) before running E2E tests"
-	@if ! curl -s "http://localhost:8080/ping" > /dev/null; then \
-		echo "⚠️  Warning: Server doesn't appear to be running on port 8080"; \
-		echo "   Run 'make run' in a separate terminal first"; \
-	fi
-	@go test -v -race ./test/e2e || { echo "❌ E2E tests failed"; exit 1; }
+	@./scripts/run-e2e-tests.sh
 	@echo "✅ End-to-end tests completed"
+
+test.e2e.only: ## Run end-to-end tests without server check
+	@echo "🧪 Running end-to-end tests (skipping server check)..."
+	@./scripts/run-e2e-tests.sh --skip-check
+	@echo "✅ End-to-end tests completed"
+
+test.e2e.run: ## Run specific E2E test (usage: make test.e2e.run TEST=TestName)
+	@if [ -z "$(TEST)" ]; then \
+		echo "❌ TEST parameter is required"; \
+		echo "Usage: make test.e2e.run TEST=TestConnectGoHealthService"; \
+		exit 1; \
+	fi
+	@echo "🧪 Running specific E2E test: $(TEST)..."
+	@./scripts/run-e2e-tests.sh $(TEST)
+	@echo "✅ E2E test $(TEST) completed"
 
 # Code quality targets
 fmt: ## Format Go code

@@ -36,8 +36,8 @@ check_server() {
 run_tests() {
     echo -e "${BLUE}Running Go E2E tests...${NC}"
     
-    # Change to project root directory
-    cd "$(dirname "$0")/../.."
+    # Change to project root directory (scripts is one level down from root)
+    cd "$(dirname "$0")/.."
     
     # Run tests with verbose output
     if go test -v -race ./test/e2e; then
@@ -54,8 +54,8 @@ run_specific_test() {
     local test_name="$1"
     echo -e "${BLUE}Running specific test: ${test_name}${NC}"
     
-    # Change to project root directory
-    cd "$(dirname "$0")/../.."
+    # Change to project root directory (scripts is one level down from root)
+    cd "$(dirname "$0")/.."
     
     # Run specific test
     if go test -v -race ./test/e2e -run "${test_name}"; then

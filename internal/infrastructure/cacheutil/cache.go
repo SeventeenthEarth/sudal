@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	redis2 "github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
@@ -33,12 +33,12 @@ type CacheUtil interface {
 
 // CacheUtilImpl provides simple key-value caching operations using Redis
 type CacheUtilImpl struct {
-	redisManager database.RedisManager
+	redisManager redis2.RedisManager
 	logger       *zap.Logger
 }
 
 // NewCacheUtil creates a new cache utility instance
-func NewCacheUtil(redisManager database.RedisManager) CacheUtil {
+func NewCacheUtil(redisManager redis2.RedisManager) CacheUtil {
 	return &CacheUtilImpl{
 		redisManager: redisManager,
 		logger:       log.GetLogger().With(zap.String("component", "cache_util")),

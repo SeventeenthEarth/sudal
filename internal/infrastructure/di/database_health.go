@@ -3,6 +3,7 @@ package di
 import (
 	"context"
 	"encoding/json"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"net/http"
 	"os"
 	"time"
@@ -10,18 +11,17 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
 // DatabaseHealthHandler handles database health check requests
 type DatabaseHealthHandler struct {
-	dbManager database.PostgresManager
+	dbManager postgres.PostgresManager
 	logger    *zap.Logger
 }
 
 // NewDatabaseHealthHandler creates a new database health handler
-func NewDatabaseHealthHandler(dbManager database.PostgresManager) *DatabaseHealthHandler {
+func NewDatabaseHealthHandler(dbManager postgres.PostgresManager) *DatabaseHealthHandler {
 	// Check if we're in test environment and return mock handler
 	if IsTestEnvironment() {
 		return NewMockDatabaseHealthHandler()
@@ -38,7 +38,7 @@ type DatabaseHealthResponse struct {
 	Status    string                 `json:"status"`
 	Message   string                 `json:"message"`
 	Timestamp string                 `json:"timestamp"`
-	Database  *database.HealthStatus `json:"database,omitempty"`
+	Database  *postgres.HealthStatus `json:"database,omitempty"`
 	Error     string                 `json:"error,omitempty"`
 }
 
@@ -57,10 +57,10 @@ func (h *DatabaseHealthHandler) HandleDatabaseHealth(w http.ResponseWriter, r *h
 	if IsTestEnvironment() {
 		response.Status = "healthy"
 		response.Message = "Mock database is healthy"
-		response.Database = &database.HealthStatus{
+		response.Database = &postgres.HealthStatus{
 			Status:  "healthy",
 			Message: "Mock database connection is healthy",
-			Stats: &database.ConnectionStats{
+			Stats: &postgres.ConnectionStats{
 				MaxOpenConnections: 25,
 				OpenConnections:    1,
 				InUse:              0,

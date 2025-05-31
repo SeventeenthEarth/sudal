@@ -1,16 +1,15 @@
-package database_test
+package redis_test
 
 import (
 	"context"
 	"errors"
-
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
+	redisdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
@@ -43,7 +42,7 @@ var _ = ginkgo.Describe("Redis Tests", func() {
 				}
 
 				// When
-				manager, err := database.NewRedisManager(config)
+				manager, err := redisdb.NewRedisManager(config)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -148,7 +147,7 @@ var _ = ginkgo.Describe("Redis Tests", func() {
 				}
 
 				// When
-				manager, err := database.NewRedisManager(config)
+				manager, err := redisdb.NewRedisManager(config)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())

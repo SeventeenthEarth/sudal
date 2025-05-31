@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/mocks"
@@ -111,10 +111,10 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 		ginkgo.Context("when database manager is available and healthy", func() {
 			ginkgo.It("should return healthy status with connection stats", func() {
 				// Given
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
-					Stats: &database.ConnectionStats{
+					Stats: &postgres.ConnectionStats{
 						MaxOpenConnections: 25,
 						OpenConnections:    5,
 						InUse:              2,
@@ -220,7 +220,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 
 			ginkgo.It("should handle context timeout gracefully", func() {
 				// Given
-				mockDBManager.EXPECT().HealthCheck(gomock.Any()).DoAndReturn(func(ctx context.Context) (*database.HealthStatus, error) {
+				mockDBManager.EXPECT().HealthCheck(gomock.Any()).DoAndReturn(func(ctx context.Context) (*postgres.HealthStatus, error) {
 					// Simulate slow operation
 					time.Sleep(10 * time.Millisecond)
 					return nil, context.DeadlineExceeded
@@ -346,7 +346,7 @@ var _ = ginkgo.Describe("DatabaseHealthHandler Unit Tests", func() {
 })
 
 // Helper function to create a DatabaseHealthHandler for testing
-func createTestDatabaseHealthHandler(dbManager database.PostgresManager) *di.DatabaseHealthHandler {
+func createTestDatabaseHealthHandler(dbManager postgres.PostgresManager) *di.DatabaseHealthHandler {
 	// Temporarily clear environment variables to ensure we don't get mock handler
 	originalGoTest := os.Getenv("GO_TEST")
 	originalGinkgoTest := os.Getenv("GINKGO_TEST")

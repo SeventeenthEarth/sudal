@@ -1,4 +1,4 @@
-package database
+package redis
 
 import (
 	"context"
@@ -15,8 +15,8 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
-//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_redis_client.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database RedisClient
-//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_redis_manager.go -package=mocks -mock_names=RedisManager=MockRedisManager github.com/seventeenthearth/sudal/internal/infrastructure/database RedisManager
+//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_redis_client.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database/redis RedisClient
+//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_redis_manager.go -package=mocks -mock_names=RedisManager=MockRedisManager github.com/seventeenthearth/sudal/internal/infrastructure/database/redis RedisManager
 
 // RedisClient defines the interface for Redis client operations
 // This interface abstracts Redis operations for better testability

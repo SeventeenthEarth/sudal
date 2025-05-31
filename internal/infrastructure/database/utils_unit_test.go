@@ -2,6 +2,7 @@ package database_test
 
 import (
 	"errors"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
@@ -33,7 +34,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when getting connection pool statistics", func() {
 			ginkgo.It("should return connection stats when manager is healthy", func() {
 				// Given
-				expectedStats := &database.ConnectionStats{
+				expectedStats := &postgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    5,
 					InUse:              2,
@@ -43,7 +44,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   expectedStats,
@@ -61,7 +62,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should return nil when manager is nil", func() {
 				// Given
-				var nilManager database.PostgresManager = nil
+				var nilManager postgres.PostgresManager = nil
 
 				// When
 				stats := database.GetConnectionPoolStats(nilManager)
@@ -84,7 +85,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should return nil when health status has no stats", func() {
 				// Given
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   nil, // No stats available
@@ -102,7 +103,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when testing different connection pool scenarios", func() {
 			ginkgo.It("should handle high connection usage", func() {
 				// Given
-				expectedStats := &database.ConnectionStats{
+				expectedStats := &postgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    24,
 					InUse:              20,
@@ -112,7 +113,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      5,
 					MaxLifetimeClosed:  2,
 				}
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection pool under high load",
 					Stats:   expectedStats,
@@ -130,7 +131,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should handle pool exhaustion scenario", func() {
 				// Given
-				expectedStats := &database.ConnectionStats{
+				expectedStats := &postgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    25,
 					InUse:              25,
@@ -140,7 +141,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "unhealthy",
 					Message: "Database connection pool exhausted",
 					Stats:   expectedStats,
@@ -163,7 +164,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when logging connection pool statistics", func() {
 			ginkgo.It("should log stats when manager is healthy", func() {
 				// Given
-				expectedStats := &database.ConnectionStats{
+				expectedStats := &postgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    5,
 					InUse:              2,
@@ -173,7 +174,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   expectedStats,
@@ -189,7 +190,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should handle nil manager gracefully", func() {
 				// Given
-				var nilManager database.PostgresManager = nil
+				var nilManager postgres.PostgresManager = nil
 
 				// When - This should not panic
 				database.LogConnectionPoolStats(nilManager)
@@ -210,7 +211,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should handle nil stats gracefully", func() {
 				// Given
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   nil, // No stats available
@@ -229,7 +230,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when using utils functions together", func() {
 			ginkgo.It("should get stats and then log them", func() {
 				// Given
-				expectedStats := &database.ConnectionStats{
+				expectedStats := &postgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    10,
 					InUse:              5,
@@ -239,7 +240,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      1,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &database.HealthStatus{
+				expectedHealthStatus := &postgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   expectedStats,

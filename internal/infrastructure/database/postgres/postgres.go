@@ -1,4 +1,4 @@
-package database
+package postgres
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
-//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_postgres_manager.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database PostgresManager
+//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_postgres_manager.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres PostgresManager
 
 // PostgresManager defines the interface for PostgreSQL database connection management
 type PostgresManager interface {

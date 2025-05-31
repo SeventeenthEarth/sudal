@@ -3,6 +3,7 @@ package data_test
 import (
 	"context"
 	"errors"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"time"
 
 	"github.com/onsi/ginkgo/v2"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/data"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
 
@@ -96,10 +96,10 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 
 			ginkgo.Context("when health check succeeds", func() {
 				ginkgo.BeforeEach(func() {
-					healthStatus := &database.HealthStatus{
+					healthStatus := &postgres.HealthStatus{
 						Status:  "healthy",
 						Message: "Database connection is healthy",
-						Stats: &database.ConnectionStats{
+						Stats: &postgres.ConnectionStats{
 							MaxOpenConnections: 50,
 							OpenConnections:    10,
 							InUse:              5,
@@ -140,10 +140,10 @@ var _ = ginkgo.Describe("HealthRepository", func() {
 
 			ginkgo.Context("when health check returns unhealthy status", func() {
 				ginkgo.BeforeEach(func() {
-					healthStatus := &database.HealthStatus{
+					healthStatus := &postgres.HealthStatus{
 						Status:  "unhealthy",
 						Message: "Database connection is unhealthy",
-						Stats: &database.ConnectionStats{
+						Stats: &postgres.ConnectionStats{
 							MaxOpenConnections: 50,
 							OpenConnections:    0,
 							InUse:              0,

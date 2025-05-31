@@ -9,7 +9,7 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/persistence/postgres"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/repository/postgres"
 )
 
 // userRepoImpl is the PostgreSQL implementation of the UserRepository interface
@@ -17,7 +17,7 @@ import (
 // while implementing user-specific data access operations.
 //
 // This implementation follows the Repository Pattern and provides:
-// - PostgreSQL-specific user data persistence
+// - PostgreSQL-specific user data repository
 // - Transaction support through the embedded base repository
 // - Standardized error handling using domain-specific errors
 // - Structured logging for all database operations

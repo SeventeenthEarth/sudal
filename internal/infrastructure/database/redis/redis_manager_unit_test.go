@@ -1,4 +1,4 @@
-package database_test
+package redis_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
+	redisdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/mocks"
 )
@@ -20,7 +20,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 	var (
 		ctrl         *gomock.Controller
 		mockClient   *mocks.MockRedisClient
-		redisManager database.RedisManager
+		redisManager redisdb.RedisManager
 		ctx          context.Context
 		cfg          *config.Config
 	)
@@ -51,7 +51,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 		}
 
 		// Create RedisManager with mock client using the new constructor
-		redisManager = database.NewRedisManagerWithClient(mockClient, cfg)
+		redisManager = redisdb.NewRedisManagerWithClient(mockClient, cfg)
 	})
 
 	ginkgo.AfterEach(func() {

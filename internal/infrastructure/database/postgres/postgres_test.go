@@ -1,4 +1,4 @@
-package database_test
+package postgres_test
 
 import (
 	"time"
@@ -7,7 +7,7 @@ import (
 	"github.com/onsi/gomega"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
+	postgresdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 
 				// When - This will fail because we don't have a real database
 				// But we're testing the configuration validation
-				_, err := database.NewPostgresManager(cfg)
+				_, err := postgresdb.NewPostgresManager(cfg)
 
 				// Then - We expect an error because there's no real database
 				// But the error should be about connection, not configuration
@@ -63,7 +63,7 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 				}
 
 				// When - This will fail because we don't have a real database
-				_, err := database.NewPostgresManager(cfg)
+				_, err := postgresdb.NewPostgresManager(cfg)
 
 				// Then - We expect an error because there's no real database
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -81,7 +81,7 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 				}
 
 				// When
-				_, err := database.NewPostgresManager(cfg)
+				_, err := postgresdb.NewPostgresManager(cfg)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -106,7 +106,7 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 				}
 
 				// When - This will fail due to no real database, but we can verify the configuration
-				_, err := database.NewPostgresManager(cfg)
+				_, err := postgresdb.NewPostgresManager(cfg)
 
 				// Then - The error should be about connection, not configuration
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -139,7 +139,7 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 				}
 
 				// When
-				_, err := database.NewPostgresManager(cfg)
+				_, err := postgresdb.NewPostgresManager(cfg)
 
 				// Then - Should fail due to no real database, but configuration should be valid
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -161,7 +161,7 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 
 				// When
 				start := time.Now()
-				_, err := database.NewPostgresManager(cfg)
+				_, err := postgresdb.NewPostgresManager(cfg)
 				duration := time.Since(start)
 
 				// Then

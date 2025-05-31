@@ -3,6 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,7 +26,7 @@ func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Create a temporary PostgreSQL manager for verification
-	pgManager, err := NewPostgresManager(cfg)
+	pgManager, err := postgres.NewPostgresManager(cfg)
 	if err != nil {
 		logger.Error("Failed to create PostgreSQL manager for verification",
 			log.FormatError(err),
@@ -62,7 +64,7 @@ func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
 
 // GetConnectionPoolStats returns the current connection pool statistics
 // This is useful for monitoring and debugging connection pool behavior
-func GetConnectionPoolStats(pgManager PostgresManager) *ConnectionStats {
+func GetConnectionPoolStats(pgManager postgres.PostgresManager) *postgres.ConnectionStats {
 	if pgManager == nil {
 		return nil
 	}
@@ -81,7 +83,7 @@ func GetConnectionPoolStats(pgManager PostgresManager) *ConnectionStats {
 
 // LogConnectionPoolStats logs the current connection pool statistics
 // This can be called periodically to monitor pool health
-func LogConnectionPoolStats(pgManager PostgresManager) {
+func LogConnectionPoolStats(pgManager postgres.PostgresManager) {
 	if pgManager == nil {
 		return
 	}
@@ -118,7 +120,7 @@ func VerifyRedisConnectivity(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Create a temporary Redis manager for verification
-	redisManager, err := NewRedisManager(cfg)
+	redisManager, err := redis.NewRedisManager(cfg)
 	if err != nil {
 		logger.Error("Failed to create Redis manager for verification",
 			log.FormatError(err),

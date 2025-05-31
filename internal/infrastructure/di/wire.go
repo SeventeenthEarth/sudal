@@ -4,6 +4,8 @@
 package di
 
 import (
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"os"
 
 	"github.com/google/wire"
@@ -17,7 +19,6 @@ import (
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/interface/connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 	"go.uber.org/zap"
@@ -89,25 +90,25 @@ func ProvideConfig() *config.Config {
 }
 
 // ProvidePostgresManager provides a PostgreSQL connection manager
-func ProvidePostgresManager(cfg *config.Config) (database.PostgresManager, error) {
+func ProvidePostgresManager(cfg *config.Config) (postgres.PostgresManager, error) {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil, nil
 	}
-	return database.NewPostgresManager(cfg)
+	return postgres.NewPostgresManager(cfg)
 }
 
 // ProvideRedisManager provides a Redis connection manager
-func ProvideRedisManager(cfg *config.Config) (database.RedisManager, error) {
+func ProvideRedisManager(cfg *config.Config) (redis.RedisManager, error) {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil, nil
 	}
-	return database.NewRedisManager(cfg)
+	return redis.NewRedisManager(cfg)
 }
 
 // ProvideCacheUtil provides a cache utility instance
-func ProvideCacheUtil(redisManager database.RedisManager) cacheutil.CacheUtil {
+func ProvideCacheUtil(redisManager redis.RedisManager) cacheutil.CacheUtil {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil
@@ -121,7 +122,7 @@ func ProvideLogger() *zap.Logger {
 }
 
 // ProvideUserRepository provides a user repository instance
-func ProvideUserRepository(pgManager database.PostgresManager, logger *zap.Logger) userDomainRepo.UserRepository {
+func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logger) userDomainRepo.UserRepository {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil
@@ -157,7 +158,7 @@ func InitializeHealthConnectHandler() (*healthConnect.HealthServiceHandler, erro
 }
 
 // InitializePostgresManager initializes and returns a PostgreSQL connection manager
-func InitializePostgresManager() (database.PostgresManager, error) {
+func InitializePostgresManager() (postgres.PostgresManager, error) {
 	wire.Build(DatabaseSet)
 	return nil, nil // Wire will fill this in
 }
@@ -169,7 +170,7 @@ func InitializeDatabaseHealthHandler() (*DatabaseHealthHandler, error) {
 }
 
 // InitializeRedisManager initializes and returns a Redis connection manager
-func InitializeRedisManager() (database.RedisManager, error) {
+func InitializeRedisManager() (redis.RedisManager, error) {
 	wire.Build(RedisSet)
 	return nil, nil // Wire will fill this in
 }

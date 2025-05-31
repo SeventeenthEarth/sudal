@@ -1,4 +1,4 @@
-package database_test
+package postgres_test
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
+	postgresdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
@@ -21,7 +21,7 @@ var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
 	var (
 		db         *sql.DB
 		mock       sqlmock.Sqlmock
-		manager    *database.PostgresManagerImpl
+		manager    *postgresdb.PostgresManagerImpl
 		ctx        context.Context
 		testConfig *config.Config
 	)
@@ -229,11 +229,11 @@ var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
 })
 
 // Helper function to create a PostgresManagerImpl with injected dependencies
-func createTestPostgresManager(db *sql.DB, cfg *config.Config) *database.PostgresManagerImpl {
+func createTestPostgresManager(db *sql.DB, cfg *config.Config) *postgresdb.PostgresManagerImpl {
 	logger := log.GetLogger().With(zap.String("component", "postgres_manager"))
 
 	// Create a PostgresManagerImpl instance and manually set its fields using reflection
-	manager := &database.PostgresManagerImpl{}
+	manager := &postgresdb.PostgresManagerImpl{}
 
 	// Use reflection to set private fields
 	v := reflect.ValueOf(manager).Elem()

@@ -3,13 +3,13 @@ package steps
 import (
 	"errors"
 	"fmt"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
 )
 
 // NewCacheTestContext creates a new cache test context
@@ -87,7 +87,7 @@ func GivenCacheUtilityIsAvailable(ctx *TestContext) {
 	}
 
 	// Create Redis manager directly (bypassing DI for E2E tests)
-	redisManager, err := database.NewRedisManager(cfg)
+	redisManager, err := redis.NewRedisManager(cfg)
 	if err != nil {
 		ctx.T.Errorf("Expected Redis manager to be created successfully, but got error: %v", err)
 		return

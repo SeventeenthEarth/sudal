@@ -76,3 +76,5 @@ internal/infrastructure/openapi/oas_*.go
 
 # CompileDaemon temporary files
 .compiledaemon.*
+
+mcp-servers/

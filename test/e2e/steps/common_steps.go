@@ -19,7 +19,7 @@ import (
 func GivenServerIsRunning(ctx *TestContext) {
 	// This step is typically handled by test setup
 	// We can add a health check here if needed
-	resp, err := ctx.HTTPClient.Get(fmt.Sprintf("%s/ping", ctx.ServerURL))
+	resp, err := ctx.HTTPClient.Get(fmt.Sprintf("%s/api/ping", ctx.ServerURL))
 	if err == nil && resp != nil {
 		resp.Body.Close() // nolint:errcheck
 	}
@@ -187,6 +187,11 @@ func ThenJSONResponseShouldContainStatus(ctx *TestContext, expectedStatus string
 	ctx.TheJSONResponseShouldContainField("status", expectedStatus)
 }
 
+// ThenJSONResponseShouldContainField checks for a specific field with expected value in JSON response in BDD style
+func ThenJSONResponseShouldContainField(ctx *TestContext, fieldName, expectedValue string) {
+	ctx.TheJSONResponseShouldContainField(fieldName, expectedValue)
+}
+
 // ThenResponseShouldNotBeEmpty checks that response is not empty in BDD style
 func ThenResponseShouldNotBeEmpty(ctx *TestContext) {
 	ctx.TheResponseShouldNotBeEmpty()
@@ -222,6 +227,36 @@ func ThenAllRequestsShouldSucceed(ctx *TestContext) {
 		if result.Response.StatusCode != http.StatusOK {
 			ctx.T.Errorf("Expected request %d to have status 200, but got %d", i+1, result.Response.StatusCode)
 		}
+	}
+}
+
+// ThenAllConcurrentRequestsShouldReturn404 checks that all concurrent requests returned 404 in BDD style
+func ThenAllConcurrentRequestsShouldReturn404(ctx *TestContext) {
+	if len(ctx.ConcurrentResults) == 0 {
+		ctx.T.Errorf("Expected concurrent results to exist, but none were found")
+		return
+	}
+
+	failedCount := 0
+	for i, result := range ctx.ConcurrentResults {
+		if result.Error != nil {
+			ctx.T.Errorf("Expected concurrent request %d to have a response, but got error: %v", i+1, result.Error)
+			failedCount++
+			continue
+		}
+		if result.Response == nil {
+			ctx.T.Errorf("Expected concurrent request %d to have a response, but none was received", i+1)
+			failedCount++
+			continue
+		}
+		if result.Response.StatusCode != http.StatusNotFound {
+			ctx.T.Errorf("Expected concurrent request %d to have status 404, but got %d", i+1, result.Response.StatusCode)
+			failedCount++
+		}
+	}
+
+	if failedCount > 0 {
+		ctx.T.Errorf("Expected all %d concurrent requests to return 404, but %d failed", len(ctx.ConcurrentResults), failedCount)
 	}
 }
 

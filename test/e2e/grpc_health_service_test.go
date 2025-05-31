@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -279,6 +280,7 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 	})
 
 	// Test Connect-Go client with default protocol (HTTP/JSON)
+	// This should fail because gRPC-only endpoints reject HTTP/JSON protocol
 	t.Run("Connect-Go default protocol health check", func(t *testing.T) {
 		// Given: Connect-Go client with default protocol
 		client := healthv1connect.NewHealthServiceClient(
@@ -294,21 +296,21 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 		req := connect.NewRequest(&healthv1.CheckRequest{})
 		resp, err := client.Check(ctx, req)
 
-		// Then: Response should indicate serving status (BDD style)
-		if err != nil {
-			t.Errorf("Expected Connect-Go default protocol request to succeed, but got error: %v", err)
+		// Then: Request should fail because gRPC-only endpoints reject HTTP/JSON (BDD style)
+		if err == nil {
+			t.Errorf("Expected Connect-Go default protocol request to fail on gRPC-only endpoint, but it succeeded")
 			return
 		}
-		if resp == nil {
-			t.Errorf("Expected Connect-Go default protocol response to exist, but it was nil")
-			return
+
+		// Verify that the error indicates the expected rejection (404 Not Found or unimplemented)
+		errorStr := err.Error()
+		if !strings.Contains(errorStr, "404") && !strings.Contains(errorStr, "unimplemented") {
+			t.Errorf("Expected Connect-Go default protocol error to indicate 404 or unimplemented, but got: %v", err)
 		}
-		if resp.Msg == nil {
-			t.Errorf("Expected Connect-Go default protocol response message to exist, but it was nil")
-			return
-		}
-		if resp.Msg.Status != healthv1.ServingStatus_SERVING_STATUS_SERVING {
-			t.Errorf("Expected Connect-Go default protocol response status to be SERVING_STATUS_SERVING, but got %v", resp.Msg.Status)
+
+		// Response should be nil when request fails
+		if resp != nil {
+			t.Errorf("Expected Connect-Go default protocol response to be nil when request fails, but got: %v", resp)
 		}
 	})
 }

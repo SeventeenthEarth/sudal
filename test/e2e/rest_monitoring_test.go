@@ -17,7 +17,7 @@ func TestRESTMonitoring(t *testing.T) {
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				steps.WhenIMakeGETRequest(ctx, "/ping")
+				steps.WhenIMakeGETRequest(ctx, "/api/ping")
 			},
 			Then: func(ctx *steps.TestContext) {
 				steps.ThenHTTPStatusShouldBe(ctx, 200)
@@ -31,7 +31,7 @@ func TestRESTMonitoring(t *testing.T) {
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				steps.WhenIMakeGETRequest(ctx, "/healthz")
+				steps.WhenIMakeGETRequest(ctx, "/api/healthz")
 			},
 			Then: func(ctx *steps.TestContext) {
 				steps.ThenHTTPStatusShouldBe(ctx, 200)
@@ -45,7 +45,7 @@ func TestRESTMonitoring(t *testing.T) {
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				steps.WhenIMakeGETRequest(ctx, "/healthz")
+				steps.WhenIMakeGETRequest(ctx, "/api/healthz")
 			},
 			Then: func(ctx *steps.TestContext) {
 				steps.ThenHTTPStatusShouldBe(ctx, 200)
@@ -68,13 +68,13 @@ func TestRESTMonitoringMultipleEndpoints(t *testing.T) {
 		steps.GivenServerIsRunning(ctx)
 
 		// When - Test ping endpoint
-		steps.WhenIMakeGETRequest(ctx, "/ping")
+		steps.WhenIMakeGETRequest(ctx, "/api/ping")
 
 		// Then
 		steps.ThenHTTPStatusShouldBe(ctx, 200)
 
 		// When - Test health endpoint
-		steps.WhenIMakeGETRequest(ctx, "/healthz")
+		steps.WhenIMakeGETRequest(ctx, "/api/healthz")
 
 		// Then
 		steps.ThenHTTPStatusShouldBe(ctx, 200)
@@ -95,14 +95,14 @@ func TestRESTMonitoringTableDriven(t *testing.T) {
 	testCases := []interface{}{
 		MonitoringTestCase{
 			Name:                "Ping endpoint",
-			Endpoint:            "/ping",
+			Endpoint:            "/api/ping",
 			ExpectedStatus:      200,
 			ExpectedValue:       "ok",
 			ShouldBeLightweight: true,
 		},
 		MonitoringTestCase{
 			Name:                "Health endpoint",
-			Endpoint:            "/healthz",
+			Endpoint:            "/api/healthz",
 			ExpectedStatus:      200,
 			ExpectedValue:       "healthy",
 			ShouldBeLightweight: true,
@@ -147,28 +147,28 @@ func TestRESTMonitoringConcurrency(t *testing.T) {
 		ConcurrencyTestCase{
 			Name:           "Concurrent ping requests",
 			NumRequests:    5,
-			Endpoint:       "/ping",
+			Endpoint:       "/api/ping",
 			ExpectedStatus: "ok",
 			Description:    "Test ping endpoint with 5 concurrent requests",
 		},
 		ConcurrencyTestCase{
 			Name:           "Concurrent health requests",
 			NumRequests:    5,
-			Endpoint:       "/healthz",
+			Endpoint:       "/api/healthz",
 			ExpectedStatus: "healthy",
 			Description:    "Test health endpoint with 5 concurrent requests",
 		},
 		ConcurrencyTestCase{
 			Name:           "High concurrency ping requests",
 			NumRequests:    10,
-			Endpoint:       "/ping",
+			Endpoint:       "/api/ping",
 			ExpectedStatus: "ok",
 			Description:    "Test ping endpoint with 10 concurrent requests",
 		},
 		ConcurrencyTestCase{
 			Name:           "High concurrency health requests",
 			NumRequests:    10,
-			Endpoint:       "/healthz",
+			Endpoint:       "/api/healthz",
 			ExpectedStatus: "healthy",
 			Description:    "Test health endpoint with 10 concurrent requests",
 		},
@@ -204,7 +204,7 @@ func TestRESTMonitoringPerformance(t *testing.T) {
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				steps.WhenIMakeGETRequest(ctx, "/ping")
+				steps.WhenIMakeGETRequest(ctx, "/api/ping")
 			},
 			Then: func(ctx *steps.TestContext) {
 				steps.ThenHTTPStatusShouldBe(ctx, 200)
@@ -219,7 +219,7 @@ func TestRESTMonitoringPerformance(t *testing.T) {
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				steps.WhenIMakeGETRequest(ctx, "/healthz")
+				steps.WhenIMakeGETRequest(ctx, "/api/healthz")
 			},
 			Then: func(ctx *steps.TestContext) {
 				steps.ThenHTTPStatusShouldBe(ctx, 200)

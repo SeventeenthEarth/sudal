@@ -40,8 +40,8 @@ func TestConnectGoProtocols(t *testing.T) {
 			},
 		},
 		{
-			Name:        "Health check using Connect-Go HTTP/JSON protocol",
-			Description: "Should return SERVING status when making a health check request using HTTP/JSON protocol",
+			Name:        "Connect-Go HTTP/JSON protocol should be rejected for gRPC-only endpoints",
+			Description: "Should return error when making HTTP/JSON request to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 				steps.GivenConnectGoClientWithProtocol(ctx, connectServerURL, "http")
@@ -50,8 +50,7 @@ func TestConnectGoProtocols(t *testing.T) {
 				steps.WhenIMakeConnectGoHealthCheckRequest(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenConnectGoResponseShouldIndicateServingStatus(ctx)
-				steps.ThenConnectGoResponseShouldNotBeEmpty(ctx)
+				steps.ThenConnectGoRequestShouldFail(ctx)
 			},
 		},
 		{
@@ -70,8 +69,8 @@ func TestConnectGoProtocols(t *testing.T) {
 			},
 		},
 		{
-			Name:        "Connect-Go protocol comparison",
-			Description: "Should get consistent results across different protocols",
+			Name:        "Connect-Go protocol comparison with gRPC-only restriction",
+			Description: "Should show that only gRPC-Web succeeds while HTTP/JSON fails for gRPC-only endpoints",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 			},
@@ -79,7 +78,7 @@ func TestConnectGoProtocols(t *testing.T) {
 				steps.WhenIMakeHealthCheckRequestsWithDifferentProtocols(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenAllProtocolsShouldReturnConsistentResults(ctx)
+				steps.ThenGRPCWebShouldSucceedAndHTTPShouldFail(ctx)
 			},
 		},
 	}
@@ -110,12 +109,12 @@ func TestConnectGoProtocolsTableDriven(t *testing.T) {
 			Description:    "gRPC-Web protocol health check should succeed",
 		},
 		ProtocolTestCase{
-			Name:           "HTTP/JSON protocol health request",
+			Name:           "HTTP/JSON protocol health request should fail",
 			Protocol:       "http",
 			Timeout:        5 * time.Second,
 			ExpectedStatus: healthv1.ServingStatus_SERVING_STATUS_SERVING,
-			ShouldSucceed:  true,
-			Description:    "HTTP/JSON protocol health check should succeed",
+			ShouldSucceed:  false,
+			Description:    "HTTP/JSON protocol health check should fail for gRPC-only endpoint",
 		},
 		ProtocolTestCase{
 			Name:           "gRPC-Web with short timeout",
@@ -142,6 +141,8 @@ func TestConnectGoProtocolsTableDriven(t *testing.T) {
 			if testCase.ShouldSucceed {
 				steps.ThenConnectGoResponseShouldIndicateServingStatus(ctx)
 				steps.ThenConnectGoResponseShouldNotBeEmpty(ctx)
+			} else {
+				steps.ThenConnectGoRequestShouldFail(ctx)
 			}
 		},
 	}
@@ -153,30 +154,34 @@ func TestConnectGoProtocolsTableDriven(t *testing.T) {
 func TestConnectGoProtocolsConcurrency(t *testing.T) {
 	// Table-driven test for different concurrency levels and protocols
 	type ConcurrencyTestCase struct {
-		Name        string
-		Protocol    string
-		NumRequests int
-		Description string
+		Name          string
+		Protocol      string
+		NumRequests   int
+		ShouldSucceed bool
+		Description   string
 	}
 
 	concurrencyTestCases := []interface{}{
 		ConcurrencyTestCase{
-			Name:        "Low gRPC-Web concurrency",
-			Protocol:    "grpc-web",
-			NumRequests: 5,
-			Description: "Test with 5 concurrent gRPC-Web requests",
+			Name:          "Low gRPC-Web concurrency",
+			Protocol:      "grpc-web",
+			NumRequests:   5,
+			ShouldSucceed: true,
+			Description:   "Test with 5 concurrent gRPC-Web requests",
 		},
 		ConcurrencyTestCase{
-			Name:        "Medium HTTP/JSON concurrency",
-			Protocol:    "http",
-			NumRequests: 15,
-			Description: "Test with 15 concurrent HTTP/JSON requests",
+			Name:          "Medium HTTP/JSON concurrency should fail",
+			Protocol:      "http",
+			NumRequests:   15,
+			ShouldSucceed: false,
+			Description:   "Test with 15 concurrent HTTP/JSON requests that should fail for gRPC-only endpoint",
 		},
 		ConcurrencyTestCase{
-			Name:        "High gRPC-Web concurrency",
-			Protocol:    "grpc-web",
-			NumRequests: 30,
-			Description: "Test with 30 concurrent gRPC-Web requests",
+			Name:          "High gRPC-Web concurrency",
+			Protocol:      "grpc-web",
+			NumRequests:   30,
+			ShouldSucceed: true,
+			Description:   "Test with 30 concurrent gRPC-Web requests",
 		},
 	}
 
@@ -192,8 +197,13 @@ func TestConnectGoProtocolsConcurrency(t *testing.T) {
 			steps.WhenIMakeConcurrentConnectGoHealthCheckRequests(ctx, testCase.NumRequests)
 		},
 		Then: func(ctx *steps.TestContext, testData interface{}) {
-			steps.ThenAllConnectGoRequestsShouldSucceed(ctx)
-			steps.ThenAllConnectGoResponsesShouldIndicateServingStatus(ctx)
+			testCase := testData.(ConcurrencyTestCase)
+			if testCase.ShouldSucceed {
+				steps.ThenAllConnectGoRequestsShouldSucceed(ctx)
+				steps.ThenAllConnectGoResponsesShouldIndicateServingStatus(ctx)
+			} else {
+				steps.ThenAllConnectGoRequestsShouldFail(ctx)
+			}
 		},
 	}
 
@@ -203,13 +213,14 @@ func TestConnectGoProtocolsConcurrency(t *testing.T) {
 // TestConnectGoDirectProtocolComparison demonstrates direct protocol comparison
 func TestConnectGoDirectProtocolComparison(t *testing.T) {
 	protocols := []struct {
-		name   string
-		option connect.ClientOption
-		useH2  bool
+		name          string
+		option        connect.ClientOption
+		useH2         bool
+		shouldSucceed bool
 	}{
-		{"gRPC", connect.WithGRPC(), true},         // Pure gRPC with HTTP/2
-		{"gRPC-Web", connect.WithGRPCWeb(), false}, // gRPC-Web with HTTP/1.1
-		{"HTTP/JSON", nil, false},                  // Default protocol with HTTP/1.1
+		{"gRPC", connect.WithGRPC(), true, true},         // Pure gRPC with HTTP/2
+		{"gRPC-Web", connect.WithGRPCWeb(), false, true}, // gRPC-Web with HTTP/1.1
+		{"HTTP/JSON", nil, false, false},                 // Default protocol with HTTP/1.1 - should fail for gRPC-only endpoint
 	}
 
 	for _, protocol := range protocols {
@@ -252,14 +263,19 @@ func TestConnectGoDirectProtocolComparison(t *testing.T) {
 			req := connect.NewRequest(&healthv1.CheckRequest{})
 			resp, err := client.Check(ctx, req)
 
-			// Then: Response should indicate serving status
-			require.NoError(t, err)
-			require.NotNil(t, resp)
-			require.NotNil(t, resp.Msg)
-			assert.Equal(t, healthv1.ServingStatus_SERVING_STATUS_SERVING, resp.Msg.Status)
-
-			// Log protocol used for verification
-			t.Logf("Successfully tested %s protocol", protocol.name)
+			// Then: Check based on expected behavior
+			if protocol.shouldSucceed {
+				// Should succeed for gRPC and gRPC-Web
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Msg)
+				assert.Equal(t, healthv1.ServingStatus_SERVING_STATUS_SERVING, resp.Msg.Status)
+				t.Logf("Successfully tested %s protocol", protocol.name)
+			} else {
+				// Should fail for HTTP/JSON on gRPC-only endpoint
+				require.Error(t, err)
+				t.Logf("Expected failure for %s protocol: %v", protocol.name, err)
+			}
 		})
 	}
 }

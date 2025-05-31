@@ -11,23 +11,19 @@ func TestBDDStyleExample(t *testing.T) {
 	// BDD Scenarios using pure BDD style assertions
 	scenarios := []steps.BDDScenario{
 		{
-			Name:        "Health check should return serving status",
-			Description: "When I make a health check request, then the response should indicate serving status",
+			Name:        "gRPC-only endpoint should reject HTTP/JSON requests",
+			Description: "When I make an HTTP/JSON request to gRPC-only endpoint, then it should return 404",
 			Given: func(ctx *steps.TestContext) {
 				// Given the server is running
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				// When I make a health check request using Connect-Go
+				// When I make an HTTP/JSON request to gRPC-only endpoint
 				steps.WhenIMakeHealthCheckRequestUsingConnectGo(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				// Then the response status code should be 200
-				ctx.TheResponseStatusCodeShouldBe(200)
-				// And the response should not be empty
-				ctx.TheResponseShouldNotBeEmpty()
-				// And the JSON response should contain the serving status
-				ctx.TheJSONResponseShouldContainField("status", "SERVING_STATUS_SERVING")
+				// Then the response status code should be 404 (gRPC-only endpoint)
+				ctx.TheResponseStatusCodeShouldBe(404)
 			},
 		},
 		{
@@ -39,7 +35,7 @@ func TestBDDStyleExample(t *testing.T) {
 			},
 			When: func(ctx *steps.TestContext) {
 				// When I make a GET request to the database health endpoint
-				steps.WhenIMakeGETRequest(ctx, "/health/database")
+				steps.WhenIMakeGETRequest(ctx, "/api/health/database")
 			},
 			Then: func(ctx *steps.TestContext) {
 				// Then the response status code should be 200
@@ -53,8 +49,8 @@ func TestBDDStyleExample(t *testing.T) {
 			},
 		},
 		{
-			Name:        "Invalid content type should be rejected",
-			Description: "When I send a request with invalid content type, then the server should reject it",
+			Name:        "gRPC-only endpoint should reject invalid content type",
+			Description: "When I send a request with invalid content type to gRPC endpoint, then it should return 404",
 			Given: func(ctx *steps.TestContext) {
 				// Given the server is running
 				steps.GivenServerIsRunning(ctx)
@@ -64,26 +60,24 @@ func TestBDDStyleExample(t *testing.T) {
 				steps.WhenIMakeHealthCheckRequestWithInvalidContentType(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				// Then the response status code should be 415 (Unsupported Media Type)
-				ctx.TheResponseStatusCodeShouldBe(415)
+				// Then the response status code should be 404 (gRPC-only endpoint blocks HTTP requests)
+				ctx.TheResponseStatusCodeShouldBe(404)
 			},
 		},
 		{
-			Name:        "Concurrent requests should all succeed",
-			Description: "When I make multiple concurrent requests, then all should succeed",
+			Name:        "Concurrent HTTP requests to gRPC endpoint should be rejected",
+			Description: "When I make multiple concurrent HTTP requests to gRPC endpoint, then all should return 404",
 			Given: func(ctx *steps.TestContext) {
 				// Given the server is running
 				steps.GivenServerIsRunning(ctx)
 			},
 			When: func(ctx *steps.TestContext) {
-				// When I make 5 concurrent health check requests
+				// When I make 5 concurrent health check requests (HTTP/JSON to gRPC endpoint)
 				steps.WhenIMakeConcurrentHealthCheckRequests(ctx, 5)
 			},
 			Then: func(ctx *steps.TestContext) {
-				// Then all requests should succeed
-				ctx.AllConcurrentRequestsShouldSucceed()
-				// And all responses should indicate serving status
-				steps.ThenAllResponsesShouldIndicateServingStatus(ctx)
+				// Then all requests should return 404 (gRPC-only endpoint)
+				steps.ThenAllConcurrentRequestsShouldReturn404(ctx)
 			},
 		},
 	}
@@ -105,13 +99,13 @@ func TestBDDStyleTableDriven(t *testing.T) {
 	testCases := []interface{}{
 		EndpointTestCase{
 			Name:           "Ping endpoint should return OK",
-			Endpoint:       "/ping",
+			Endpoint:       "/api/ping",
 			ExpectedStatus: 200,
 			ShouldHaveJSON: false,
 		},
 		EndpointTestCase{
 			Name:           "Database health should return detailed info",
-			Endpoint:       "/health/database",
+			Endpoint:       "/api/health/database",
 			ExpectedStatus: 200,
 			ShouldHaveJSON: true,
 		},

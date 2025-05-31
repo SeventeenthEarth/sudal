@@ -13,8 +13,8 @@ func TestConnectGoHealthService(t *testing.T) {
 	// BDD Scenarios for Connect-Go Health Service
 	scenarios := []steps.BDDScenario{
 		{
-			Name:        "Health check using Connect-Go client",
-			Description: "Should return SERVING status when making a health check request using Connect-Go client",
+			Name:        "HTTP/JSON request to gRPC endpoint should be rejected",
+			Description: "Should return 404 status when making HTTP/JSON request to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 			},
@@ -22,13 +22,12 @@ func TestConnectGoHealthService(t *testing.T) {
 				steps.WhenIMakeHealthCheckRequestUsingConnectGo(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenResponseShouldIndicateServingStatus(ctx)
-				steps.ThenResponseShouldNotBeEmpty(ctx)
+				steps.ThenHTTPStatusShouldBe(ctx, 404)
 			},
 		},
 		{
-			Name:        "Health check using HTTP/JSON over Connect-Go",
-			Description: "Should return 200 status and SERVING_STATUS_SERVING when making HTTP/JSON request",
+			Name:        "HTTP/JSON requests to gRPC endpoint should be rejected",
+			Description: "Should return 404 status when making HTTP/JSON request to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 			},
@@ -36,13 +35,12 @@ func TestConnectGoHealthService(t *testing.T) {
 				steps.WhenIMakeHealthCheckRequestUsingHTTPJSON(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenHTTPStatusShouldBe(ctx, 200)
-				steps.ThenJSONResponseShouldContainServingStatusServing(ctx)
+				steps.ThenHTTPStatusShouldBe(ctx, 404)
 			},
 		},
 		{
-			Name:        "Invalid content type rejection for Connect-Go endpoint",
-			Description: "Should return 415 status when making request with invalid content type",
+			Name:        "Invalid content type requests to gRPC endpoint should be rejected",
+			Description: "Should return 404 status when making request with invalid content type to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 			},
@@ -50,8 +48,7 @@ func TestConnectGoHealthService(t *testing.T) {
 				steps.WhenIMakeHealthCheckRequestWithInvalidContentType(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenHTTPStatusShouldBe(ctx, 415)
-				steps.ThenServerShouldRejectRequest(ctx)
+				steps.ThenHTTPStatusShouldBe(ctx, 404)
 			},
 		},
 		{
@@ -68,8 +65,8 @@ func TestConnectGoHealthService(t *testing.T) {
 			},
 		},
 		{
-			Name:        "Multiple concurrent Connect-Go health requests",
-			Description: "Should handle multiple concurrent requests successfully",
+			Name:        "Multiple concurrent HTTP/JSON requests to gRPC endpoint should be rejected",
+			Description: "Should return 404 for all concurrent HTTP/JSON requests to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 			},
@@ -77,13 +74,12 @@ func TestConnectGoHealthService(t *testing.T) {
 				steps.WhenIMakeConcurrentHealthCheckRequests(ctx, 10)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenAllRequestsShouldSucceed(ctx)
-				steps.ThenAllResponsesShouldIndicateServingStatus(ctx)
+				steps.ThenAllConcurrentRequestsShouldReturn404(ctx)
 			},
 		},
 		{
-			Name:        "Connect-Go health service error handling",
-			Description: "Should return proper Connect-Go headers and SERVING status",
+			Name:        "HTTP/JSON request to gRPC endpoint should be rejected with proper error",
+			Description: "Should return 404 with proper error message for HTTP/JSON requests to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
 			},
@@ -91,8 +87,7 @@ func TestConnectGoHealthService(t *testing.T) {
 				steps.WhenIMakeHealthCheckRequestUsingConnectGo(ctx)
 			},
 			Then: func(ctx *steps.TestContext) {
-				steps.ThenResponseShouldIndicateServingStatus(ctx)
-				steps.ThenResponseShouldContainProperConnectGoHeaders(ctx)
+				steps.ThenHTTPStatusShouldBe(ctx, 404)
 			},
 		},
 	}
@@ -116,20 +111,20 @@ func TestConnectGoHealthServiceTableDriven(t *testing.T) {
 
 	testCases := []interface{}{
 		RequestTestCase{
-			Name:                "Valid Connect-Go health request",
+			Name:                "HTTP/JSON request to gRPC endpoint should be rejected",
 			Endpoint:            "/health.v1.HealthService/Check",
 			ContentType:         "application/json",
 			Body:                "{}",
-			ExpectedStatus:      200,
-			ShouldContainStatus: true,
-			ExpectedStatusValue: "SERVING_STATUS_SERVING",
+			ExpectedStatus:      404,
+			ShouldContainStatus: false,
+			ExpectedStatusValue: "",
 		},
 		RequestTestCase{
-			Name:                "Invalid content type",
+			Name:                "Invalid content type to gRPC endpoint should be rejected",
 			Endpoint:            "/health.v1.HealthService/Check",
 			ContentType:         "text/plain",
 			Body:                "{}",
-			ExpectedStatus:      415,
+			ExpectedStatus:      404,
 			ShouldContainStatus: false,
 		},
 		RequestTestCase{
@@ -201,8 +196,7 @@ func TestConnectGoHealthServiceConcurrency(t *testing.T) {
 			steps.WhenIMakeConcurrentHealthCheckRequests(ctx, testCase.NumRequests)
 		},
 		Then: func(ctx *steps.TestContext, testData interface{}) {
-			steps.ThenAllRequestsShouldSucceed(ctx)
-			steps.ThenAllResponsesShouldIndicateServingStatus(ctx)
+			steps.ThenAllConcurrentRequestsShouldReturn404(ctx)
 		},
 	}
 

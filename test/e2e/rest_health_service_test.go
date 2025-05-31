@@ -6,10 +6,8 @@ import (
 	"github.com/seventeenthearth/sudal/test/e2e/steps"
 )
 
-const serverURL = "http://localhost:8080"
-
-// TestConnectGoHealthService tests the Connect-Go Health Service functionality
-func TestConnectGoHealthService(t *testing.T) {
+// TestRestHealthService tests the Connect-Go Health Service functionality
+func TestRestHealthService(t *testing.T) {
 	// BDD Scenarios for Connect-Go Health Service
 	scenarios := []steps.BDDScenario{
 		{
@@ -93,11 +91,11 @@ func TestConnectGoHealthService(t *testing.T) {
 	}
 
 	// Run all BDD scenarios
-	steps.RunBDDScenarios(t, serverURL, scenarios)
+	steps.RunBDDScenarios(t, ServerURL, scenarios)
 }
 
-// TestConnectGoHealthServiceTableDriven demonstrates table-driven BDD tests
-func TestConnectGoHealthServiceTableDriven(t *testing.T) {
+// TestRestHealthServiceTableDriven demonstrates table-driven BDD tests
+func TestRestHealthServiceTableDriven(t *testing.T) {
 	// Table-driven test cases for different request scenarios
 	type RequestTestCase struct {
 		Name                string
@@ -156,11 +154,11 @@ func TestConnectGoHealthServiceTableDriven(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, tableDrivenTest, testCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, tableDrivenTest, testCases)
 }
 
-// TestConnectGoHealthServiceConcurrency tests concurrent request scenarios
-func TestConnectGoHealthServiceConcurrency(t *testing.T) {
+// TestRestHealthServiceConcurrency tests concurrent request scenarios
+func TestRestHealthServiceConcurrency(t *testing.T) {
 	// Table-driven test for different concurrency levels
 	type ConcurrencyTestCase struct {
 		Name        string
@@ -200,5 +198,5 @@ func TestConnectGoHealthServiceConcurrency(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, concurrencyTest, concurrencyTestCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, concurrencyTest, concurrencyTestCases)
 }

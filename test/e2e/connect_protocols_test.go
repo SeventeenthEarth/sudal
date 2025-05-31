@@ -18,8 +18,6 @@ import (
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 )
 
-const connectServerURL = "http://localhost:8080"
-
 // TestConnectGoProtocols tests Connect-Go with different protocols
 func TestConnectGoProtocols(t *testing.T) {
 	// BDD Scenarios for different Connect-Go protocols
@@ -29,7 +27,7 @@ func TestConnectGoProtocols(t *testing.T) {
 			Description: "Should return SERVING status when making a health check request using gRPC-Web protocol",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenConnectGoClientWithProtocol(ctx, connectServerURL, "grpc-web")
+				steps.GivenConnectGoClientWithProtocol(ctx, ServerURL, "grpc-web")
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeConnectGoHealthCheckRequest(ctx)
@@ -44,7 +42,7 @@ func TestConnectGoProtocols(t *testing.T) {
 			Description: "Should return error when making HTTP/JSON request to gRPC-only endpoint",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenConnectGoClientWithProtocol(ctx, connectServerURL, "http")
+				steps.GivenConnectGoClientWithProtocol(ctx, ServerURL, "http")
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeConnectGoHealthCheckRequest(ctx)
@@ -58,7 +56,7 @@ func TestConnectGoProtocols(t *testing.T) {
 			Description: "Should handle multiple concurrent gRPC-Web requests successfully",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenConnectGoClientWithProtocol(ctx, connectServerURL, "grpc-web")
+				steps.GivenConnectGoClientWithProtocol(ctx, ServerURL, "grpc-web")
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeConcurrentConnectGoHealthCheckRequests(ctx, 10)
@@ -84,7 +82,7 @@ func TestConnectGoProtocols(t *testing.T) {
 	}
 
 	// Run all BDD scenarios
-	steps.RunBDDScenarios(t, connectServerURL, scenarios)
+	steps.RunBDDScenarios(t, ServerURL, scenarios)
 }
 
 // TestConnectGoProtocolsTableDriven demonstrates table-driven BDD tests for different protocols
@@ -131,7 +129,7 @@ func TestConnectGoProtocolsTableDriven(t *testing.T) {
 		Given: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(ProtocolTestCase)
 			steps.GivenServerIsRunning(ctx)
-			steps.GivenConnectGoClientWithProtocolAndTimeout(ctx, connectServerURL, testCase.Protocol, testCase.Timeout)
+			steps.GivenConnectGoClientWithProtocolAndTimeout(ctx, ServerURL, testCase.Protocol, testCase.Timeout)
 		},
 		When: func(ctx *steps.TestContext, testData interface{}) {
 			steps.WhenIMakeConnectGoHealthCheckRequest(ctx)
@@ -147,7 +145,7 @@ func TestConnectGoProtocolsTableDriven(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, connectServerURL, tableDrivenTest, testCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, tableDrivenTest, testCases)
 }
 
 // TestConnectGoProtocolsConcurrency tests concurrent request scenarios with different protocols
@@ -190,7 +188,7 @@ func TestConnectGoProtocolsConcurrency(t *testing.T) {
 		Given: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(ConcurrencyTestCase)
 			steps.GivenServerIsRunning(ctx)
-			steps.GivenConnectGoClientWithProtocol(ctx, connectServerURL, testCase.Protocol)
+			steps.GivenConnectGoClientWithProtocol(ctx, ServerURL, testCase.Protocol)
 		},
 		When: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(ConcurrencyTestCase)
@@ -207,7 +205,7 @@ func TestConnectGoProtocolsConcurrency(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, connectServerURL, concurrencyTest, concurrencyTestCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, concurrencyTest, concurrencyTestCases)
 }
 
 // TestConnectGoDirectProtocolComparison demonstrates direct protocol comparison
@@ -246,13 +244,13 @@ func TestConnectGoDirectProtocolComparison(t *testing.T) {
 			if protocol.option != nil {
 				client = healthv1connect.NewHealthServiceClient(
 					httpClient,
-					connectServerURL,
+					ServerURL,
 					protocol.option,
 				)
 			} else {
 				client = healthv1connect.NewHealthServiceClient(
 					httpClient,
-					connectServerURL,
+					ServerURL,
 				)
 			}
 

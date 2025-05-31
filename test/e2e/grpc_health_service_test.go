@@ -17,8 +17,6 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 )
 
-const grpcServerAddr = "localhost:8080"
-
 // TestGRPCHealthService tests the gRPC Health Service functionality using native gRPC client
 func TestGRPCHealthService(t *testing.T) {
 	// BDD Scenarios for native gRPC Health Service
@@ -28,7 +26,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should return SERVING status when making a health check request using native gRPC client",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientIsConnected(ctx, grpcServerAddr)
+				steps.GivenGRPCClientIsConnected(ctx, ServerURL)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeGRPCHealthCheckRequest(ctx)
@@ -43,7 +41,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should handle multiple concurrent gRPC requests successfully",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientIsConnected(ctx, grpcServerAddr)
+				steps.GivenGRPCClientIsConnected(ctx, ServerURL)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeConcurrentGRPCHealthCheckRequests(ctx, 10)
@@ -58,7 +56,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should handle connection timeout gracefully",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientWithTimeout(ctx, grpcServerAddr, 1*time.Second)
+				steps.GivenGRPCClientWithTimeout(ctx, ServerURL, 1*time.Second)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeGRPCHealthCheckRequest(ctx)
@@ -72,7 +70,7 @@ func TestGRPCHealthService(t *testing.T) {
 			Description: "Should handle gRPC metadata correctly",
 			Given: func(ctx *steps.TestContext) {
 				steps.GivenServerIsRunning(ctx)
-				steps.GivenGRPCClientIsConnected(ctx, grpcServerAddr)
+				steps.GivenGRPCClientIsConnected(ctx, ServerURL)
 			},
 			When: func(ctx *steps.TestContext) {
 				steps.WhenIMakeGRPCHealthCheckRequestWithMetadata(ctx)
@@ -85,7 +83,7 @@ func TestGRPCHealthService(t *testing.T) {
 	}
 
 	// Run all BDD scenarios
-	steps.RunBDDScenarios(t, serverURL, scenarios)
+	steps.RunBDDScenarios(t, ServerURL, scenarios)
 }
 
 // TestGRPCHealthServiceTableDriven demonstrates table-driven BDD tests for gRPC
@@ -132,7 +130,7 @@ func TestGRPCHealthServiceTableDriven(t *testing.T) {
 		Given: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(GRPCTestCase)
 			steps.GivenServerIsRunning(ctx)
-			steps.GivenGRPCClientWithTimeout(ctx, grpcServerAddr, testCase.Timeout)
+			steps.GivenGRPCClientWithTimeout(ctx, ServerURL, testCase.Timeout)
 		},
 		When: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(GRPCTestCase)
@@ -151,7 +149,7 @@ func TestGRPCHealthServiceTableDriven(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, tableDrivenTest, testCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, tableDrivenTest, testCases)
 }
 
 // TestGRPCHealthServiceConcurrency tests concurrent gRPC request scenarios
@@ -185,7 +183,7 @@ func TestGRPCHealthServiceConcurrency(t *testing.T) {
 		Name: "gRPC concurrency scenarios",
 		Given: func(ctx *steps.TestContext, testData interface{}) {
 			steps.GivenServerIsRunning(ctx)
-			steps.GivenGRPCClientIsConnected(ctx, grpcServerAddr)
+			steps.GivenGRPCClientIsConnected(ctx, ServerURL)
 		},
 		When: func(ctx *steps.TestContext, testData interface{}) {
 			testCase := testData.(ConcurrencyTestCase)
@@ -197,7 +195,7 @@ func TestGRPCHealthServiceConcurrency(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, concurrencyTest, concurrencyTestCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, concurrencyTest, concurrencyTestCases)
 }
 
 // TestGRPCHealthServiceDirectClient demonstrates Connect-Go client usage with different protocols
@@ -216,7 +214,7 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 
 		client := healthv1connect.NewHealthServiceClient(
 			h2Client,
-			serverURL,
+			ServerURL,
 			connect.WithGRPC(), // Use gRPC protocol
 		)
 
@@ -250,7 +248,7 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 		// Given: Connect-Go client with gRPC-Web protocol
 		client := healthv1connect.NewHealthServiceClient(
 			http.DefaultClient,
-			serverURL,
+			ServerURL,
 			connect.WithGRPCWeb(), // Use gRPC-Web protocol
 		)
 
@@ -285,7 +283,7 @@ func TestGRPCHealthServiceDirectClient(t *testing.T) {
 		// Given: Connect-Go client with default protocol
 		client := healthv1connect.NewHealthServiceClient(
 			http.DefaultClient,
-			serverURL,
+			ServerURL,
 			// No protocol specified - uses default HTTP/JSON
 		)
 

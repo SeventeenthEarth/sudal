@@ -84,7 +84,7 @@ func TestRESTDatabaseHealth(t *testing.T) {
 	}
 
 	// Run all BDD scenarios
-	steps.RunBDDScenarios(t, serverURL, scenarios)
+	steps.RunBDDScenarios(t, ServerURL, scenarios)
 }
 
 // TestRESTDatabaseHealthTableDriven demonstrates table-driven BDD tests for database health
@@ -145,7 +145,7 @@ func TestRESTDatabaseHealthTableDriven(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, tableDrivenTest, testCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, tableDrivenTest, testCases)
 }
 
 // TestRESTDatabaseHealthConcurrency tests concurrent database health requests
@@ -194,7 +194,7 @@ func TestRESTDatabaseHealthConcurrency(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, concurrencyTest, concurrencyTestCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, concurrencyTest, concurrencyTestCases)
 }
 
 // TestRESTDatabaseHealthValidation tests database health response validation
@@ -246,5 +246,5 @@ func TestRESTDatabaseHealthValidation(t *testing.T) {
 	}
 
 	// Run validation scenarios
-	steps.RunBDDScenarios(t, serverURL, validationScenarios)
+	steps.RunBDDScenarios(t, ServerURL, validationScenarios)
 }

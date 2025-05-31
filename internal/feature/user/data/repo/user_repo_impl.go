@@ -3,6 +3,8 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -121,11 +123,11 @@ func (r *userRepoImpl) GetByID(ctx context.Context, userID uuid.UUID) (*entity.U
 		return nil, entity.ErrInvalidUserID
 	}
 
-	// Execute SELECT query with userID
+	// Execute SELECT query with userID (exclude soft-deleted users)
 	query := `
 		SELECT id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at
 		FROM sudal.users
-		WHERE id = $1`
+		WHERE id = $1 AND deleted_at IS NULL`
 
 	db := r.GetDB().(interface {
 		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
@@ -156,13 +158,40 @@ func (r *userRepoImpl) GetByID(ctx context.Context, userID uuid.UUID) (*entity.U
 // Returns entity.ErrUserNotFound if no user exists with the given Firebase UID
 // Returns entity.ErrInvalidFirebaseUID if the provided Firebase UID is empty or invalid
 func (r *userRepoImpl) GetByFirebaseUID(ctx context.Context, firebaseUID string) (*entity.User, error) {
-	// TODO: Implement user retrieval by Firebase UID
-	// This should include:
-	// 1. Validate firebaseUID parameter
-	// 2. Execute SELECT query with firebaseUID
-	// 3. Scan result into User entity
-	// 4. Handle not found case appropriately
-	panic("not implemented")
+	// Validate firebaseUID parameter
+	if firebaseUID == "" {
+		return nil, entity.ErrInvalidFirebaseUID
+	}
+
+	// Execute SELECT query with firebaseUID (exclude soft-deleted users)
+	query := `
+		SELECT id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at
+		FROM sudal.users
+		WHERE firebase_uid = $1 AND deleted_at IS NULL`
+
+	db := r.GetDB().(interface {
+		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	})
+
+	row := db.QueryRowContext(ctx, query, firebaseUID)
+
+	user := &entity.User{}
+	err := row.Scan(
+		&user.ID, &user.FirebaseUID, &user.DisplayName,
+		&user.AvatarURL, &user.CandyBalance, &user.AuthProvider,
+		&user.CreatedAt, &user.UpdatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, entity.ErrUserNotFound
+		}
+		r.GetLogger().Error("Failed to get user by Firebase UID",
+			zap.String("firebase_uid", firebaseUID),
+			zap.Error(err))
+		return nil, err
+	}
+
+	return user, nil
 }
 
 // Update updates an existing user's information
@@ -170,13 +199,84 @@ func (r *userRepoImpl) GetByFirebaseUID(ctx context.Context, firebaseUID string)
 // Returns entity.ErrUserNotFound if no user exists with the given ID
 // Returns entity.ErrInvalidUserID if the provided user ID is invalid
 func (r *userRepoImpl) Update(ctx context.Context, user *entity.User) (*entity.User, error) {
-	// TODO: Implement user update logic
-	// This should include:
-	// 1. Validate user parameter and ID
-	// 2. Build dynamic UPDATE query for non-zero fields
-	// 3. Execute update with optimistic locking if needed
-	// 4. Return updated user with new timestamp
-	panic("not implemented")
+	// Validate user parameter and ID
+	if user == nil {
+		return nil, entity.ErrInvalidUserID
+	}
+	if user.ID == uuid.Nil {
+		return nil, entity.ErrInvalidUserID
+	}
+
+	// Validate display name if provided
+	if user.DisplayName != nil && !entity.IsValidDisplayName(*user.DisplayName) {
+		return nil, entity.ErrInvalidDisplayName
+	}
+
+	// Build dynamic UPDATE query for non-zero/non-nil fields
+	setParts := []string{"updated_at = CURRENT_TIMESTAMP"}
+	args := []any{}
+	argIndex := 1
+
+	if user.DisplayName != nil {
+		setParts = append(setParts, fmt.Sprintf("display_name = $%d", argIndex))
+		args = append(args, user.DisplayName)
+		argIndex++
+	}
+
+	if user.AvatarURL != nil {
+		setParts = append(setParts, fmt.Sprintf("avatar_url = $%d", argIndex))
+		args = append(args, user.AvatarURL)
+		argIndex++
+	}
+
+	if user.CandyBalance != 0 {
+		setParts = append(setParts, fmt.Sprintf("candy_balance = $%d", argIndex))
+		args = append(args, user.CandyBalance)
+		argIndex++
+	}
+
+	if user.AuthProvider != "" {
+		setParts = append(setParts, fmt.Sprintf("auth_provider = $%d", argIndex))
+		args = append(args, user.AuthProvider)
+		argIndex++
+	}
+
+	// Add user ID as the final argument for WHERE clause
+	args = append(args, user.ID)
+
+	query := fmt.Sprintf(`
+		UPDATE sudal.users
+		SET %s
+		WHERE id = $%d
+		RETURNING id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at`,
+		strings.Join(setParts, ", "), argIndex)
+
+	db := r.GetDB().(interface {
+		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	})
+
+	row := db.QueryRowContext(ctx, query, args...)
+
+	updatedUser := &entity.User{}
+	err := row.Scan(
+		&updatedUser.ID, &updatedUser.FirebaseUID, &updatedUser.DisplayName,
+		&updatedUser.AvatarURL, &updatedUser.CandyBalance, &updatedUser.AuthProvider,
+		&updatedUser.CreatedAt, &updatedUser.UpdatedAt)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, entity.ErrUserNotFound
+		}
+		r.GetLogger().Error("Failed to update user",
+			zap.String("user_id", user.ID.String()),
+			zap.Error(err))
+		return nil, err
+	}
+
+	r.GetLogger().Info("User updated successfully",
+		zap.String("user_id", updatedUser.ID.String()))
+
+	return updatedUser, nil
 }
 
 // UpdateCandyBalance updates a user's candy balance by the specified amount
@@ -199,13 +299,51 @@ func (r *userRepoImpl) UpdateCandyBalance(ctx context.Context, userID uuid.UUID,
 // Returns entity.ErrUserNotFound if no user exists with the given ID
 // Note: Consider implementing soft delete for data retention and audit purposes
 func (r *userRepoImpl) Delete(ctx context.Context, userID uuid.UUID) error {
-	// TODO: Implement user deletion (preferably soft delete)
-	// This should include:
-	// 1. Validate userID parameter
-	// 2. Check if user exists
-	// 3. Perform soft delete (set deleted_at timestamp)
-	// 4. Consider cleanup of related data
-	panic("not implemented")
+	// Validate userID parameter
+	if userID == uuid.Nil {
+		return entity.ErrInvalidUserID
+	}
+
+	// Perform soft delete by setting deleted_at timestamp
+	// Only update if the user exists and is not already soft-deleted
+	query := `
+		UPDATE sudal.users
+		SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND deleted_at IS NULL`
+
+	db := r.GetDB().(interface {
+		ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	})
+
+	result, err := db.ExecContext(ctx, query, userID)
+	if err != nil {
+		r.GetLogger().Error("Failed to soft delete user",
+			zap.String("user_id", userID.String()),
+			zap.Error(err))
+		return err
+	}
+
+	// Check if any rows were affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		r.GetLogger().Error("Failed to get rows affected for user deletion",
+			zap.String("user_id", userID.String()),
+			zap.Error(err))
+		return err
+	}
+
+	if rowsAffected == 0 {
+		// No rows were updated, which means either:
+		// 1. User doesn't exist, or
+		// 2. User is already soft-deleted
+		// In both cases, we return ErrUserNotFound
+		return entity.ErrUserNotFound
+	}
+
+	r.GetLogger().Info("User soft deleted successfully",
+		zap.String("user_id", userID.String()))
+
+	return nil
 }
 
 // Exists checks if a user exists with the given Firebase UID
@@ -218,8 +356,8 @@ func (r *userRepoImpl) Exists(ctx context.Context, firebaseUID string) (bool, er
 		return false, entity.ErrInvalidFirebaseUID
 	}
 
-	// Execute COUNT query
-	query := `SELECT COUNT(1) FROM sudal.users WHERE firebase_uid = $1`
+	// Execute COUNT query (exclude soft-deleted users)
+	query := `SELECT COUNT(1) FROM sudal.users WHERE firebase_uid = $1 AND deleted_at IS NULL`
 
 	db := r.GetDB().(interface {
 		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
@@ -245,22 +383,91 @@ func (r *userRepoImpl) Exists(ctx context.Context, firebaseUID string) (bool, er
 // Returns an empty slice if no users are found (not an error)
 // This method is primarily for administrative purposes
 func (r *userRepoImpl) List(ctx context.Context, offset, limit int) ([]*entity.User, error) {
-	// TODO: Implement paginated user listing
-	// This should include:
-	// 1. Validate offset and limit parameters
-	// 2. Execute SELECT query with LIMIT and OFFSET
-	// 3. Scan results into User entities slice
-	// 4. Return empty slice if no results (not an error)
-	panic("not implemented")
+	// Validate offset and limit parameters
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 {
+		limit = 50 // Default reasonable limit
+	}
+	if limit > 1000 {
+		limit = 1000 // Maximum reasonable limit
+	}
+
+	// Execute SELECT query with LIMIT and OFFSET (exclude soft-deleted users)
+	query := `
+		SELECT id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at
+		FROM sudal.users
+		WHERE deleted_at IS NULL
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2`
+
+	db := r.GetDB().(interface {
+		QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	})
+
+	rows, err := db.QueryContext(ctx, query, limit, offset)
+	if err != nil {
+		r.GetLogger().Error("Failed to list users",
+			zap.Int("offset", offset),
+			zap.Int("limit", limit),
+			zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close() // nolint:errcheck
+
+	var users []*entity.User
+	for rows.Next() {
+		user := &entity.User{}
+		err := rows.Scan(
+			&user.ID, &user.FirebaseUID, &user.DisplayName,
+			&user.AvatarURL, &user.CandyBalance, &user.AuthProvider,
+			&user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			r.GetLogger().Error("Failed to scan user row",
+				zap.Error(err))
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	// Check for errors from iterating over rows
+	if err = rows.Err(); err != nil {
+		r.GetLogger().Error("Error iterating over user rows",
+			zap.Error(err))
+		return nil, err
+	}
+
+	r.GetLogger().Debug("Users listed successfully",
+		zap.Int("count", len(users)),
+		zap.Int("offset", offset),
+		zap.Int("limit", limit))
+
+	return users, nil
 }
 
 // Count returns the total number of users in the system
 // This is useful for pagination calculations and administrative dashboards
 func (r *userRepoImpl) Count(ctx context.Context) (int64, error) {
-	// TODO: Implement user count
-	// This should include:
-	// 1. Execute COUNT(*) query
-	// 2. Return total count as int64
-	// 3. Handle database errors appropriately
-	panic("not implemented")
+	// Execute COUNT query (exclude soft-deleted users)
+	query := `SELECT COUNT(*) FROM sudal.users WHERE deleted_at IS NULL`
+
+	db := r.GetDB().(interface {
+		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	})
+
+	row := db.QueryRowContext(ctx, query)
+
+	var count int64
+	err := row.Scan(&count)
+	if err != nil {
+		r.GetLogger().Error("Failed to count users",
+			zap.Error(err))
+		return 0, err
+	}
+
+	r.GetLogger().Debug("User count retrieved successfully",
+		zap.Int64("count", count))
+
+	return count, nil
 }

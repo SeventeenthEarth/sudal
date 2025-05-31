@@ -29,6 +29,35 @@ type CacheTestContext struct {
 	mu            interface{} // Will be sync.Mutex but avoiding import
 }
 
+// HTTPTestContext holds HTTP-specific test context
+type HTTPTestContext struct {
+	RequestEndpoint    string
+	RequestContentType string
+	RequestBody        string
+	LastResponse       *http.Response
+	LastResponseBody   []byte
+	LastError          error
+}
+
+// UserTestContext holds user-specific test context
+type UserTestContext struct {
+	UserClient                interface{} // Will be userv1connect.UserServiceClient but avoiding import cycle
+	RegisterUserRequest       interface{} // Will be *userv1.RegisterUserRequest
+	RegisterUserResponse      interface{} // Will be *connect.Response[userv1.RegisterUserResponse]
+	GetUserProfileRequest     interface{} // Will be *userv1.GetUserProfileRequest
+	GetUserProfileResponse    interface{} // Will be *connect.Response[userv1.UserProfile]
+	UpdateUserProfileRequest  interface{} // Will be *userv1.UpdateUserProfileRequest
+	UpdateUserProfileResponse interface{} // Will be *connect.Response[userv1.UpdateUserProfileResponse]
+	LastError                 error
+	CreatedUserID             string
+	TestFirebaseUID           string
+	TestDisplayName           string
+	TestAvatarURL             string
+	Protocol                  string
+	Timeout                   time.Duration
+	ConcurrentResults         []interface{} // Will be []UserResult but avoiding import cycle
+}
+
 // TestContext holds the context for BDD test scenarios
 type TestContext struct {
 	T                 *testing.T
@@ -54,6 +83,10 @@ type TestContext struct {
 	ConnectGoConcurrentResults []ConnectGoResult
 	// Cache related fields
 	CacheTestContext *CacheTestContext
+	// User related fields
+	UserTestContext *UserTestContext
+	// HTTP related fields
+	HTTPTestContext *HTTPTestContext
 }
 
 // ConcurrentResult holds the result of a concurrent request

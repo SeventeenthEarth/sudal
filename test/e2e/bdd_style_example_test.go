@@ -83,7 +83,7 @@ func TestBDDStyleExample(t *testing.T) {
 	}
 
 	// Run all BDD scenarios
-	steps.RunBDDScenarios(t, serverURL, scenarios)
+	steps.RunBDDScenarios(t, ServerURL, scenarios)
 }
 
 // TestBDDStyleTableDriven demonstrates table-driven BDD tests with pure BDD style
@@ -142,5 +142,5 @@ func TestBDDStyleTableDriven(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, tableDrivenTest, testCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, tableDrivenTest, testCases)
 }

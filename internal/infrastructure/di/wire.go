@@ -4,9 +4,10 @@
 package di
 
 import (
+	"os"
+
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
-	"os"
 
 	"github.com/google/wire"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
@@ -14,6 +15,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/repo"
 
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/interface/connect"
+	userApplication "github.com/seventeenthearth/sudal/internal/feature/user/application"
 	userRepo "github.com/seventeenthearth/sudal/internal/feature/user/data/repo"
 	userDomainRepo "github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/interface/connect"
@@ -81,7 +83,8 @@ var UserSet = wire.NewSet(
 	ProvidePostgresManager,
 	ProvideLogger,
 	ProvideUserRepository,
-	userConnect.NewUserService,
+	ProvideUserService,
+	userConnect.NewUserHandler,
 )
 
 // ProvideConfig provides the application configuration
@@ -128,6 +131,15 @@ func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logge
 		return nil
 	}
 	return userRepo.NewUserRepoImpl(pgManager.GetDB(), logger)
+}
+
+// ProvideUserService provides a user application service instance
+func ProvideUserService(repository userDomainRepo.UserRepository) userApplication.UserService {
+	// Check if we're in test environment and return nil to use mock
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	return userApplication.NewService(repository)
 }
 
 // isTestEnvironmentWire checks if we're running in a test environment for wire
@@ -181,8 +193,8 @@ func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
 	return nil, nil // Wire will fill this in
 }
 
-// InitializeUserConnectHandler initializes and returns a Connect-go user service handler (gRPC only)
-func InitializeUserConnectHandler() (*userConnect.UserService, error) {
+// InitializeUserConnectHandler initializes and returns a Connect-go user handler (gRPC only)
+func InitializeUserConnectHandler() (*userConnect.UserHandler, error) {
 	wire.Build(UserSet)
 	return nil, nil // Wire will fill this in
 }

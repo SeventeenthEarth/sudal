@@ -56,13 +56,13 @@ func TestRESTMonitoring(t *testing.T) {
 	}
 
 	// Run all BDD scenarios
-	steps.RunBDDScenarios(t, serverURL, scenarios)
+	steps.RunBDDScenarios(t, ServerURL, scenarios)
 }
 
 // TestRESTMonitoringMultipleEndpoints tests multiple monitoring endpoints accessibility
 func TestRESTMonitoringMultipleEndpoints(t *testing.T) {
 	t.Run("Multiple monitoring endpoints are accessible", func(t *testing.T) {
-		ctx := steps.NewTestContext(t, serverURL)
+		ctx := steps.NewTestContext(t, ServerURL)
 
 		// Given
 		steps.GivenServerIsRunning(ctx)
@@ -129,7 +129,7 @@ func TestRESTMonitoringTableDriven(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, tableDrivenTest, testCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, tableDrivenTest, testCases)
 }
 
 // TestRESTMonitoringConcurrency tests concurrent monitoring requests
@@ -190,7 +190,7 @@ func TestRESTMonitoringConcurrency(t *testing.T) {
 		},
 	}
 
-	steps.RunTableDrivenBDDTest(t, serverURL, concurrencyTest, concurrencyTestCases)
+	steps.RunTableDrivenBDDTest(t, ServerURL, concurrencyTest, concurrencyTestCases)
 }
 
 // TestRESTMonitoringPerformance tests monitoring endpoint performance characteristics
@@ -230,5 +230,5 @@ func TestRESTMonitoringPerformance(t *testing.T) {
 	}
 
 	// Run performance scenarios
-	steps.RunBDDScenarios(t, serverURL, performanceScenarios)
+	steps.RunBDDScenarios(t, ServerURL, performanceScenarios)
 }

@@ -15,7 +15,7 @@ GOLANGCILINT := $(shell command -v golangci-lint 2> /dev/null)
 GINKGO := $(shell command -v ginkgo 2> /dev/null)
 MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 
-.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only test.e2e.run fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
+.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
 
 .DEFAULT_GOAL := help
 
@@ -28,6 +28,9 @@ help: ## Show this help message
 	@echo "  make install-tools # Install development tools"
 	@echo "  make generate      # Generate all code"
 	@echo "  make test          # Run all tests"
+	@echo "  make test.e2e      # Run all godog E2E tests"
+	@echo "  make test.e2e.only # Run specific godog E2E scenarios"
+	@echo "  VERBOSE=1 make test.e2e  # Run with verbose output"
 	@echo "  make run           # Run the application"
 	@echo ""
 	@echo "📋 Available targets:"
@@ -120,25 +123,23 @@ endif
 	@echo "✅ Integration tests completed - coverage report: coverage.int.html"
 	@echo "ℹ️  Note: Infrastructure coverage is not measured because mock infrastructure is used."
 
-test.e2e: ## Run end-to-end tests
-	@echo "🧪 Running end-to-end tests..."
-	@./scripts/run-e2e-tests.sh
-	@echo "✅ End-to-end tests completed"
-
-test.e2e.only: ## Run end-to-end tests without server check
-	@echo "🧪 Running end-to-end tests (skipping server check)..."
-	@./scripts/run-e2e-tests.sh --skip-check
-	@echo "✅ End-to-end tests completed"
-
-test.e2e.run: ## Run specific E2E test (usage: make test.e2e.run TEST=TestName)
-	@if [ -z "$(TEST)" ]; then \
-		echo "❌ TEST parameter is required"; \
-		echo "Usage: make test.e2e.run TEST=TestConnectGoHealthService"; \
-		exit 1; \
+test.e2e: ## Run all godog E2E tests (usage: make test.e2e [VERBOSE=1])
+	@echo "🧪 Running all godog E2E tests..."
+	@if [ "$(VERBOSE)" = "1" ]; then \
+		./scripts/run-e2e-tests.sh -v; \
+	else \
+		./scripts/run-e2e-tests.sh; \
 	fi
-	@echo "🧪 Running specific E2E test: $(TEST)..."
-	@./scripts/run-e2e-tests.sh $(TEST)
-	@echo "✅ E2E test $(TEST) completed"
+	@echo "✅ All godog E2E tests completed"
+
+test.e2e.only: ## Run specific godog E2E scenarios (usage: make test.e2e.only TAGS=@health SCENARIO="Basic health check" [VERBOSE=1])
+	@echo "🧪 Running specific godog E2E scenarios..."
+	@if [ "$(VERBOSE)" = "1" ]; then \
+		./scripts/run-e2e-tests.sh -v --only $(TAGS) $(SCENARIO); \
+	else \
+		./scripts/run-e2e-tests.sh --only $(TAGS) $(SCENARIO); \
+	fi
+	@echo "✅ Specific godog E2E scenarios completed"
 
 # Code quality targets
 fmt: ## Format Go code

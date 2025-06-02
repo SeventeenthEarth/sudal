@@ -184,7 +184,7 @@ The project has three types of tests:
 
 1. **Unit Tests**: Test individual components in isolation (Go + Ginkgo/Gomega)
 2. **Integration Tests**: Test interactions between components (Go + Ginkgo/Gomega)
-3. **End-to-End Tests**: Test the entire system with a running server (Go + testify BDD style)
+3. **End-to-End Tests**: Test the entire system with a running server (Godog + Gherkin BDD style)
 
 To run all tests:
 
@@ -194,16 +194,17 @@ make test
 
 ### End-to-End Tests
 
-E2E tests are implemented using Go with testify in a BDD (Behavior Driven Development) style. These tests verify the complete functionality by making actual HTTP requests to a running server.
+E2E tests are implemented using **Godog** (Cucumber for Go) with **Gherkin** syntax in a true BDD (Behavior Driven Development) style. These tests verify the complete functionality by making actual HTTP/gRPC requests to a running server.
 
-#### Go BDD Style E2E Tests (Current)
+#### Godog BDD Style E2E Tests
 
-The E2E tests use a custom BDD framework built on top of Go's standard testing package and testify:
+The E2E tests use the Godog framework with Gherkin feature files:
 
-- **Given-When-Then Structure**: Clear BDD scenario organization
-- **Reusable Step Functions**: Located in `test/e2e/steps/` directory
-- **Table-Driven Tests**: Support for parameterized BDD scenarios
-- **Concurrent Testing**: Built-in support for testing concurrent requests
+- **Gherkin Feature Files**: Human-readable scenarios in `.feature` files
+- **Given-When-Then Structure**: Clear BDD scenario organization with natural language
+- **Step Definitions**: Located in `test/e2e/steps/` directory
+- **Scenario Outlines**: Support for parameterized scenarios with Examples tables
+- **Protocol Separation**: Separate feature files for gRPC positive and REST negative tests
 
 #### Prerequisites for E2E Tests
 
@@ -215,31 +216,41 @@ The E2E tests use a custom BDD framework built on top of Go's standard testing p
 #### Running E2E Tests
 
 ```bash
-# Run E2E tests using Make (recommended)
+# Run all godog E2E tests (recommended)
 make test.e2e
 
-# Run only E2E tests without preparation steps
+# Run E2E tests without preparation steps
 make test.e2e.only
 
-# Or run directly with go test
-go test -v ./test/e2e
+# Run specific tests by tags
+make test.e2e.only TAGS=@health
+make test.e2e.only TAGS=@user
+make test.e2e.only TAGS=@rest
+make test.e2e.only TAGS=@grpc
+
+# Run with verbose output
+VERBOSE=1 make test.e2e
+
+# Run specific scenarios
+make test.e2e.only TAGS=@health SCENARIO="Basic health check"
 ```
 
 #### E2E Test Features
 
-- **BDD Style**: Tests written with Given-When-Then structure for better readability
-- **Multiple Protocols**: Tests both Connect-Go and HTTP/JSON endpoints
-- **Concurrent Testing**: Includes performance tests with concurrent requests
-- **Error Handling**: Tests various error scenarios and edge cases
-- **Automatic Server Detection**: Verifies server availability before running tests
-- **Table-Driven Tests**: Support for parameterized test scenarios
-- **Reusable Steps**: Step functions organized in `test/e2e/steps/` for reusability
+- **Gherkin Syntax**: Human-readable feature files with natural language scenarios
+- **Tag-Based Execution**: Filter tests by protocol (`@rest`, `@grpc`), domain (`@health`, `@user`), or type (`@positive`, `@negative`)
+- **Scenario Outlines**: Parameterized tests using Examples tables to minimize duplication
+- **Step Definitions**: Reusable step functions in Go for Given/When/Then statements
+- **Protocol Coverage**: Tests both REST health endpoints and gRPC business logic
+- **Concurrent Testing**: Built-in support for testing concurrent requests and performance validation
+- **Error Scenarios**: Comprehensive error handling and edge case testing
+- **Domain Organization**: Feature files organized by service domain (health, user) and protocol
 
 For detailed information about testing, including:
 - Running specific test types
 - Test structure and organization
 - Testing strategy and tools
-- Writing BDD tests with Go testify
+- Writing BDD tests with Godog and Gherkin
 - End-to-end testing setup and usage
 
 See the [Testing Documentation](docs/test.md).

@@ -1,21 +1,33 @@
 # E2E Testing Guide
 
-This comprehensive guide covers End-to-End (E2E) testing for the Social Quiz Platform backend, implemented using Go with a custom BDD framework optimized for gRPC testing.
+This comprehensive guide covers End-to-End (E2E) testing for the Social Quiz Platform backend, implemented using **Godog v0.14** with **Gherkin** syntax for true BDD (Behavior Driven Development) style testing.
 
 ## Overview
 
-The E2E testing framework provides a pure BDD (Behavior Driven Development) style testing approach that maintains the Given-When-Then structure while leveraging Go's type safety and performance benefits. Tests verify the complete functionality of the service by making actual HTTP/gRPC requests to a running server instance.
+The E2E testing framework uses **Godog** (Cucumber for Go) with **Gherkin** feature files to provide human-readable test scenarios. Tests verify the complete functionality of the service by making actual HTTP/gRPC requests to a running server instance.
+
+### Migration from Custom BDD Framework
+
+The project has migrated from a custom Go BDD framework to **Godog v0.14 + Gherkin**, providing:
+
+- **Human-readable scenarios**: Gherkin syntax with natural language
+- **Protocol separation**: Separate feature files for gRPC positive and REST negative tests
+- **Scenario Outlines**: Parameterized tests using Examples tables to minimize duplication
+- **Step definitions**: Reusable step functions in Go for Given/When/Then statements
+- **Comprehensive coverage**: All original test scenarios preserved and enhanced
 
 ## Quick Start
 
 ### Prerequisites
 
 1. **Running Server**: The server must be running on the specified port (default: 8080)
+
    ```bash
    make run
    ```
 
 2. **Go Dependencies**: Ensure all dependencies are installed
+
    ```bash
    go mod tidy
    ```
@@ -23,295 +35,302 @@ The E2E testing framework provides a pure BDD (Behavior Driven Development) styl
 ### Running Tests
 
 ```bash
-# Run all E2E tests (recommended)
+# Run all godog E2E tests (recommended)
 make test.e2e
 
-# Run E2E tests without server check
-make test.e2e.only
+# Run with verbose output
+VERBOSE=1 make test.e2e
 
-# Run specific E2E test
-make test.e2e.run TEST=TestGRPCHealthService
+# Run specific scenarios by tags
+make test.e2e.only TAGS=@health
+
+# Run specific scenarios by tags and scenario name
+make test.e2e.only TAGS=@health SCENARIO="Basic health check"
 
 # Run directly with go test
 go test -v ./test/e2e
 
-# Run specific test with go test
-go test -v ./test/e2e -run TestConnectGoHealthService
+# Run with specific tags using godog
+go test ./test/e2e -godog.tags="@rest"
+go test ./test/e2e -godog.tags="@grpc"
+go test ./test/e2e -godog.tags="@health"
+go test ./test/e2e -godog.tags="@user"
 
-# Run with race detection
-go test -v -race ./test/e2e
+# Run with protocol-specific environment variables
+HEALTH_PROTOCOL=rest go test ./test/e2e
+USER_PROTOCOL=grpc go test ./test/e2e
 ```
 
 ## Architecture
 
 ### Directory Structure
 
-```
+```text
 test/e2e/
-├── steps/                              # Reusable step functions
-│   ├── bdd_helpers.go                  # BDD framework and test context
-│   ├── common_steps.go                 # Common Given/When/Then steps
-│   ├── connect_steps.go                # Connect-Go specific steps
-│   ├── connect_grpc_steps.go           # gRPC protocol steps
-│   ├── grpc_steps.go                   # gRPC service steps
-│   ├── user_steps.go                   # User service steps
-│   ├── cache_steps.go                  # Cache utility steps
-│   └── database_steps.go               # Database health specific steps
-├── connect_protocols_test.go           # Tests using both gRPC and REST protocols
-├── grpc_health_service_test.go         # Tests using only gRPC protocol
-├── grpc_user_service_test.go           # Tests using only gRPC protocol
-├── rest_database_health_test.go        # Tests using only REST protocol
-├── rest_health_service_test.go         # Tests using only REST protocol
-├── rest_monitoring_test.go             # Tests using only REST protocol
-├── rest_user_service_test.go           # Tests using only REST protocol
-├── cache_utility_test.go               # Cache utility tests
-└── const.go                            # Test constants
+├── main_test.go                        # Test harness with TestMain and godog setup
+├── features/                           # Gherkin feature files
+│   ├── health/                         # Health-related features
+│   │   ├── rest.feature               # REST health endpoints
+│   │   └── grpc.feature               # gRPC health endpoints
+│   └── user/                          # User-related features
+│       └── grpc.feature               # gRPC user service
+└── steps/                             # Step definitions
+    ├── hooks.go                       # Common hooks and initialization
+    ├── health_steps.go                # Health-specific step definitions
+    └── user_steps.go                  # User-specific step definitions
 ```
 
 ### Core Components
 
-#### 1. BDD Helpers (`steps/bdd_helpers.go`)
+#### 1. Feature Files (Gherkin)
 
-- **TestContext**: Holds test state including HTTP client, responses, and errors
-- **BDDScenario**: Represents a Given-When-Then scenario
-- **TableDrivenBDDTest**: Support for parameterized test scenarios
-- **Helper Methods**: Common assertions and utilities
+Feature files use **Gherkin syntax** to define human-readable test scenarios:
 
-#### 2. Step Functions
+- **Background**: Common setup steps shared across scenarios
+- **Scenario**: Individual test cases with Given-When-Then structure
+- **Scenario Outline**: Parameterized tests with Examples tables
+- **Tags**: Organize tests by protocol (@rest, @grpc), domain (@health, @user), and type (@positive, @negative)
 
-Step functions are organized by feature area:
+#### 2. Step Definitions (Go)
 
-- **Common Steps** (`common_steps.go`): HTTP requests, status checks, JSON validation
-- **Connect Steps** (`connect_steps.go`): Connect-Go protocol specific operations
-- **gRPC Steps** (`grpc_steps.go`): gRPC service operations
+Step definitions implement the Gherkin steps in Go:
+
+- **Health Steps** (`health_steps.go`): Health service specific operations
 - **User Steps** (`user_steps.go`): User service specific operations
-- **Cache Steps** (`cache_steps.go`): Cache utility operations
-- **Database Steps** (`database_steps.go`): Database health and connection statistics
+- **Hooks** (`hooks.go`): Common setup, teardown, and context management
 
-## Writing BDD Tests
+#### 3. Test Harness (`main_test.go`)
 
-### Basic BDD Scenario
+- **TestMain**: Handles protocol-specific test execution
+- **TestFeatures**: Main godog test runner with configurable options
+- **Protocol Support**: Environment variable-based protocol selection
 
-```go
-func TestExample(t *testing.T) {
-    scenario := steps.BDDScenario{
-        Name: "Health check responds correctly",
-        Given: func(ctx *steps.TestContext) {
-            steps.GivenServerIsRunning(ctx)
-        },
-        When: func(ctx *steps.TestContext) {
-            steps.WhenIMakeGETRequest(ctx, "/healthz")
-        },
-        Then: func(ctx *steps.TestContext) {
-            ctx.TheResponseStatusCodeShouldBe(200)
-            ctx.TheJSONResponseShouldContainField("status", "healthy")
-        },
-    }
+## Features Covered
 
-    steps.RunBDDScenario(t, serverURL, scenario)
-}
+### Health Service
+
+#### REST Endpoints
+- **`GET /api/ping`** - Simple health check
+- **`GET /api/healthz`** - Comprehensive health check
+- **`GET /api/health/database`** - Database connectivity check
+
+#### gRPC Endpoints
+- **`grpc.health.v1.Health/Check`** - gRPC health check (via HTTP/2 on port 8080)
+
+### User Service
+
+#### gRPC Endpoints
+- **`user.v1.UserService/RegisterUser`** - User registration
+- **`user.v1.UserService/GetUserProfile`** - User profile retrieval
+- **`user.v1.UserService/UpdateUserProfile`** - User profile updates
+
+## Writing Gherkin Feature Files
+
+### Basic Scenario
+
+```gherkin
+@rest @health @positive
+Feature: REST Health Endpoints
+  As a monitoring system
+  I want to check the health of the service via REST endpoints
+  So that I can ensure the service is running properly
+
+  Background:
+    Given the server is running
+
+  Scenario: Health endpoint responds correctly
+    When I make a GET request to "/api/healthz"
+    Then the HTTP status should be 200
+    And the response should contain status "healthy"
 ```
 
-### Table-Driven BDD Tests
+### Scenario Outline with Examples
 
-```go
-func TestTableDriven(t *testing.T) {
-    type TestCase struct {
-        Endpoint       string
-        ExpectedStatus int
-        ExpectedValue  string
-    }
+```gherkin
+@rest @health @positive
+Scenario Outline: Health endpoints respond correctly
+  When I make a GET request to "<endpoint>"
+  Then the HTTP status should be <status>
+  And the response should contain status "<expected_status>"
 
-    testCases := []interface{}{
-        TestCase{"/ping", 200, "ok"},
-        TestCase{"/healthz", 200, "healthy"},
-    }
-
-    test := steps.TableDrivenBDDTest{
-        Name: "Monitoring endpoints",
-        Given: func(ctx *steps.TestContext, testData interface{}) {
-            steps.GivenServerIsRunning(ctx)
-        },
-        When: func(ctx *steps.TestContext, testData interface{}) {
-            testCase := testData.(TestCase)
-            steps.WhenIMakeGETRequest(ctx, testCase.Endpoint)
-        },
-        Then: func(ctx *steps.TestContext, testData interface{}) {
-            testCase := testData.(TestCase)
-            ctx.TheResponseStatusCodeShouldBe(testCase.ExpectedStatus)
-            ctx.TheJSONResponseShouldContainField("status", testCase.ExpectedValue)
-        },
-    }
-
-    steps.RunTableDrivenBDDTest(t, serverURL, test, testCases)
-}
+  Examples:
+    | endpoint             | status | expected_status |
+    | /api/ping           | 200    | ok              |
+    | /api/healthz        | 200    | healthy         |
+    | /api/health/database| 200    | healthy         |
 ```
 
-### Multiple Scenarios
+### gRPC Feature Example
 
-```go
-func TestMultipleScenarios(t *testing.T) {
-    scenarios := []steps.BDDScenario{
-        {
-            Name: "Scenario 1",
-            Given: func(ctx *steps.TestContext) { /* ... */ },
-            When:  func(ctx *steps.TestContext) { /* ... */ },
-            Then:  func(ctx *steps.TestContext) { /* ... */ },
-        },
-        {
-            Name: "Scenario 2",
-            Given: func(ctx *steps.TestContext) { /* ... */ },
-            When:  func(ctx *steps.TestContext) { /* ... */ },
-            Then:  func(ctx *steps.TestContext) { /* ... */ },
-        },
-    }
+```gherkin
+@grpc @user @positive
+Feature: gRPC User Service
+  As a gRPC client
+  I want to manage user profiles via gRPC protocol
+  So that I can register users and retrieve profiles
 
-    steps.RunBDDScenarios(t, serverURL, scenarios)
-}
+  Background:
+    Given the server is running
+    And the gRPC user client is connected
+
+  Scenario: User registration with valid data should succeed
+    Given I have valid user registration data
+    When I register a user with valid data
+    Then the user registration should succeed
+    And the response should contain a valid user ID
 ```
 
-## Available Step Functions
+## Available Step Definitions
 
-### Common Steps
+### Health Service Steps
 
 #### Given Steps
-- `GivenServerIsRunning(ctx)`: Ensures server is accessible
+- `the server is running` - Verifies server accessibility
+- `the gRPC client is connected` - Establishes gRPC connection
+- `the gRPC client is connected with timeout "5s"` - Establishes gRPC connection with custom timeout
+- `the Connect-Go client is configured with "grpc-web" protocol` - Sets up Connect-Go client
 
 #### When Steps
-- `WhenIMakeGETRequest(ctx, endpoint)`: Makes GET request
-- `WhenIMakePOSTRequest(ctx, endpoint, contentType, body)`: Makes POST request
-- `WhenIMakeConcurrentRequests(ctx, numRequests, endpoint)`: Makes concurrent requests
+- `I call the "REST|gRPC" health endpoint` - Makes health request via specified protocol
+- `I make a GET request to "/path"` - Makes HTTP GET request
+- `I make a Connect-Go health request` - Makes Connect-Go style request
+- `I make a gRPC health check request` - Makes gRPC health check
+- `I make a gRPC health check request with metadata` - Makes gRPC request with metadata
+- `I make 5 concurrent "REST|gRPC" health requests` - Makes concurrent requests
 
-#### Then Steps (BDD Style)
-- `ctx.TheResponseStatusCodeShouldBe(expectedStatus)`: Checks HTTP status in natural language
-- `ctx.TheJSONResponseShouldContainField("status", expectedValue)`: Checks JSON field value
-- `ctx.TheResponseShouldNotBeEmpty()`: Validates response is not empty
-- `ctx.TheContentTypeShouldBe(expectedContentType)`: Checks Content-Type header
-- `ctx.TheJSONResponseShouldHaveStructure([]string{"field1", "field2"})`: Validates JSON structure
-- `ctx.AllConcurrentRequestsShouldSucceed()`: Validates all concurrent requests succeeded
+#### Then Steps
+- `the status should be healthy` - Validates healthy status (both protocols)
+- `the HTTP status should be 200` - Validates HTTP status code
+- `the response should contain status "healthy"` - Validates JSON status field
+- `the response should contain field "field" with value "value"` - Validates JSON field
+- `the gRPC response should indicate serving status` - Validates gRPC SERVING status
+- `the gRPC response should not be empty` - Validates gRPC response exists
+- `the gRPC response should contain metadata` - Validates gRPC metadata
+- `all concurrent "REST|gRPC" requests should succeed` - Validates concurrent results
 
-### Connect-Go Steps
+### User Service Steps
+
+#### Given Steps
+- `the gRPC user client is connected` - Establishes gRPC user client connection
+- `the gRPC-Web user client is connected` - Establishes gRPC-Web user client connection
+- `I have valid user registration data` - Sets up valid registration data
+- `I have invalid user registration data with empty Firebase UID` - Sets up invalid data
+- `an existing user is registered` - Creates a test user for subsequent operations
 
 #### When Steps
-- `WhenIMakeHealthCheckRequestUsingConnectGo(ctx)`: Connect-Go health check
-- `WhenIMakeHealthCheckRequestWithInvalidContentType(ctx)`: Invalid content type test
-- `WhenIMakeConcurrentHealthCheckRequests(ctx, numRequests)`: Concurrent Connect-Go requests
+- `I register a user with valid data` - Performs user registration
+- `I register a user with the same Firebase UID` - Tests duplicate registration
+- `I register a user with empty Firebase UID` - Tests invalid registration
+- `I get the user profile` - Retrieves user profile
+- `I get the user profile with invalid ID` - Tests invalid profile retrieval
+- `I get the user profile with non-existent ID` - Tests non-existent profile retrieval
+- `I update the user profile with display name "..."` - Updates user profile
+- `I make 5 concurrent user registrations` - Tests concurrent registrations
 
 #### Then Steps
-- `ThenResponseShouldIndicateServingStatus(ctx)`: Checks SERVING status
-- `ThenResponseShouldContainProperConnectGoHeaders(ctx)`: Validates headers
+- `the user registration should succeed` - Validates successful registration
+- `the response should contain a valid user ID` - Validates UUID format
+- `the user registration should fail with AlreadyExists error` - Validates duplicate error
+- `the user registration should fail with InvalidArgument error` - Validates invalid data error
+- `the user profile retrieval should fail with NotFound error` - Validates not found error
+- `the user profile should be retrieved` - Validates successful profile retrieval
+- `the user profile should contain display name "..."` - Validates profile data
+- `the user profile update should succeed` - Validates successful update
+- `all concurrent user registrations should succeed` - Validates concurrent operations
 
-### gRPC Steps
+## Test Organization and Tags
 
-#### When Steps
-- `WhenIMakeGRPCHealthCheckRequest(ctx)`: gRPC health check
-- `WhenIMakeGRPCUserServiceRequest(ctx, request)`: gRPC user service requests
+### Tag-Based Organization
 
-#### Then Steps
-- `ctx.TheGRPCResponseShouldBeSuccessful()`: Validates gRPC response
-- `ctx.TheConnectGoResponseShouldBeSuccessful()`: Validates Connect-Go response
+Tests are organized using **Gherkin tags** for flexible execution:
 
-### Database Steps
+- **Protocol Tags**: `@rest`, `@grpc`, `@connect` - Filter by communication protocol
+- **Domain Tags**: `@health`, `@user` - Filter by service domain
+- **Type Tags**: `@positive`, `@negative` - Filter by test type
+- **Feature Tags**: `@concurrency` - Filter by specific features
 
-#### Then Steps
-- `ThenJSONResponseShouldContainDatabaseInformation(ctx)`: Database info validation
-- `ThenJSONResponseShouldContainConnectionStatistics(ctx)`: Connection stats validation
-- `ThenDatabaseConnectionPoolShouldBeHealthy(ctx)`: Pool health validation
-- `ThenConnectionStatisticsShouldBeValid(ctx)`: Statistics consistency validation
+### Feature File Structure
 
-### User Steps
+#### Health Features
+- **`health/rest.feature`** - REST health endpoints with positive and negative scenarios
+- **`health/grpc.feature`** - gRPC health service with timeout and metadata testing
 
-#### When Steps
-- `WhenIMakeUserRegistrationRequest(ctx, userData)`: User registration
-- `WhenIMakeUserProfileRequest(ctx, userID)`: User profile retrieval
+#### User Features
+- **`user/grpc.feature`** - gRPC user service with comprehensive CRUD operations
 
-#### Then Steps
-- `ThenUserShouldBeCreatedSuccessfully(ctx)`: User creation validation
-- `ThenUserProfileShouldBeReturned(ctx)`: Profile data validation
+### Protocol Separation
 
-### Cache Steps
+The project follows a **dual-protocol architecture**:
 
-#### When Steps
-- `WhenICacheData(ctx, key, value)`: Cache data operations
-- `WhenIRetrieveCachedData(ctx, key)`: Cache retrieval operations
+- **REST**: Health checks and monitoring only (`/api/ping`, `/api/healthz`, `/api/health/database`)
+- **gRPC**: All business logic (user management, future services)
+- **Protocol Filter Middleware**: Blocks HTTP/JSON requests to gRPC-only endpoints
 
-#### Then Steps
-- `ThenCachedDataShouldBeRetrieved(ctx)`: Cache hit validation
-- `ThenCacheShouldBeEmpty(ctx)`: Cache miss validation
+### Test Execution Patterns
 
-## Test Categories and Naming Conventions
-
-E2E tests follow a specific naming convention based on the protocol they use:
-
-- **grpc_**: Tests that use only the gRPC protocol
-- **rest_**: Tests that use only the REST protocol
-- **connect_**: Tests that use both gRPC and REST protocols
-
-This naming convention helps to clearly identify the protocol being tested and ensures consistency across the test suite.
-
-### Connect-Go Protocol Tests
-- HTTP/JSON over Connect-Go
-- gRPC protocol validation
-- Invalid content type handling
-- Protocol switching tests
-- Concurrent request testing
-
-### gRPC Service Tests
-- Health service gRPC tests
-- User service gRPC tests
-- Service method validation
-- Error handling scenarios
-
-### REST API Tests
-- Database health endpoint validation
-- Monitoring endpoint tests
-- Server ping endpoint
-- Connection statistics verification
-
-### Cache Utility Tests
-- Redis cache operations
-- Cache hit/miss scenarios
-- Cache invalidation tests
-- Concurrent cache access
+- **Positive Tests**: Verify expected functionality works correctly
+- **Negative Tests**: Verify proper error handling and edge cases
+- **Concurrent Tests**: Validate system behavior under load
+- **Protocol Tests**: Ensure protocol separation is enforced
 
 ## Test Features
 
-### BDD Style Testing
-Tests are organized using Given-When-Then structure for clear scenario definition with natural language assertions that enhance readability and maintainability.
+### Gherkin BDD Style
+Tests use **Gherkin syntax** for human-readable scenarios:
 
-### Table-Driven Tests
-Support for parameterized test scenarios with multiple test cases for comprehensive coverage.
+```gherkin
+Feature: REST Health Endpoints
+  As a monitoring system
+  I want to check the health of the service
+  So that I can ensure the service is running properly
+
+  Scenario: Health endpoint responds correctly
+    Given the server is running
+    When I make a GET request to "/api/healthz"
+    Then the HTTP status should be 200
+    And the response should contain status "healthy"
+```
+
+### Scenario Outlines
+**Parameterized testing** using Examples tables to minimize duplication:
+
+```gherkin
+Scenario Outline: Health endpoints respond correctly
+  When I make a GET request to "<endpoint>"
+  Then the HTTP status should be <status>
+  And the response should contain status "<expected_status>"
+
+  Examples:
+    | endpoint             | status | expected_status |
+    | /api/ping           | 200    | ok              |
+    | /api/healthz        | 200    | healthy         |
+    | /api/health/database| 200    | healthy         |
+```
 
 ### Concurrent Testing
-Built-in support for testing concurrent requests and performance validation:
+Built-in support for testing concurrent requests:
 
-```go
-steps.WhenIMakeConcurrentRequests(ctx, 10, "/healthz")
-steps.ThenAllRequestsShouldSucceed(ctx)
+```gherkin
+Scenario Outline: Concurrent user registrations
+  When I make <num_requests> concurrent user registrations
+  Then all concurrent user registrations should succeed
+
+  Examples:
+    | num_requests |
+    | 3            |
+    | 5            |
+    | 10           |
 ```
 
 ### Error Handling
-Comprehensive error scenario testing:
+Comprehensive error scenario testing with natural language:
 
-```go
-steps.WhenIMakeHealthCheckRequestWithInvalidContentType(ctx)
-steps.ThenHTTPStatusShouldBe(ctx, 415)
-```
-
-### BDD Style Assertions
-Natural language assertions for enhanced readability:
-
-```go
-// BDD Style - Natural Language
-ctx.TheResponseStatusCodeShouldBe(200)
-ctx.TheJSONResponseShouldContainField("status", "healthy")
-ctx.TheContentTypeShouldBe("application/json")
-ctx.TheResponseShouldNotBeEmpty()
-ctx.AllConcurrentRequestsShouldSucceed()
-
-// gRPC and Connect-Go specific
-ctx.TheGRPCResponseShouldBeSuccessful()
-ctx.TheConnectGoResponseShouldBeSuccessful()
+```gherkin
+@negative
+Scenario: User registration with duplicate Firebase UID should fail
+  Given an existing user is registered
+  When I register a user with the same Firebase UID
+  Then the user registration should fail with AlreadyExists error
 ```
 
 ## Test Coverage
@@ -320,100 +339,228 @@ Unlike unit and integration tests, end-to-end tests do not generate coverage rep
 
 ## Troubleshooting
 
-### Server Not Running
+### Godog Test Execution Issues
+
+**Error**: `godog: no feature files found`
+
+**Solution**:
+
+1. Verify feature files exist in `/test/e2e/features/`
+2. Check file extensions are `.feature`
+3. Ensure working directory is correct
+
+**Error**: `undefined step: "I make a GET request to..."`
+
+**Solution**:
+
+1. Check step definitions in `/test/e2e/steps/`
+2. Verify step function signatures match Gherkin steps
+3. Ensure step definitions are registered in `main_test.go`
+
+### Server Connection Issues
+
 **Error**: Server is not running on port 8080
+
 **Solution**: Start the server using `make run` or `docker-compose up`
 
-### Connection Refused
-**Error**: Failed to connect to server at http://localhost:8080
+**Error**: Failed to connect to server at `http://localhost:8080`
+
 **Solution**:
+
 1. Check if the server is running
 2. Verify the correct port is being used
 3. Check firewall settings
+4. Ensure `.env` configuration is correct
 
-### Test Failures
-**Error**: Test failed: expected status 200, got 500
+### gRPC Connection Issues
+
+**Error**: gRPC connection failed
+
 **Solution**:
+
+1. Verify gRPC server is running on HTTP/2
+2. Check gRPC port configuration (default: 8080)
+3. Validate protobuf definitions are up-to-date
+4. Ensure Connect-Go middleware is properly configured
+
+### Test Execution Failures
+
+**Error**: Test failed: expected status 200, got 500
+
+**Solution**:
+
 1. Check server logs for errors
 2. Verify database connectivity
 3. Check environment configuration
+4. Validate test data setup in step definitions
 
-### gRPC Connection Issues
-**Error**: gRPC connection failed
+**Error**: `panic: runtime error: invalid memory address`
+
 **Solution**:
-1. Verify gRPC server is running
-2. Check gRPC port configuration
-3. Validate protobuf definitions
+
+1. Check for nil pointer dereferences in step definitions
+2. Verify proper context initialization in hooks
+3. Ensure proper cleanup in scenario teardown
 
 ## Adding New Tests
 
-1. **Create test functions** in appropriate `*_test.go` files
-2. **Use existing step functions** from the `steps/` package
-3. **Follow BDD structure** with Given-When-Then organization
-4. **Add new step functions** to appropriate `steps/*.go` files if needed
-5. **Use table-driven tests** for parameterized scenarios
+### 1. Create Feature Files
 
-### Adding New Step Functions
+Create new `.feature` files in `/test/e2e/features/<domain>/`:
 
-1. Create step functions in appropriate `steps/*.go` files
-2. Follow the naming convention: `Given*/When*/Then*`
-3. Use the TestContext for state management
-4. Add proper error handling and assertions
+```gherkin
+@grpc @quiz @positive
+Feature: gRPC Quiz Service
+  As a quiz application
+  I want to manage quizzes via gRPC protocol
+  So that users can create and take quizzes
 
-### Adding New Test Files
+  Background:
+    Given the server is running
+    And the gRPC quiz client is connected
 
-1. Create test files in `test/e2e/` directory
-2. Import the steps package
-3. Use the BDD framework helpers
-4. Follow the established patterns for consistency
+  Scenario: Create quiz with valid data should succeed
+    Given I have valid quiz creation data
+    When I create a quiz with valid data
+    Then the quiz creation should succeed
+    And the response should contain a valid quiz ID
+```
 
-## Best Practices
+### 2. Implement Step Definitions
 
-1. **Organize Steps**: Group related steps in appropriate files
-2. **Reuse Steps**: Use existing step functions when possible
-3. **Clear Naming**: Use descriptive scenario names
-4. **Error Handling**: Always check for errors in step functions
-5. **Concurrent Safety**: Ensure step functions are thread-safe for concurrent tests
-6. **Test Isolation**: Each test should be independent and not rely on other tests
-7. **Reuse step functions** to maintain consistency
-8. **Use descriptive test names** that explain the scenario
-9. **Keep tests independent** - each test should be able to run in isolation
-10. **Use concurrent testing** for performance validation
-11. **Add proper error handling** in custom step functions
-12. **Follow Go testing conventions** for test organization
-
-## Migration from Python
-
-The Go BDD framework maintains the same test scenarios as the previous Python implementation:
-
-- **Feature Parity**: All Python test scenarios have been converted
-- **BDD Structure**: Maintains Given-When-Then organization
-- **Test Coverage**: Same test coverage with improved performance
-- **Type Safety**: Compile-time validation of test code
-
-## Advanced Usage
-
-### Custom Test Context
-
-You can extend the TestContext for specific test needs:
+Create step definition files in `/test/e2e/steps/<domain>_steps.go`:
 
 ```go
-type CustomTestContext struct {
-    *steps.TestContext
-    CustomData map[string]interface{}
+package steps
+
+import (
+    "context"
+    "github.com/cucumber/godog"
+)
+
+type QuizContext struct {
+    // Quiz-specific context fields
+    quizClient QuizServiceClient
+    quizData   *QuizData
+    response   *QuizResponse
+    err        error
+}
+
+func (qc *QuizContext) iHaveValidQuizCreationData() error {
+    qc.quizData = &QuizData{
+        Title:       "Sample Quiz",
+        Description: "A sample quiz for testing",
+    }
+    return nil
+}
+
+func (qc *QuizContext) iCreateAQuizWithValidData() error {
+    qc.response, qc.err = qc.quizClient.CreateQuiz(context.Background(), qc.quizData)
+    return nil
+}
+
+func (qc *QuizContext) theQuizCreationShouldSucceed() error {
+    if qc.err != nil {
+        return fmt.Errorf("expected quiz creation to succeed, but got error: %v", qc.err)
+    }
+    return nil
+}
+
+func InitializeQuizScenario(ctx *godog.ScenarioContext) {
+    qc := &QuizContext{}
+
+    ctx.Given(`^I have valid quiz creation data$`, qc.iHaveValidQuizCreationData)
+    ctx.When(`^I create a quiz with valid data$`, qc.iCreateAQuizWithValidData)
+    ctx.Then(`^the quiz creation should succeed$`, qc.theQuizCreationShouldSucceed)
 }
 ```
 
-### Performance Testing
+### 3. Register Step Definitions
 
-Use concurrent testing for performance validation:
+Update `/test/e2e/main_test.go` to register new step definitions:
 
 ```go
-steps.WhenIMakeConcurrentRequests(ctx, 100, "/api/endpoint")
-ctx.AllConcurrentRequestsShouldCompleteWithin(time.Second * 5)
+func TestFeatures(t *testing.T) {
+    suite := godog.TestSuite{
+        ScenarioInitializer: func(ctx *godog.ScenarioContext) {
+            // Existing step definitions
+            steps.InitializeHealthScenario(ctx)
+            steps.InitializeUserScenario(ctx)
+
+            // Add new step definitions
+            steps.InitializeQuizScenario(ctx)
+        },
+        Options: &godog.Options{
+            Format:   "pretty",
+            Paths:    []string{"features"},
+            TestingT: t,
+        },
+    }
+
+    if suite.Run() != 0 {
+        t.Fatal("non-zero status returned, failed to run feature tests")
+    }
+}
 ```
 
-### Integration with CI/CD
+### 4. Test Execution
+
+Run the new tests:
+
+```bash
+# Run all tests including new quiz tests
+make test.e2e
+
+# Run only quiz tests
+make test.e2e.only TAGS=@quiz
+
+# Run specific quiz scenarios
+make test.e2e.only TAGS=@quiz SCENARIO="Create quiz with valid data"
+```
+
+## Best Practices
+
+### Feature File Organization
+
+- **One feature per service domain** (health, user, quiz, etc.)
+- **Separate files by protocol** (rest.feature, grpc.feature)
+- **Use descriptive scenario names** that explain the business value
+- **Group related scenarios** using Background sections
+
+### Step Definition Guidelines
+
+- **Keep steps atomic** - each step should do one thing
+- **Use context structs** for scenario state management
+- **Implement proper cleanup** in hooks
+- **Follow naming conventions** - use domain prefixes for context structs
+
+### Tag Strategy
+
+- **Protocol tags**: `@rest`, `@grpc` for protocol filtering
+- **Domain tags**: `@health`, `@user`, `@quiz` for service filtering
+- **Type tags**: `@positive`, `@negative` for test type filtering
+- **Feature tags**: `@concurrency`, `@security` for special features
+
+### Error Handling
+
+- **Use descriptive error messages** in step definitions
+- **Validate all assumptions** in Given steps
+- **Check for nil pointers** before accessing response data
+- **Implement proper timeout handling** for gRPC calls
+
+## Contributing
+
+When adding new E2E tests:
+
+1. Follow the existing naming conventions and tag strategy
+2. Use the Godog framework for consistency with Gherkin syntax
+3. Add appropriate error handling in step definitions
+4. Include both positive and negative test scenarios
+5. Test concurrent scenarios where applicable
+6. Organize feature files by domain and protocol
+7. Update this documentation if adding new patterns or conventions
+
+## Integration with CI/CD
 
 E2E tests are designed to run in CI/CD pipelines:
 
@@ -423,5 +570,18 @@ make run &          # Start server in background
 sleep 10           # Wait for server to start
 make test.e2e      # Run E2E tests
 ```
+
+## Summary
+
+The E2E testing framework has successfully migrated from a custom BDD implementation to **Godog v0.14 + Gherkin**, providing:
+
+- **Human-readable test scenarios** using natural language
+- **Comprehensive protocol coverage** for both REST and gRPC
+- **Flexible test execution** with tag-based filtering
+- **Maintainable test organization** with domain-based feature files
+- **Robust error handling** for both positive and negative scenarios
+- **Concurrent testing support** for performance validation
+
+This migration maintains all existing test coverage while providing a more standard, maintainable, and extensible testing framework for future development.
 
 For detailed implementation examples and advanced patterns, refer to the existing test files in the `/test/e2e` directory.

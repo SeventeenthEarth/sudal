@@ -3,664 +3,787 @@ package steps
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/cucumber/godog"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"golang.org/x/net/http2"
 
 	userv1 "github.com/seventeenthearth/sudal/gen/go/user/v1"
 	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
 )
 
-// UserResult represents the result of a user service call
-type UserResult struct {
+// UserCtx holds the context for user-related test scenarios
+type UserCtx struct {
+	baseURL      string
+	grpcEndpoint string
+
+	// HTTP-related fields (for negative REST tests)
+	httpClient   *http.Client
+	lastResponse *http.Response
+	lastBody     []byte
+	lastError    error
+
+	// gRPC-related fields
+	grpcClient       userv1connect.UserServiceClient
+	registerRequest  *userv1.RegisterUserRequest
+	registerResponse *connect.Response[userv1.RegisterUserResponse]
+	profileRequest   *userv1.GetUserProfileRequest
+	profileResponse  *connect.Response[userv1.UserProfile]
+	updateRequest    *userv1.UpdateUserProfileRequest
+	updateResponse   *connect.Response[userv1.UpdateUserProfileResponse]
+	grpcError        error
+
+	// Test data
+	testFirebaseUID string
+	testDisplayName string
+	testAvatarURL   string
+	createdUserID   string
+
+	// Concurrent test results
+	concurrentResults     []ConcurrentUserResult
+	concurrentHTTPResults []ConcurrentHTTPResult
+
+	// Shared response for cross-context communication
+	sharedResponse *SharedHTTPResponse
+}
+
+// ConcurrentUserResult holds the result of a concurrent user operation
+type ConcurrentUserResult struct {
 	RegisterResponse *connect.Response[userv1.RegisterUserResponse]
 	ProfileResponse  *connect.Response[userv1.UserProfile]
 	UpdateResponse   *connect.Response[userv1.UpdateUserProfileResponse]
 	Error            error
-	Protocol         string
 	OperationType    string // "register", "get_profile", "update_profile"
 }
 
-// UserStepContext holds user-specific test context with concrete types
-type UserStepContext struct {
-	UserClient                userv1connect.UserServiceClient
-	RegisterUserRequest       *userv1.RegisterUserRequest
-	RegisterUserResponse      *connect.Response[userv1.RegisterUserResponse]
-	GetUserProfileRequest     *userv1.GetUserProfileRequest
-	GetUserProfileResponse    *connect.Response[userv1.UserProfile]
-	UpdateUserProfileRequest  *userv1.UpdateUserProfileRequest
-	UpdateUserProfileResponse *connect.Response[userv1.UpdateUserProfileResponse]
-	LastError                 error
-	CreatedUserID             string
-	TestFirebaseUID           string
-	TestDisplayName           string
-	TestAvatarURL             string
-	Protocol                  string
-	Timeout                   time.Duration
-	ConcurrentResults         []UserResult
+// ConcurrentHTTPResult holds the result of a concurrent HTTP request
+type ConcurrentHTTPResult struct {
+	Response *http.Response
+	Body     []byte
+	Error    error
 }
 
-// getUserStepContext gets or creates a UserStepContext from TestContext
-func getUserStepContext(ctx *TestContext) *UserStepContext {
-	if ctx.UserTestContext == nil {
-		ctx.UserTestContext = &UserTestContext{}
+// NewUserCtx creates a new UserCtx instance
+func NewUserCtx() *UserCtx {
+	baseURL := os.Getenv("BASE_URL")
+	if baseURL == "" {
+		baseURL = "http://localhost:8080"
 	}
 
-	// If we don't have a concrete context stored, create one
-	if ctx.UserTestContext.UserClient == nil {
-		return &UserStepContext{}
+	grpcEndpoint := os.Getenv("GRPC_ADDR")
+	if grpcEndpoint == "" {
+		grpcEndpoint = "localhost:8080"
 	}
 
-	// Try to cast the stored client back to concrete type
-	client, ok := ctx.UserTestContext.UserClient.(userv1connect.UserServiceClient)
-	if !ok {
-		return &UserStepContext{}
-	}
-
-	userCtx := &UserStepContext{
-		UserClient:      client,
-		Protocol:        ctx.UserTestContext.Protocol,
-		Timeout:         ctx.UserTestContext.Timeout,
-		TestFirebaseUID: ctx.UserTestContext.TestFirebaseUID,
-		TestDisplayName: ctx.UserTestContext.TestDisplayName,
-		TestAvatarURL:   ctx.UserTestContext.TestAvatarURL,
-		CreatedUserID:   ctx.UserTestContext.CreatedUserID,
-		LastError:       ctx.UserTestContext.LastError,
-	}
-
-	// Cast stored requests and responses
-	if ctx.UserTestContext.RegisterUserRequest != nil {
-		if req, ok := ctx.UserTestContext.RegisterUserRequest.(*userv1.RegisterUserRequest); ok {
-			userCtx.RegisterUserRequest = req
-		}
-	}
-	if ctx.UserTestContext.RegisterUserResponse != nil {
-		if resp, ok := ctx.UserTestContext.RegisterUserResponse.(*connect.Response[userv1.RegisterUserResponse]); ok {
-			userCtx.RegisterUserResponse = resp
-		}
-	}
-	if ctx.UserTestContext.GetUserProfileRequest != nil {
-		if req, ok := ctx.UserTestContext.GetUserProfileRequest.(*userv1.GetUserProfileRequest); ok {
-			userCtx.GetUserProfileRequest = req
-		}
-	}
-	if ctx.UserTestContext.GetUserProfileResponse != nil {
-		if resp, ok := ctx.UserTestContext.GetUserProfileResponse.(*connect.Response[userv1.UserProfile]); ok {
-			userCtx.GetUserProfileResponse = resp
-		}
-	}
-	if ctx.UserTestContext.UpdateUserProfileRequest != nil {
-		if req, ok := ctx.UserTestContext.UpdateUserProfileRequest.(*userv1.UpdateUserProfileRequest); ok {
-			userCtx.UpdateUserProfileRequest = req
-		}
-	}
-	if ctx.UserTestContext.UpdateUserProfileResponse != nil {
-		if resp, ok := ctx.UserTestContext.UpdateUserProfileResponse.(*connect.Response[userv1.UpdateUserProfileResponse]); ok {
-			userCtx.UpdateUserProfileResponse = resp
-		}
-	}
-	if ctx.UserTestContext.ConcurrentResults != nil {
-		// Convert []protocol{} to []UserResult
-		userResults := make([]UserResult, len(ctx.UserTestContext.ConcurrentResults))
-		for i, result := range ctx.UserTestContext.ConcurrentResults {
-			if userResult, ok := result.(UserResult); ok {
-				userResults[i] = userResult
-			}
-		}
-		userCtx.ConcurrentResults = userResults
-	}
-
-	return userCtx
-}
-
-// setUserStepContext stores a UserStepContext back to TestContext
-func setUserStepContext(ctx *TestContext, userCtx *UserStepContext) {
-	if ctx.UserTestContext == nil {
-		ctx.UserTestContext = &UserTestContext{}
-	}
-
-	ctx.UserTestContext.UserClient = userCtx.UserClient
-	ctx.UserTestContext.Protocol = userCtx.Protocol
-	ctx.UserTestContext.Timeout = userCtx.Timeout
-	ctx.UserTestContext.TestFirebaseUID = userCtx.TestFirebaseUID
-	ctx.UserTestContext.TestDisplayName = userCtx.TestDisplayName
-	ctx.UserTestContext.TestAvatarURL = userCtx.TestAvatarURL
-	ctx.UserTestContext.CreatedUserID = userCtx.CreatedUserID
-	ctx.UserTestContext.LastError = userCtx.LastError
-
-	// Store concrete types as interfaces
-	ctx.UserTestContext.RegisterUserRequest = userCtx.RegisterUserRequest
-	ctx.UserTestContext.RegisterUserResponse = userCtx.RegisterUserResponse
-	ctx.UserTestContext.GetUserProfileRequest = userCtx.GetUserProfileRequest
-	ctx.UserTestContext.GetUserProfileResponse = userCtx.GetUserProfileResponse
-	ctx.UserTestContext.UpdateUserProfileRequest = userCtx.UpdateUserProfileRequest
-	ctx.UserTestContext.UpdateUserProfileResponse = userCtx.UpdateUserProfileResponse
-
-	// Convert []UserResult to []protocol{}
-	if userCtx.ConcurrentResults != nil {
-		interfaceResults := make([]interface{}, len(userCtx.ConcurrentResults))
-		for i, result := range userCtx.ConcurrentResults {
-			interfaceResults[i] = result
-		}
-		ctx.UserTestContext.ConcurrentResults = interfaceResults
+	return &UserCtx{
+		baseURL:      baseURL,
+		grpcEndpoint: grpcEndpoint,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
 }
 
-// User-specific Given Steps
+// Cleanup cleans up resources used by UserCtx
+func (u *UserCtx) Cleanup() {
+	// Close HTTP response if exists
+	if u.lastResponse != nil {
+		u.lastResponse.Body.Close()
+	}
+}
 
-// GivenUserServiceClientWithProtocol establishes a user service client with specific protocol
-func GivenUserServiceClientWithProtocol(ctx *TestContext, serverURL, protocol string) {
-	userCtx := getUserStepContext(ctx)
+// Given Steps
 
-	var client userv1connect.UserServiceClient
+func (u *UserCtx) theServerIsRunning() error {
+	// Check if server is accessible via ping endpoint
+	resp, err := u.httpClient.Get(fmt.Sprintf("%s/api/ping", u.baseURL))
+	if err != nil {
+		return fmt.Errorf("server is not running: %v", err)
+	}
+	defer resp.Body.Close()
 
-	switch protocol {
-	case "grpc":
-		// Use HTTP/2 client for pure gRPC protocol
-		h2Client := &http.Client{
-			Transport: &http2.Transport{
-				AllowHTTP: true,
-				DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-					return net.Dial(network, addr)
-				},
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server is not healthy, status: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (u *UserCtx) theGRPCUserClientIsConnected() error {
+	// Use HTTP/2 client for pure gRPC protocol
+	h2Client := &http.Client{
+		Transport: &http2.Transport{
+			AllowHTTP: true,
+			DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+				return net.Dial(network, addr)
 			},
-		}
-		client = userv1connect.NewUserServiceClient(
-			h2Client,
-			serverURL,
-			connect.WithGRPC(),
-		)
-	case "grpc-web":
-		client = userv1connect.NewUserServiceClient(
-			http.DefaultClient,
-			serverURL,
-			connect.WithGRPCWeb(),
-		)
-	case "http":
-		fallthrough
-	default:
-		client = userv1connect.NewUserServiceClient(
-			http.DefaultClient,
-			serverURL,
-		)
+		},
+		Timeout: 10 * time.Second,
 	}
 
-	userCtx.UserClient = client
-	userCtx.Protocol = protocol
-	setUserStepContext(ctx, userCtx)
+	u.grpcClient = userv1connect.NewUserServiceClient(
+		h2Client,
+		u.baseURL,
+		connect.WithGRPC(),
+	)
+
+	return nil
 }
 
-// GivenUserServiceClientWithProtocolAndTimeout establishes a user service client with protocol and timeout
-func GivenUserServiceClientWithProtocolAndTimeout(ctx *TestContext, serverURL, protocol string, timeout time.Duration) {
-	GivenUserServiceClientWithProtocol(ctx, serverURL, protocol)
-	if ctx.UserTestContext != nil {
-		ctx.UserTestContext.Timeout = timeout
-	}
+func (u *UserCtx) theGRPCWebUserClientIsConnected() error {
+	// Use standard HTTP client for gRPC-Web
+	u.grpcClient = userv1connect.NewUserServiceClient(
+		u.httpClient,
+		u.baseURL,
+		connect.WithGRPCWeb(),
+	)
+
+	return nil
 }
 
-// GivenValidUserRegistrationData sets up valid user registration data
-func GivenValidUserRegistrationData(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
+func (u *UserCtx) iHaveValidUserRegistrationData() error {
 	// Generate unique test data
-	userCtx.TestFirebaseUID = "firebase_" + uuid.New().String()
-	userCtx.TestDisplayName = "Test User " + uuid.New().String()[:8]
+	u.testFirebaseUID = "firebase_" + uuid.New().String()
+	u.testDisplayName = "Test User " + uuid.New().String()[:8]
 
-	userCtx.RegisterUserRequest = &userv1.RegisterUserRequest{
-		FirebaseUid:  userCtx.TestFirebaseUID,
-		DisplayName:  userCtx.TestDisplayName,
+	u.registerRequest = &userv1.RegisterUserRequest{
+		FirebaseUid:  u.testFirebaseUID,
+		DisplayName:  u.testDisplayName,
 		AuthProvider: "google",
 	}
 
-	setUserStepContext(ctx, userCtx)
+	return nil
 }
 
-// GivenInvalidUserRegistrationData sets up invalid user registration data
-func GivenInvalidUserRegistrationData(ctx *TestContext, invalidType string) {
-	if ctx.UserTestContext == nil {
-		ctx.UserTestContext = &UserTestContext{}
+func (u *UserCtx) iHaveInvalidUserRegistrationDataWithEmptyFirebaseUID() error {
+	u.testDisplayName = "Test User"
+
+	u.registerRequest = &userv1.RegisterUserRequest{
+		FirebaseUid:  "", // Empty Firebase UID
+		DisplayName:  u.testDisplayName,
+		AuthProvider: "google",
 	}
 
-	switch invalidType {
-	case "empty_firebase_uid":
-		ctx.UserTestContext.RegisterUserRequest = &userv1.RegisterUserRequest{
-			FirebaseUid:  "",
-			DisplayName:  "Test User",
-			AuthProvider: "google",
-		}
-	case "empty_auth_provider":
-		ctx.UserTestContext.RegisterUserRequest = &userv1.RegisterUserRequest{
-			FirebaseUid:  "firebase_" + uuid.New().String(),
-			DisplayName:  "Test User",
-			AuthProvider: "",
-		}
-	case "invalid_display_name":
-		ctx.UserTestContext.RegisterUserRequest = &userv1.RegisterUserRequest{
-			FirebaseUid:  "firebase_" + uuid.New().String(),
-			DisplayName:  "", // Empty display name
-			AuthProvider: "google",
-		}
-	case "long_display_name":
-		longName := ""
-		for i := 0; i < 101; i++ { // Exceed 100 character limit
-			longName += "a"
-		}
-		ctx.UserTestContext.RegisterUserRequest = &userv1.RegisterUserRequest{
-			FirebaseUid:  "firebase_" + uuid.New().String(),
-			DisplayName:  longName,
-			AuthProvider: "google",
-		}
-	default:
-		ctx.UserTestContext.RegisterUserRequest = &userv1.RegisterUserRequest{
-			FirebaseUid:  "",
-			DisplayName:  "",
-			AuthProvider: "",
-		}
-	}
+	return nil
 }
 
-// GivenExistingUser sets up an existing user for testing
-func GivenExistingUser(ctx *TestContext) {
-	// First create a valid user
-	GivenValidUserRegistrationData(ctx)
-	WhenIRegisterUser(ctx)
-
-	userCtx := getUserStepContext(ctx)
-
-	// Verify registration was successful
-	if userCtx.LastError != nil {
-		ctx.T.Fatalf("Failed to create existing user for test: %v", userCtx.LastError)
-	}
-	if userCtx.RegisterUserResponse == nil || userCtx.RegisterUserResponse.Msg == nil {
-		ctx.T.Fatalf("Failed to get user ID from registration response")
+func (u *UserCtx) anExistingUserIsRegistered() error {
+	// First ensure we have a client
+	if u.grpcClient == nil {
+		if err := u.theGRPCUserClientIsConnected(); err != nil {
+			return err
+		}
 	}
 
-	userCtx.CreatedUserID = userCtx.RegisterUserResponse.Msg.UserId
-	setUserStepContext(ctx, userCtx)
-}
+	// Generate unique test data for existing user
+	u.testFirebaseUID = "firebase_" + uuid.New().String()
+	u.testDisplayName = "Existing User " + uuid.New().String()[:8]
 
-// GivenValidUserProfileUpdateData sets up valid user profile update data
-func GivenValidUserProfileUpdateData(ctx *TestContext) {
-	if ctx.UserTestContext == nil {
-		ctx.UserTestContext = &UserTestContext{}
+	// Register the user
+	registerReq := &userv1.RegisterUserRequest{
+		FirebaseUid:  u.testFirebaseUID,
+		DisplayName:  u.testDisplayName,
+		AuthProvider: "google",
 	}
 
-	newDisplayName := "Updated User " + uuid.New().String()[:8]
-	newAvatarURL := "https://example.com/avatar/" + uuid.New().String() + ".jpg"
-
-	ctx.UserTestContext.TestDisplayName = newDisplayName
-	ctx.UserTestContext.TestAvatarURL = newAvatarURL
-
-	ctx.UserTestContext.UpdateUserProfileRequest = &userv1.UpdateUserProfileRequest{
-		UserId:      ctx.UserTestContext.CreatedUserID,
-		DisplayName: &newDisplayName,
-		AvatarUrl:   &newAvatarURL,
-	}
-}
-
-// User-specific When Steps
-
-// WhenIRegisterUser makes a user registration request
-func WhenIRegisterUser(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.UserClient == nil {
-		userCtx.LastError = assert.AnError
-		setUserStepContext(ctx, userCtx)
-		return
-	}
-
-	timeout := userCtx.Timeout
-	if timeout == 0 {
-		timeout = 5 * time.Second
-	}
-
-	connectCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	req := connect.NewRequest(userCtx.RegisterUserRequest)
-	resp, err := userCtx.UserClient.RegisterUser(connectCtx, req)
-	userCtx.RegisterUserResponse = resp
-	userCtx.LastError = err
+	req := connect.NewRequest(registerReq)
+	resp, err := u.grpcClient.RegisterUser(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to register existing user: %v", err)
+	}
 
-	setUserStepContext(ctx, userCtx)
+	if resp.Msg == nil || resp.Msg.UserId == "" {
+		return fmt.Errorf("failed to get user ID from registration response")
+	}
+
+	u.createdUserID = resp.Msg.UserId
+	return nil
 }
 
-// WhenIGetUserProfile makes a get user profile request
-func WhenIGetUserProfile(ctx *TestContext, userID string) {
-	userCtx := getUserStepContext(ctx)
+// When Steps
 
-	if userCtx.UserClient == nil {
-		userCtx.LastError = assert.AnError
-		setUserStepContext(ctx, userCtx)
-		return
+func (u *UserCtx) iRegisterAUserWithValidData() error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
 	}
 
-	timeout := userCtx.Timeout
-	if timeout == 0 {
-		timeout = 5 * time.Second
+	if u.registerRequest == nil {
+		return fmt.Errorf("registration request not prepared")
 	}
 
-	connectCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	userCtx.GetUserProfileRequest = &userv1.GetUserProfileRequest{
-		UserId: userID,
-	}
+	req := connect.NewRequest(u.registerRequest)
+	resp, err := u.grpcClient.RegisterUser(ctx, req)
+	u.registerResponse = resp
+	u.grpcError = err
 
-	req := connect.NewRequest(userCtx.GetUserProfileRequest)
-	resp, err := userCtx.UserClient.GetUserProfile(connectCtx, req)
-	userCtx.GetUserProfileResponse = resp
-	userCtx.LastError = err
-
-	setUserStepContext(ctx, userCtx)
+	return nil
 }
 
-// WhenIUpdateUserProfile makes an update user profile request
-func WhenIUpdateUserProfile(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.UserClient == nil {
-		userCtx.LastError = assert.AnError
-		setUserStepContext(ctx, userCtx)
-		return
+func (u *UserCtx) iRegisterAUserWithTheSameFirebaseUID() error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
 	}
 
-	timeout := userCtx.Timeout
-	if timeout == 0 {
-		timeout = 5 * time.Second
+	// Use the same Firebase UID as the existing user
+	u.registerRequest = &userv1.RegisterUserRequest{
+		FirebaseUid:  u.testFirebaseUID, // Same as existing user
+		DisplayName:  "Another User",
+		AuthProvider: "google",
 	}
 
-	connectCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	req := connect.NewRequest(userCtx.UpdateUserProfileRequest)
-	resp, err := userCtx.UserClient.UpdateUserProfile(connectCtx, req)
-	userCtx.UpdateUserProfileResponse = resp
-	userCtx.LastError = err
+	req := connect.NewRequest(u.registerRequest)
+	resp, err := u.grpcClient.RegisterUser(ctx, req)
+	u.registerResponse = resp
+	u.grpcError = err
 
-	setUserStepContext(ctx, userCtx)
+	return nil
 }
 
-// WhenIMakeConcurrentUserRegistrations makes multiple concurrent user registration requests
-func WhenIMakeConcurrentUserRegistrations(ctx *TestContext, numRequests int) {
-	userCtx := getUserStepContext(ctx)
+func (u *UserCtx) iRegisterAUserWithEmptyFirebaseUID() error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
+	}
 
-	if userCtx.UserClient == nil {
-		userCtx.LastError = assert.AnError
-		setUserStepContext(ctx, userCtx)
-		return
+	if u.registerRequest == nil {
+		return fmt.Errorf("registration request not prepared")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := connect.NewRequest(u.registerRequest)
+	resp, err := u.grpcClient.RegisterUser(ctx, req)
+	u.registerResponse = resp
+	u.grpcError = err
+
+	return nil
+}
+
+func (u *UserCtx) iGetTheUserProfile() error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
+	}
+
+	if u.createdUserID == "" {
+		return fmt.Errorf("no user ID available for profile request")
+	}
+
+	u.profileRequest = &userv1.GetUserProfileRequest{
+		UserId: u.createdUserID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := connect.NewRequest(u.profileRequest)
+	resp, err := u.grpcClient.GetUserProfile(ctx, req)
+	u.profileResponse = resp
+	u.grpcError = err
+
+	return nil
+}
+
+func (u *UserCtx) iGetTheUserProfileWithNonExistentID() error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
+	}
+
+	// Use a valid UUID that doesn't exist in the database
+	// Generate a random UUID that is very unlikely to exist
+	nonExistentID := "12345678-1234-5678-9abc-123456789abc"
+
+	u.profileRequest = &userv1.GetUserProfileRequest{
+		UserId: nonExistentID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := connect.NewRequest(u.profileRequest)
+	resp, err := u.grpcClient.GetUserProfile(ctx, req)
+	u.profileResponse = resp
+	u.grpcError = err
+
+	return nil
+}
+
+func (u *UserCtx) iGetTheUserProfileWithInvalidID() error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
+	}
+
+	// Use nil UUID (all zeros) which is considered invalid
+	invalidID := "00000000-0000-0000-0000-000000000000"
+
+	u.profileRequest = &userv1.GetUserProfileRequest{
+		UserId: invalidID,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := connect.NewRequest(u.profileRequest)
+	resp, err := u.grpcClient.GetUserProfile(ctx, req)
+	u.profileResponse = resp
+	u.grpcError = err
+
+	return nil
+}
+
+func (u *UserCtx) iUpdateTheUserProfileWithDisplayName(displayName string) error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
+	}
+
+	if u.createdUserID == "" {
+		return fmt.Errorf("no user ID available for update request")
+	}
+
+	// Make display name unique to avoid constraint violations
+	uniqueDisplayName := displayName + " " + uuid.New().String()[:8]
+
+	u.updateRequest = &userv1.UpdateUserProfileRequest{
+		UserId:      u.createdUserID,
+		DisplayName: &uniqueDisplayName,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	req := connect.NewRequest(u.updateRequest)
+	resp, err := u.grpcClient.UpdateUserProfile(ctx, req)
+	u.updateResponse = resp
+	u.grpcError = err
+
+	return nil
+}
+
+func (u *UserCtx) iMakeAGETRequestTo(endpoint string) error {
+	url := fmt.Sprintf("%s%s", u.baseURL, endpoint)
+	resp, err := u.httpClient.Get(url)
+
+	u.lastResponse = resp
+	u.lastError = err
+
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	return nil
+}
+
+func (u *UserCtx) iMakeAPOSTRequestToWithContentTypeAndBody(endpoint, contentType, body string) error {
+	url := fmt.Sprintf("%s%s", u.baseURL, endpoint)
+
+	// Handle escaped JSON in body
+	unescapedBody := strings.ReplaceAll(body, "\\\"", "\"")
+
+	req, err := http.NewRequest("POST", url, strings.NewReader(unescapedBody))
+	if err != nil {
+		u.lastError = err
+		// Also set shared response if available
+		if u.sharedResponse != nil {
+			u.sharedResponse.Error = err
+		}
+		return nil
+	}
+
+	req.Header.Set("Content-Type", contentType)
+
+	resp, err := u.httpClient.Do(req)
+	u.lastResponse = resp
+	u.lastError = err
+
+	// Also set shared response if available
+	if u.sharedResponse != nil {
+		u.sharedResponse.Response = resp
+		u.sharedResponse.Error = err
+	}
+
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	return nil
+}
+
+func (u *UserCtx) iMakeConcurrentUserRegistrations(numRequests int) error {
+	if u.grpcClient == nil {
+		return fmt.Errorf("gRPC client not connected")
 	}
 
 	var wg sync.WaitGroup
-	results := make([]UserResult, numRequests)
+	results := make([]ConcurrentUserResult, numRequests)
 
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
 
-			timeout := userCtx.Timeout
-			if timeout == 0 {
-				timeout = 5 * time.Second
-			}
-
-			connectCtx, cancel := context.WithTimeout(context.Background(), timeout)
-			defer cancel()
-
-			// Create unique registration data for each request
-			uniqueFirebaseUID := "firebase_concurrent_" + uuid.New().String()
-			uniqueDisplayName := "Concurrent User " + uuid.New().String()[:8]
+			// Generate unique data for each request
+			firebaseUID := "firebase_" + uuid.New().String()
+			displayName := fmt.Sprintf("Concurrent User %d %s", index, uuid.New().String()[:8])
 
 			registerReq := &userv1.RegisterUserRequest{
-				FirebaseUid:  uniqueFirebaseUID,
-				DisplayName:  uniqueDisplayName,
+				FirebaseUid:  firebaseUID,
+				DisplayName:  displayName,
 				AuthProvider: "google",
 			}
 
-			req := connect.NewRequest(registerReq)
-			resp, err := userCtx.UserClient.RegisterUser(connectCtx, req)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 
-			results[index] = UserResult{
+			req := connect.NewRequest(registerReq)
+			resp, err := u.grpcClient.RegisterUser(ctx, req)
+
+			results[index] = ConcurrentUserResult{
 				RegisterResponse: resp,
 				Error:            err,
-				Protocol:         userCtx.Protocol,
 				OperationType:    "register",
 			}
 		}(i)
 	}
 
 	wg.Wait()
-	userCtx.ConcurrentResults = results
-	setUserStepContext(ctx, userCtx)
+	u.concurrentResults = results
+
+	return nil
 }
 
-// User-specific Then Steps
+// Then Steps
 
-// ThenUserRegistrationShouldSucceed checks that user registration succeeded in BDD style
-func ThenUserRegistrationShouldSucceed(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError != nil {
-		ctx.T.Errorf("Expected user registration to succeed, but got error: %v", userCtx.LastError)
-		return
+func (u *UserCtx) theUserRegistrationShouldSucceed() error {
+	if u.grpcError != nil {
+		return fmt.Errorf("user registration should not return an error, got: %v", u.grpcError)
 	}
 
-	if userCtx.RegisterUserResponse == nil {
-		ctx.T.Errorf("Expected user registration response to exist, but it was nil")
-		return
+	if u.registerResponse == nil {
+		return fmt.Errorf("registration response should not be nil")
 	}
 
-	if userCtx.RegisterUserResponse.Msg == nil {
-		ctx.T.Errorf("Expected user registration response message to exist, but it was nil")
-		return
+	if u.registerResponse.Msg == nil {
+		return fmt.Errorf("registration response message should not be nil")
 	}
 
-	if userCtx.RegisterUserResponse.Msg.UserId == "" {
-		ctx.T.Errorf("Expected user registration response to contain user ID, but it was empty")
-		return
+	if u.registerResponse.Msg.UserId == "" {
+		return fmt.Errorf("user ID should not be empty")
 	}
 
-	// Validate that the returned user ID is a valid UUID
-	if _, err := uuid.Parse(userCtx.RegisterUserResponse.Msg.UserId); err != nil {
-		ctx.T.Errorf("Expected user ID to be a valid UUID, but got: %s", userCtx.RegisterUserResponse.Msg.UserId)
-	}
-
-	ctx.T.Logf("User registration succeeded with ID: %s", userCtx.RegisterUserResponse.Msg.UserId)
+	// Store the created user ID for potential use in subsequent tests
+	u.createdUserID = u.registerResponse.Msg.UserId
+	return nil
 }
 
-// ThenUserRegistrationShouldFail checks that user registration failed as expected in BDD style
-func ThenUserRegistrationShouldFail(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError == nil {
-		ctx.T.Errorf("Expected user registration to fail, but it succeeded")
-		return
+func (u *UserCtx) theResponseShouldContainAValidUserID() error {
+	if u.registerResponse == nil {
+		return fmt.Errorf("registration response should not be nil")
 	}
 
-	ctx.T.Logf("User registration failed as expected: %v", userCtx.LastError)
+	if u.registerResponse.Msg == nil {
+		return fmt.Errorf("registration response message should not be nil")
+	}
+
+	userID := u.registerResponse.Msg.UserId
+	_, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("user ID should be a valid UUID, got: %s, error: %v", userID, err)
+	}
+
+	return nil
 }
 
-// ThenUserRegistrationShouldFailWithCode checks that user registration failed with specific error code
-func ThenUserRegistrationShouldFailWithCode(ctx *TestContext, expectedCode connect.Code) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError == nil {
-		ctx.T.Errorf("Expected user registration to fail, but it succeeded")
-		return
+func (u *UserCtx) theUserRegistrationShouldFailWithAlreadyExistsError() error {
+	if u.grpcError == nil {
+		return fmt.Errorf("expected AlreadyExists error but got no error")
 	}
 
-	connectErr, ok := userCtx.LastError.(*connect.Error)
-	if !ok {
-		ctx.T.Errorf("Expected error to be a Connect error, but got: %T", userCtx.LastError)
-		return
+	// Check if error contains "already exists" or "AlreadyExists"
+	errorStr := u.grpcError.Error()
+	if !contains(errorStr, "already exists") && !contains(errorStr, "AlreadyExists") {
+		return fmt.Errorf("expected AlreadyExists error, got: %v", u.grpcError)
 	}
 
-	if connectErr.Code() != expectedCode {
-		ctx.T.Errorf("Expected error code to be %v, but got %v", expectedCode, connectErr.Code())
-		return
-	}
-
-	ctx.T.Logf("User registration failed with expected code %v: %v", expectedCode, userCtx.LastError)
+	return nil
 }
 
-// ThenUserProfileShouldBeRetrieved checks that user profile was retrieved successfully in BDD style
-func ThenUserProfileShouldBeRetrieved(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError != nil {
-		ctx.T.Errorf("Expected user profile retrieval to succeed, but got error: %v", userCtx.LastError)
-		return
+func (u *UserCtx) theUserRegistrationShouldFailWithInvalidArgumentError() error {
+	if u.grpcError == nil {
+		return fmt.Errorf("expected InvalidArgument error but got no error")
 	}
 
-	if userCtx.GetUserProfileResponse == nil {
-		ctx.T.Errorf("Expected user profile response to exist, but it was nil")
-		return
+	// Check if error contains "invalid" or "InvalidArgument"
+	errorStr := u.grpcError.Error()
+	if !contains(errorStr, "invalid") && !contains(errorStr, "InvalidArgument") {
+		return fmt.Errorf("expected InvalidArgument error, got: %v", u.grpcError)
 	}
 
-	if userCtx.GetUserProfileResponse.Msg == nil {
-		ctx.T.Errorf("Expected user profile response message to exist, but it was nil")
-		return
-	}
-
-	profile := userCtx.GetUserProfileResponse.Msg
-	if profile.UserId == "" {
-		ctx.T.Errorf("Expected user profile to contain user ID, but it was empty")
-		return
-	}
-
-	if profile.CreatedAt == nil {
-		ctx.T.Errorf("Expected user profile to contain created_at timestamp, but it was nil")
-		return
-	}
-
-	ctx.T.Logf("User profile retrieved successfully for ID: %s", profile.UserId)
+	return nil
 }
 
-// ThenUserProfileShouldContainCorrectData checks that user profile contains expected data
-func ThenUserProfileShouldContainCorrectData(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.GetUserProfileResponse == nil || userCtx.GetUserProfileResponse.Msg == nil {
-		ctx.T.Errorf("Expected user profile response to exist")
-		return
+func (u *UserCtx) theUserProfileRetrievalShouldFailWithNotFoundError() error {
+	if u.grpcError == nil {
+		return fmt.Errorf("expected NotFound error but got no error")
 	}
 
-	profile := userCtx.GetUserProfileResponse.Msg
-
-	// Check that the profile contains the expected display name
-	if userCtx.TestDisplayName != "" {
-		if profile.DisplayName != userCtx.TestDisplayName {
-			ctx.T.Errorf("Expected display name to be '%s', but got '%s'", userCtx.TestDisplayName, profile.DisplayName)
-		}
+	// Check if error contains "not found" or "NotFound"
+	errorStr := u.grpcError.Error()
+	if !contains(errorStr, "not found") && !contains(errorStr, "NotFound") {
+		return fmt.Errorf("expected NotFound error, got: %v", u.grpcError)
 	}
 
-	// Check that candy balance is initialized to 0
-	if profile.CandyBalance != 0 {
-		ctx.T.Errorf("Expected candy balance to be 0 for new user, but got %d", profile.CandyBalance)
-	}
-
-	ctx.T.Logf("User profile contains correct data: display_name=%s, candy_balance=%d", profile.DisplayName, profile.CandyBalance)
+	return nil
 }
 
-// ThenUserProfileRetrievalShouldFail checks that user profile retrieval failed as expected
-func ThenUserProfileRetrievalShouldFail(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError == nil {
-		ctx.T.Errorf("Expected user profile retrieval to fail, but it succeeded")
-		return
+func (u *UserCtx) theUserProfileShouldBeRetrieved() error {
+	if u.grpcError != nil {
+		return fmt.Errorf("user profile retrieval should not return an error, got: %v", u.grpcError)
 	}
 
-	ctx.T.Logf("User profile retrieval failed as expected: %v", userCtx.LastError)
+	if u.profileResponse == nil {
+		return fmt.Errorf("profile response should not be nil")
+	}
+
+	if u.profileResponse.Msg == nil {
+		return fmt.Errorf("profile response message should not be nil")
+	}
+
+	if u.profileResponse.Msg.UserId == "" {
+		return fmt.Errorf("profile user ID should not be empty")
+	}
+
+	return nil
 }
 
-// ThenUserProfileRetrievalShouldFailWithCode checks that user profile retrieval failed with specific error code
-func ThenUserProfileRetrievalShouldFailWithCode(ctx *TestContext, expectedCode connect.Code) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError == nil {
-		ctx.T.Errorf("Expected user profile retrieval to fail, but it succeeded")
-		return
+func (u *UserCtx) theUserProfileShouldContainDisplayName(expectedDisplayName string) error {
+	if u.profileResponse == nil || u.profileResponse.Msg == nil {
+		return fmt.Errorf("profile response should not be nil")
 	}
 
-	connectErr, ok := userCtx.LastError.(*connect.Error)
-	if !ok {
-		ctx.T.Errorf("Expected error to be a Connect error, but got: %T", userCtx.LastError)
-		return
+	if u.profileResponse.Msg.DisplayName != expectedDisplayName {
+		return fmt.Errorf("expected display name %s, got %s", expectedDisplayName, u.profileResponse.Msg.DisplayName)
 	}
 
-	if connectErr.Code() != expectedCode {
-		ctx.T.Errorf("Expected error code to be %v, but got %v", expectedCode, connectErr.Code())
-		return
-	}
-
-	ctx.T.Logf("User profile retrieval failed with expected code %v: %v", expectedCode, userCtx.LastError)
+	return nil
 }
 
-// ThenUserProfileUpdateShouldSucceed checks that user profile update succeeded in BDD style
-func ThenUserProfileUpdateShouldSucceed(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if userCtx.LastError != nil {
-		ctx.T.Errorf("Expected user profile update to succeed, but got error: %v", userCtx.LastError)
-		return
+func (u *UserCtx) theUserProfileUpdateShouldSucceed() error {
+	if u.grpcError != nil {
+		return fmt.Errorf("user profile update should not return an error, got: %v", u.grpcError)
 	}
 
-	if userCtx.UpdateUserProfileResponse == nil {
-		ctx.T.Errorf("Expected user profile update response to exist, but it was nil")
-		return
+	if u.updateResponse == nil {
+		return fmt.Errorf("update response should not be nil")
 	}
 
-	if userCtx.UpdateUserProfileResponse.Msg == nil {
-		ctx.T.Errorf("Expected user profile update response message to exist, but it was nil")
-		return
+	if u.updateResponse.Msg == nil {
+		return fmt.Errorf("update response message should not be nil")
 	}
 
-	ctx.T.Logf("User profile update succeeded")
+	return nil
 }
 
-// ThenAllConcurrentUserRegistrationsShouldSucceed checks that all concurrent user registrations succeeded
-func ThenAllConcurrentUserRegistrationsShouldSucceed(ctx *TestContext) {
-	userCtx := getUserStepContext(ctx)
-
-	if len(userCtx.ConcurrentResults) == 0 {
-		ctx.T.Errorf("Expected concurrent user registration results to exist, but none were found")
-		return
+func (u *UserCtx) theHTTPStatusShouldBe(expectedStatus int) error {
+	if u.lastResponse == nil {
+		return fmt.Errorf("no HTTP response available")
 	}
 
-	failedCount := 0
-	for i, result := range userCtx.ConcurrentResults {
+	if u.lastResponse.StatusCode != expectedStatus {
+		return fmt.Errorf("expected HTTP status %d, got %d", expectedStatus, u.lastResponse.StatusCode)
+	}
+
+	return nil
+}
+
+func (u *UserCtx) allConcurrentUserRegistrationsShouldSucceed() error {
+	if len(u.concurrentResults) == 0 {
+		return fmt.Errorf("no concurrent results available")
+	}
+
+	for i, result := range u.concurrentResults {
 		if result.Error != nil {
-			ctx.T.Errorf("Expected concurrent user registration %d to succeed, but got error: %v", i+1, result.Error)
-			failedCount++
-			continue
+			return fmt.Errorf("concurrent request %d failed: %v", i, result.Error)
 		}
+
 		if result.RegisterResponse == nil {
-			ctx.T.Errorf("Expected concurrent user registration %d to have a response, but none was received", i+1)
-			failedCount++
-			continue
+			return fmt.Errorf("concurrent request %d: response should not be nil", i)
 		}
+
 		if result.RegisterResponse.Msg == nil {
-			ctx.T.Errorf("Expected concurrent user registration %d response message to exist, but it was nil", i+1)
-			failedCount++
-			continue
+			return fmt.Errorf("concurrent request %d: response message should not be nil", i)
 		}
+
 		if result.RegisterResponse.Msg.UserId == "" {
-			ctx.T.Errorf("Expected concurrent user registration %d to return user ID, but it was empty", i+1)
-			failedCount++
+			return fmt.Errorf("concurrent request %d: user ID should not be empty", i)
 		}
 	}
 
-	if failedCount > 0 {
-		ctx.T.Errorf("Expected all %d concurrent user registrations to succeed, but %d failed", len(userCtx.ConcurrentResults), failedCount)
-	} else {
-		ctx.T.Logf("All %d concurrent user registrations succeeded", len(userCtx.ConcurrentResults))
+	return nil
+}
+
+func (u *UserCtx) iMakeConcurrentPOSTRequestsToWithContentTypeAndBody(numRequests int, endpoint, contentType, body string) error {
+	var wg sync.WaitGroup
+	results := make([]ConcurrentHTTPResult, numRequests)
+
+	// Handle escaped JSON in body
+	unescapedBody := strings.ReplaceAll(body, "\\\"", "\"")
+
+	for i := 0; i < numRequests; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+
+			url := fmt.Sprintf("%s%s", u.baseURL, endpoint)
+
+			req, err := http.NewRequest("POST", url, strings.NewReader(unescapedBody))
+			if err != nil {
+				results[index] = ConcurrentHTTPResult{Error: err}
+				return
+			}
+
+			req.Header.Set("Content-Type", contentType)
+
+			resp, err := u.httpClient.Do(req)
+			results[index] = ConcurrentHTTPResult{
+				Response: resp,
+				Error:    err,
+			}
+
+			if resp != nil {
+				defer resp.Body.Close()
+			}
+		}(i)
 	}
+
+	wg.Wait()
+	u.concurrentHTTPResults = results
+
+	return nil
+}
+
+func (u *UserCtx) allConcurrentRequestsShouldReturnHTTPStatus(expectedStatus int) error {
+	if len(u.concurrentHTTPResults) == 0 {
+		return fmt.Errorf("no concurrent HTTP results available")
+	}
+
+	for i, result := range u.concurrentHTTPResults {
+		if result.Error != nil {
+			return fmt.Errorf("concurrent request %d failed: %v", i, result.Error)
+		}
+
+		if result.Response == nil {
+			return fmt.Errorf("concurrent request %d: response should not be nil", i)
+		}
+
+		if result.Response.StatusCode != expectedStatus {
+			return fmt.Errorf("concurrent request %d: expected HTTP status %d, got %d", i, expectedStatus, result.Response.StatusCode)
+		}
+	}
+
+	return nil
+}
+
+// Additional step definitions for JSON body patterns that godog auto-generates
+
+func (u *UserCtx) iMakeAPOSTRequestToWithJSONBody2Fields(endpoint, contentType, key1, value1 string) error {
+	// Reconstruct JSON body from individual fields
+	body := fmt.Sprintf(`{"%s":"%s"}`, key1, value1)
+	return u.iMakeAPOSTRequestToWithContentTypeAndBody(endpoint, contentType, body)
+}
+
+func (u *UserCtx) iMakeAPOSTRequestToWithJSONBody4Fields(endpoint, contentType, key1, value1, key2, value2 string) error {
+	// Reconstruct JSON body from individual fields
+	body := fmt.Sprintf(`{"%s":"%s","%s":"%s"}`, key1, value1, key2, value2)
+	return u.iMakeAPOSTRequestToWithContentTypeAndBody(endpoint, contentType, body)
+}
+
+func (u *UserCtx) iMakeAPOSTRequestToWithJSONBody6Fields(endpoint, contentType, key1, value1, key2, value2, key3, value3 string) error {
+	// Reconstruct JSON body from individual fields
+	body := fmt.Sprintf(`{"%s":"%s","%s":"%s","%s":"%s"}`, key1, value1, key2, value2, key3, value3)
+	return u.iMakeAPOSTRequestToWithContentTypeAndBody(endpoint, contentType, body)
+}
+
+func (u *UserCtx) iMakeConcurrentPOSTRequestsToWithJSONBody6Fields(numRequests int, endpoint, contentType, key1, value1, key2, value2, key3, value3 string) error {
+	// Reconstruct JSON body from individual fields
+	body := fmt.Sprintf(`{"%s":"%s","%s":"%s","%s":"%s"}`, key1, value1, key2, value2, key3, value3)
+	return u.iMakeConcurrentPOSTRequestsToWithContentTypeAndBody(numRequests, endpoint, contentType, body)
+}
+
+// Helper functions
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr ||
+		(len(s) > len(substr) &&
+			(s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				containsSubstring(s, substr))))
+}
+
+func containsSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// Register registers all user-related step definitions
+func (u *UserCtx) Register(sc *godog.ScenarioContext) {
+	// Given steps
+	sc.Step(`^the server is running$`, u.theServerIsRunning)
+	sc.Step(`^the gRPC user client is connected$`, u.theGRPCUserClientIsConnected)
+	sc.Step(`^the gRPC-Web user client is connected$`, u.theGRPCWebUserClientIsConnected)
+	sc.Step(`^I have valid user registration data$`, u.iHaveValidUserRegistrationData)
+	sc.Step(`^I have invalid user registration data with empty Firebase UID$`, u.iHaveInvalidUserRegistrationDataWithEmptyFirebaseUID)
+	sc.Step(`^an existing user is registered$`, u.anExistingUserIsRegistered)
+
+	// When steps
+	sc.Step(`^I register a user with valid data$`, u.iRegisterAUserWithValidData)
+	sc.Step(`^I register a user with the same Firebase UID$`, u.iRegisterAUserWithTheSameFirebaseUID)
+	sc.Step(`^I register a user with empty Firebase UID$`, u.iRegisterAUserWithEmptyFirebaseUID)
+	sc.Step(`^I get the user profile$`, u.iGetTheUserProfile)
+	sc.Step(`^I get the user profile with invalid ID$`, u.iGetTheUserProfileWithInvalidID)
+	sc.Step(`^I get the user profile with non-existent ID$`, u.iGetTheUserProfileWithNonExistentID)
+	sc.Step(`^I update the user profile with display name "([^"]*)"$`, u.iUpdateTheUserProfileWithDisplayName)
+	sc.Step(`^I make a GET request to "([^"]*)"$`, u.iMakeAGETRequestTo)
+	sc.Step(`^I make a POST request to "([^"]*)" with content type "([^"]*)" and body "([^"]*)"$`, u.iMakeAPOSTRequestToWithContentTypeAndBody)
+	sc.Step(`^I make (\d+) concurrent user registrations$`, u.iMakeConcurrentUserRegistrations)
+	sc.Step(`^I make (\d+) concurrent POST requests to "([^"]*)" with content type "([^"]*)" and body "([^"]*)"$`, u.iMakeConcurrentPOSTRequestsToWithContentTypeAndBody)
+
+	// Additional step definitions for complex JSON patterns that godog auto-generates
+	// These handle the specific JSON structures in the feature files
+	sc.Step(`^I make a POST request to "([^"]*)" with content type "([^"]*)" and body "{\\"([^"]*)":\\"([^"]*)"}"$`, u.iMakeAPOSTRequestToWithJSONBody2Fields)
+	sc.Step(`^I make a POST request to "([^"]*)" with content type "([^"]*)" and body "{\\"([^"]*)":\\"([^"]*)",\\"([^"]*)":\\"([^"]*)"}"$`, u.iMakeAPOSTRequestToWithJSONBody4Fields)
+	sc.Step(`^I make a POST request to "([^"]*)" with content type "([^"]*)" and body "{\\"([^"]*)":\\"([^"]*)",\\"([^"]*)":\\"([^"]*)",\\"([^"]*)":\\"([^"]*)"}"$`, u.iMakeAPOSTRequestToWithJSONBody6Fields)
+	sc.Step(`^I make (\d+) concurrent POST requests to "([^"]*)" with content type "([^"]*)" and body "{\\"([^"]*)":\\"([^"]*)",\\"([^"]*)":\\"([^"]*)",\\"([^"]*)":\\"([^"]*)"}"$`, u.iMakeConcurrentPOSTRequestsToWithJSONBody6Fields)
+
+	// Then steps
+	sc.Step(`^the user registration should succeed$`, u.theUserRegistrationShouldSucceed)
+	sc.Step(`^the response should contain a valid user ID$`, u.theResponseShouldContainAValidUserID)
+	sc.Step(`^the user registration should fail with AlreadyExists error$`, u.theUserRegistrationShouldFailWithAlreadyExistsError)
+	sc.Step(`^the user registration should fail with InvalidArgument error$`, u.theUserRegistrationShouldFailWithInvalidArgumentError)
+	sc.Step(`^the user profile retrieval should fail with NotFound error$`, u.theUserProfileRetrievalShouldFailWithNotFoundError)
+	sc.Step(`^the user profile should be retrieved$`, u.theUserProfileShouldBeRetrieved)
+	sc.Step(`^the user profile should contain display name "([^"]*)"$`, u.theUserProfileShouldContainDisplayName)
+	sc.Step(`^the user profile update should succeed$`, u.theUserProfileUpdateShouldSucceed)
+	// Note: HTTP status checks are handled by HealthCtx to avoid conflicts
+	sc.Step(`^all concurrent user registrations should succeed$`, u.allConcurrentUserRegistrationsShouldSucceed)
+	sc.Step(`^all concurrent requests should return HTTP status (\d+)$`, u.allConcurrentRequestsShouldReturnHTTPStatus)
 }

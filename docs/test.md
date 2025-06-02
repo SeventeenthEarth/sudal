@@ -83,8 +83,9 @@ go test ./path/to/package -v
 
 The project follows a Behavior-Driven Development (BDD) approach to testing using the following tools:
 
-- **Ginkgo**: A BDD-style testing framework for Go that provides a more expressive and readable syntax for writing tests.
+- **Ginkgo**: A BDD-style testing framework for Go that provides a more expressive and readable syntax for writing unit and integration tests.
 - **Gomega**: An assertion library that pairs with Ginkgo to provide a rich set of matchers for making assertions in tests.
+- **Godog**: A Cucumber-style BDD framework for Go used specifically for end-to-end tests with Gherkin syntax.
 - **mockgen**: Used to generate mock implementations of interfaces for testing.
 - **httptest**: Standard library package for testing HTTP handlers and servers.
 - **go-sqlmock**: Used for mocking database interactions in tests.
@@ -97,7 +98,33 @@ The project follows a Behavior-Driven Development (BDD) approach to testing usin
 
 ## End-to-End Tests
 
-For detailed information about end-to-end tests, including how to run them, naming conventions, BDD style testing, and test coverage, please refer to the [E2E Testing Guide](e2e-testing-guide.md).
+End-to-End tests use **Godog v0.14** with **Gherkin** syntax for human-readable BDD scenarios. These tests verify the complete functionality of the service by making actual HTTP/gRPC requests to a running server instance.
+
+### Quick Start
+
+```bash
+# Run all E2E tests
+make test.e2e
+
+# Run specific tests by tags
+make test.e2e.only TAGS=@health
+make test.e2e.only TAGS=@user
+make test.e2e.only TAGS=@rest
+make test.e2e.only TAGS=@grpc
+```
+
+### Features Covered
+
+- **Health Service**: REST endpoints (`/api/ping`, `/api/healthz`, `/api/health/database`) and gRPC health checks
+- **User Service**: gRPC user management (registration, profile retrieval, updates)
+
+### Test Organization
+
+- **Feature Files**: Located in `/test/e2e/features/` using Gherkin syntax
+- **Step Definitions**: Located in `/test/e2e/steps/` with Go implementations
+- **Tag-Based Execution**: Use `@rest`, `@grpc`, `@health`, `@user`, `@positive`, `@negative` tags
+
+For comprehensive information about E2E testing, including Gherkin syntax, step definitions, troubleshooting, and adding new tests, please refer to the [E2E Testing Guide](e2e-testing-guide.md).
 
 ## Writing BDD Tests
 

@@ -1,8 +1,9 @@
 package protocol
 
 import (
-	"connectrpc.com/connect"
 	"context"
+
+	"connectrpc.com/connect"
 
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
@@ -15,8 +16,8 @@ type HealthManager struct {
 	healthService application.HealthService
 }
 
-// NewHealthAdapter creates a new health service handler
-func NewHealthAdapter(service application.HealthService) *HealthManager {
+// NewHealthManager creates a new health service handler
+func NewHealthManager(service application.HealthService) *HealthManager {
 	return &HealthManager{
 		healthService: service,
 	}

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/cucumber/godog"
-	"github.com/cucumber/godog/colors"
 
 	"github.com/seventeenthearth/sudal/test/e2e/steps"
 )
@@ -40,6 +39,11 @@ func TestFeatures(t *testing.T) {
 		Strict:        *godogStrict,
 		Tags:          *godogTags,
 		TestingT:      t,
+	}
+
+	// For user tests, force sequential execution to avoid Firebase rate limiting
+	if userProtocol != "" {
+		opts.Concurrency = 1 // Force sequential execution for user tests
 	}
 
 	// Create test suite
@@ -82,81 +86,8 @@ func getFeaturePaths() []string {
 func TestMain(m *testing.M) {
 	flag.Parse()
 
-	// Check if we should run for specific protocols
-	healthProtocol := os.Getenv("HEALTH_PROTOCOL")
-	userProtocol := os.Getenv("USER_PROTOCOL")
-
-	if healthProtocol == "" && userProtocol == "" {
-		// Run tests for all protocol combinations
-		fmt.Println("Running tests for all protocol combinations...")
-
-		var results []int
-
-		// Health REST tests
-		fmt.Println("\n=== Running Health REST Protocol Tests ===")
-		os.Setenv("HEALTH_PROTOCOL", "rest")
-		os.Setenv("USER_PROTOCOL", "")
-		results = append(results, m.Run())
-
-		// Health gRPC tests
-		fmt.Println("\n=== Running Health gRPC Protocol Tests ===")
-		os.Setenv("HEALTH_PROTOCOL", "grpc")
-		os.Setenv("USER_PROTOCOL", "")
-		results = append(results, m.Run())
-
-		// User gRPC tests
-		fmt.Println("\n=== Running User gRPC Protocol Tests ===")
-		os.Setenv("HEALTH_PROTOCOL", "")
-		os.Setenv("USER_PROTOCOL", "grpc")
-		results = append(results, m.Run())
-
-		// User REST tests (negative)
-		fmt.Println("\n=== Running User REST Protocol Tests (Negative) ===")
-		os.Setenv("HEALTH_PROTOCOL", "")
-		os.Setenv("USER_PROTOCOL", "rest")
-		results = append(results, m.Run())
-
-		// Check if any tests failed
-		for i, result := range results {
-			if result != 0 {
-				fmt.Printf("Test suite %d failed with code %d\n", i+1, result)
-				os.Exit(1)
-			}
-		}
-
-		fmt.Println("All protocol tests passed!")
-		os.Exit(0)
-	} else {
-		// Run tests for specified protocols only
-		fmt.Printf("Running tests for specified protocols - Health: %s, User: %s\n", healthProtocol, userProtocol)
-		result := m.Run()
-		os.Exit(result)
-	}
-}
-
-// Example of how to run specific scenarios programmatically
-func runHealthScenarios() {
-	opts := godog.Options{
-		Format: "pretty",
-		Paths:  []string{"features"},
-		Output: colors.Colored(os.Stdout),
-	}
-
-	status := godog.TestSuite{
-		Name:                "health-scenarios",
-		ScenarioInitializer: steps.InitializeScenario,
-		Options:             &opts,
-	}.Run()
-
-	if status == 2 {
-		fmt.Println("Tests failed due to non-zero status")
-		os.Exit(1)
-	}
-
-	if status == 1 {
-		fmt.Println("Tests failed")
-		os.Exit(1)
-	}
-
-	fmt.Println("All tests passed!")
+	// Simply run all tests once - the script handles protocol separation
+	fmt.Println("Running E2E tests...")
+	result := m.Run()
+	os.Exit(result)
 }

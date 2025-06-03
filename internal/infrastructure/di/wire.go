@@ -12,6 +12,7 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
 
 	"github.com/google/wire"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
@@ -42,7 +43,7 @@ var HealthConnectSet = wire.NewSet(
 	application.NewHealthCheckUseCase,
 	application.NewDatabaseHealthUseCase,
 	application.NewService,
-	healthConnect.NewHealthAdapter,
+	healthConnect.NewHealthManager,
 )
 
 // DatabaseSet is a Wire provider set for database-related dependencies
@@ -77,7 +78,17 @@ var UserSet = wire.NewSet(
 	ProvideLogger,
 	ProvideUserRepository,
 	ProvideUserService,
+	ProvideFirebaseHandler,
 	userConnect.NewUserHandler,
+)
+
+// FirebaseSet is a Wire provider set for Firebase-related dependencies
+var FirebaseSet = wire.NewSet(
+	ProvideConfig,
+	ProvideLogger,
+	ProvideUserRepository,
+	ProvidePostgresManager,
+	ProvideFirebaseHandler,
 )
 
 // ProvideConfig provides the application configuration
@@ -135,6 +146,22 @@ func ProvideUserService(repository userDomainRepo.UserRepository) userApplicatio
 	return userApplication.NewService(repository)
 }
 
+// ProvideFirebaseHandler provides a Firebase handler instance
+func ProvideFirebaseHandler(cfg *config.Config, userRepo userDomainRepo.UserRepository, logger *zap.Logger) (*firebase.FirebaseHandler, error) {
+	// Check if we're in test environment and return nil to use mock
+	if isTestEnvironmentWire() {
+		return nil, nil
+	}
+
+	// Use GOOGLE_APPLICATION_CREDENTIALS environment variable if set, otherwise use config
+	credentialsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if credentialsFile == "" {
+		credentialsFile = cfg.FirebaseCredentialsJSON
+	}
+
+	return firebase.NewFirebaseHandler(credentialsFile, userRepo, logger)
+}
+
 // isTestEnvironmentWire checks if we're running in a test environment for wire
 func isTestEnvironmentWire() bool {
 	// Check environment variables that indicate test mode
@@ -183,6 +210,12 @@ func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
 // InitializeUserConnectHandler initializes and returns a Connect-go user handler (gRPC only)
 func InitializeUserConnectHandler() (*userConnect.UserManager, error) {
 	wire.Build(UserSet)
+	return nil, nil // Wire will fill this in
+}
+
+// InitializeFirebaseHandler initializes and returns a Firebase handler
+func InitializeFirebaseHandler() (*firebase.FirebaseHandler, error) {
+	wire.Build(FirebaseSet)
 	return nil, nil // Wire will fill this in
 }
 

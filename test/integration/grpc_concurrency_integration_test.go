@@ -3,11 +3,12 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 
 	"connectrpc.com/connect"
 	. "github.com/onsi/ginkgo/v2"
@@ -39,7 +40,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 		// Create service with mock repository
 		service = application.NewService(mockRepo)
-		handler = healthConnect.NewHealthAdapter(service)
+		handler = healthConnect.NewHealthManager(service)
 
 		// Setup test server
 		mux := http.NewServeMux()

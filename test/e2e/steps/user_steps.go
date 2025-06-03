@@ -18,12 +18,17 @@ import (
 
 	userv1 "github.com/seventeenthearth/sudal/gen/go/user/v1"
 	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
+	"github.com/seventeenthearth/sudal/test/e2e/helpers"
 )
 
 // UserCtx holds the context for user-related test scenarios
+// Now uses real Firebase authentication instead of fake tokens
 type UserCtx struct {
 	baseURL      string
 	grpcEndpoint string
+
+	// Firebase Auth client for real authentication
+	firebaseClient *helpers.FirebaseAuthClient
 
 	// HTTP-related fields (for negative REST tests)
 	httpClient   *http.Client
@@ -40,6 +45,12 @@ type UserCtx struct {
 	updateRequest    *userv1.UpdateUserProfileRequest
 	updateResponse   *connect.Response[userv1.UpdateUserProfileResponse]
 	grpcError        error
+
+	// Firebase authentication data
+	firebaseIDToken string
+	firebaseUID     string
+	email           string
+	password        string
 
 	// Test data
 	testFirebaseUID string
@@ -83,9 +94,18 @@ func NewUserCtx() *UserCtx {
 		grpcEndpoint = "localhost:8080"
 	}
 
+	// Initialize Firebase client
+	firebaseClient, err := helpers.NewFirebaseAuthClient()
+	if err != nil {
+		// Log error but don't fail initialization
+		// This allows tests that don't need Firebase to still work
+		fmt.Printf("Warning: Failed to initialize Firebase client: %v\n", err)
+	}
+
 	return &UserCtx{
-		baseURL:      baseURL,
-		grpcEndpoint: grpcEndpoint,
+		baseURL:        baseURL,
+		grpcEndpoint:   grpcEndpoint,
+		firebaseClient: firebaseClient,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -98,6 +118,47 @@ func (u *UserCtx) Cleanup() {
 	if u.lastResponse != nil {
 		u.lastResponse.Body.Close()
 	}
+
+	// Clean up Firebase user if exists
+	if u.firebaseClient != nil && u.firebaseIDToken != "" {
+		if err := u.firebaseClient.DeleteUser(u.firebaseIDToken); err != nil {
+			// Log warning but don't fail the test
+			fmt.Printf("Warning: Failed to delete Firebase user: %v\n", err)
+		}
+	}
+}
+
+// createFirebaseUser creates a new Firebase user and returns authentication data
+func (u *UserCtx) createFirebaseUser() error {
+	if u.firebaseClient == nil {
+		return fmt.Errorf("Firebase client not initialized")
+	}
+
+	// Generate random credentials
+	u.email = helpers.GenerateRandomEmail()
+	u.password = helpers.GenerateSecurePassword()
+
+	// Add delay to avoid rate limiting
+	time.Sleep(1 * time.Second)
+
+	// Sign up with Firebase
+	authResp, err := u.firebaseClient.SignUpWithEmailPassword(u.email, u.password)
+	if err != nil {
+		return fmt.Errorf("failed to sign up with Firebase: %w", err)
+	}
+
+	u.firebaseIDToken = authResp.IDToken
+	u.firebaseUID = authResp.LocalID
+
+	return nil
+}
+
+// ensureFirebaseAuth ensures Firebase authentication is set up
+func (u *UserCtx) ensureFirebaseAuth() error {
+	if u.firebaseIDToken == "" || u.firebaseUID == "" {
+		return u.createFirebaseUser()
+	}
+	return nil
 }
 
 // Given Steps
@@ -150,14 +211,19 @@ func (u *UserCtx) theGRPCWebUserClientIsConnected() error {
 }
 
 func (u *UserCtx) iHaveValidUserRegistrationData() error {
-	// Generate unique test data
-	u.testFirebaseUID = "firebase_" + uuid.New().String()
+	// Ensure Firebase authentication is set up
+	if err := u.ensureFirebaseAuth(); err != nil {
+		return fmt.Errorf("failed to set up Firebase authentication: %w", err)
+	}
+
+	// Use real Firebase UID and generate display name
+	u.testFirebaseUID = u.firebaseUID
 	u.testDisplayName = "Test User " + uuid.New().String()[:8]
 
 	u.registerRequest = &userv1.RegisterUserRequest{
 		FirebaseUid:  u.testFirebaseUID,
 		DisplayName:  u.testDisplayName,
-		AuthProvider: "google",
+		AuthProvider: "email",
 	}
 
 	return nil
@@ -183,21 +249,29 @@ func (u *UserCtx) anExistingUserIsRegistered() error {
 		}
 	}
 
-	// Generate unique test data for existing user
-	u.testFirebaseUID = "firebase_" + uuid.New().String()
+	// Ensure Firebase authentication is set up
+	if err := u.ensureFirebaseAuth(); err != nil {
+		return fmt.Errorf("failed to set up Firebase authentication: %w", err)
+	}
+
+	// Use Firebase UID and generate display name
+	u.testFirebaseUID = u.firebaseUID
 	u.testDisplayName = "Existing User " + uuid.New().String()[:8]
 
 	// Register the user
 	registerReq := &userv1.RegisterUserRequest{
 		FirebaseUid:  u.testFirebaseUID,
 		DisplayName:  u.testDisplayName,
-		AuthProvider: "google",
+		AuthProvider: "email",
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req := connect.NewRequest(registerReq)
+	// Use real Firebase token
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.RegisterUser(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to register existing user: %v", err)
@@ -222,10 +296,21 @@ func (u *UserCtx) iRegisterAUserWithValidData() error {
 		return fmt.Errorf("registration request not prepared")
 	}
 
+	// Ensure Firebase authentication is set up
+	if err := u.ensureFirebaseAuth(); err != nil {
+		return fmt.Errorf("failed to set up Firebase authentication: %w", err)
+	}
+
+	// Update the request with real Firebase UID
+	u.registerRequest.FirebaseUid = u.firebaseUID
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req := connect.NewRequest(u.registerRequest)
+	// Use real Firebase token
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.RegisterUser(ctx, req)
 	u.registerResponse = resp
 	u.grpcError = err
@@ -242,13 +327,16 @@ func (u *UserCtx) iRegisterAUserWithTheSameFirebaseUID() error {
 	u.registerRequest = &userv1.RegisterUserRequest{
 		FirebaseUid:  u.testFirebaseUID, // Same as existing user
 		DisplayName:  "Another User",
-		AuthProvider: "google",
+		AuthProvider: "email",
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req := connect.NewRequest(u.registerRequest)
+	// Use real Firebase token (same user trying to register again)
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.RegisterUser(ctx, req)
 	u.registerResponse = resp
 	u.grpcError = err
@@ -265,10 +353,18 @@ func (u *UserCtx) iRegisterAUserWithEmptyFirebaseUID() error {
 		return fmt.Errorf("registration request not prepared")
 	}
 
+	// Ensure Firebase authentication is set up
+	if err := u.ensureFirebaseAuth(); err != nil {
+		return fmt.Errorf("failed to set up Firebase authentication: %w", err)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	req := connect.NewRequest(u.registerRequest)
+	// Use real Firebase token but with empty UID in request
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.RegisterUser(ctx, req)
 	u.registerResponse = resp
 	u.grpcError = err
@@ -293,6 +389,9 @@ func (u *UserCtx) iGetTheUserProfile() error {
 	defer cancel()
 
 	req := connect.NewRequest(u.profileRequest)
+	// Use real Firebase token
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.GetUserProfile(ctx, req)
 	u.profileResponse = resp
 	u.grpcError = err
@@ -303,6 +402,11 @@ func (u *UserCtx) iGetTheUserProfile() error {
 func (u *UserCtx) iGetTheUserProfileWithNonExistentID() error {
 	if u.grpcClient == nil {
 		return fmt.Errorf("gRPC client not connected")
+	}
+
+	// Ensure Firebase authentication is set up
+	if err := u.ensureFirebaseAuth(); err != nil {
+		return fmt.Errorf("failed to set up Firebase authentication: %w", err)
 	}
 
 	// Use a valid UUID that doesn't exist in the database
@@ -317,6 +421,9 @@ func (u *UserCtx) iGetTheUserProfileWithNonExistentID() error {
 	defer cancel()
 
 	req := connect.NewRequest(u.profileRequest)
+	// Use real Firebase token
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.GetUserProfile(ctx, req)
 	u.profileResponse = resp
 	u.grpcError = err
@@ -327,6 +434,11 @@ func (u *UserCtx) iGetTheUserProfileWithNonExistentID() error {
 func (u *UserCtx) iGetTheUserProfileWithInvalidID() error {
 	if u.grpcClient == nil {
 		return fmt.Errorf("gRPC client not connected")
+	}
+
+	// Ensure Firebase authentication is set up
+	if err := u.ensureFirebaseAuth(); err != nil {
+		return fmt.Errorf("failed to set up Firebase authentication: %w", err)
 	}
 
 	// Use nil UUID (all zeros) which is considered invalid
@@ -340,6 +452,9 @@ func (u *UserCtx) iGetTheUserProfileWithInvalidID() error {
 	defer cancel()
 
 	req := connect.NewRequest(u.profileRequest)
+	// Use real Firebase token
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.GetUserProfile(ctx, req)
 	u.profileResponse = resp
 	u.grpcError = err
@@ -368,6 +483,9 @@ func (u *UserCtx) iUpdateTheUserProfileWithDisplayName(displayName string) error
 	defer cancel()
 
 	req := connect.NewRequest(u.updateRequest)
+	// Use real Firebase token
+	req.Header().Set("Authorization", "Bearer "+u.firebaseIDToken)
+
 	resp, err := u.grpcClient.UpdateUserProfile(ctx, req)
 	u.updateResponse = resp
 	u.grpcError = err
@@ -429,34 +547,63 @@ func (u *UserCtx) iMakeConcurrentUserRegistrations(numRequests int) error {
 		return fmt.Errorf("gRPC client not connected")
 	}
 
+	if u.firebaseClient == nil {
+		return fmt.Errorf("Firebase client not initialized")
+	}
+
 	var wg sync.WaitGroup
 	results := make([]ConcurrentUserResult, numRequests)
 
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
+		// Add delay between starting goroutines to avoid rate limiting
+		time.Sleep(3 * time.Second)
+
 		go func(index int) {
 			defer wg.Done()
 
-			// Generate unique data for each request
-			firebaseUID := "firebase_" + uuid.New().String()
+			// Add additional delay within goroutine to stagger Firebase requests
+			time.Sleep(time.Duration(index) * 2 * time.Second)
+
+			// Create a unique Firebase user for each concurrent request
+			email := helpers.GenerateRandomEmail()
+			password := helpers.GenerateSecurePassword()
 			displayName := fmt.Sprintf("Concurrent User %d %s", index, uuid.New().String()[:8])
 
-			registerReq := &userv1.RegisterUserRequest{
-				FirebaseUid:  firebaseUID,
-				DisplayName:  displayName,
-				AuthProvider: "google",
+			// Sign up with Firebase
+			authResp, err := u.firebaseClient.SignUpWithEmailPassword(email, password)
+			if err != nil {
+				results[index] = ConcurrentUserResult{
+					Error:         fmt.Errorf("failed to create Firebase user: %w", err),
+					OperationType: "register",
+				}
+				return
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			registerReq := &userv1.RegisterUserRequest{
+				FirebaseUid:  authResp.LocalID,
+				DisplayName:  displayName,
+				AuthProvider: "email",
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
 			req := connect.NewRequest(registerReq)
+			// Use real Firebase token
+			req.Header().Set("Authorization", "Bearer "+authResp.IDToken)
+
 			resp, err := u.grpcClient.RegisterUser(ctx, req)
 
 			results[index] = ConcurrentUserResult{
 				RegisterResponse: resp,
 				Error:            err,
 				OperationType:    "register",
+			}
+
+			// Clean up Firebase user after test
+			if cleanupErr := u.firebaseClient.DeleteUser(authResp.LocalID); cleanupErr != nil {
+				fmt.Printf("Warning: Failed to delete Firebase user %s: %v\n", authResp.LocalID, cleanupErr)
 			}
 		}(i)
 	}
@@ -546,6 +693,21 @@ func (u *UserCtx) theUserProfileRetrievalShouldFailWithNotFoundError() error {
 	errorStr := u.grpcError.Error()
 	if !contains(errorStr, "not found") && !contains(errorStr, "NotFound") {
 		return fmt.Errorf("expected NotFound error, got: %v", u.grpcError)
+	}
+
+	return nil
+}
+
+func (u *UserCtx) theUserProfileRetrievalShouldFailWithPermissionDeniedError() error {
+	if u.grpcError == nil {
+		return fmt.Errorf("expected PermissionDenied error but got no error")
+	}
+
+	// Check if error contains "permission denied" or "PermissionDenied"
+	errorStr := u.grpcError.Error()
+	if !strings.Contains(strings.ToLower(errorStr), "permission") &&
+		!strings.Contains(errorStr, "PermissionDenied") {
+		return fmt.Errorf("expected PermissionDenied error, got: %v", u.grpcError)
 	}
 
 	return nil
@@ -780,6 +942,7 @@ func (u *UserCtx) Register(sc *godog.ScenarioContext) {
 	sc.Step(`^the user registration should fail with AlreadyExists error$`, u.theUserRegistrationShouldFailWithAlreadyExistsError)
 	sc.Step(`^the user registration should fail with InvalidArgument error$`, u.theUserRegistrationShouldFailWithInvalidArgumentError)
 	sc.Step(`^the user profile retrieval should fail with NotFound error$`, u.theUserProfileRetrievalShouldFailWithNotFoundError)
+	sc.Step(`^the user profile retrieval should fail with PermissionDenied error$`, u.theUserProfileRetrievalShouldFailWithPermissionDeniedError)
 	sc.Step(`^the user profile should be retrieved$`, u.theUserProfileShouldBeRetrieved)
 	sc.Step(`^the user profile should contain display name "([^"]*)"$`, u.theUserProfileShouldContainDisplayName)
 	sc.Step(`^the user profile update should succeed$`, u.theUserProfileUpdateShouldSucceed)

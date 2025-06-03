@@ -1,9 +1,10 @@
 package protocol_test
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
+
+	"connectrpc.com/connect"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/seventeenthearth/sudal/internal/feature/health/protocol"
@@ -25,7 +26,7 @@ var _ = Describe("HealthManager", func() {
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockService = mocks.NewMockHealthService(mockCtrl)
-		healthHandler = protocol.NewHealthAdapter(mockService)
+		healthHandler = protocol.NewHealthManager(mockService)
 		ctx = context.Background()
 	})
 

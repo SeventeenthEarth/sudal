@@ -10,8 +10,8 @@ redis_addr: localhost:6379
 redis_password: ""  # Optional
 
 # Firebase Configuration
-firebase_project_id: your-firebase-project-id
-firebase_credentials_json: ./configs/firebase-credentials.json
+firebase_project_id: sudal-14497
+firebase_credentials_json: ./secrets/firebase_admin_key.json
 
 # JWT Configuration
 jwt_secret_key: your-jwt-secret-key

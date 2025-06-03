@@ -48,18 +48,26 @@ run_all_tests() {
     # Change to project root directory (scripts is one level down from root)
     cd "$(dirname "$0")/.."
 
+    # Load environment variables from .env file if it exists
+    if [ -f ".env" ]; then
+        echo -e "${YELLOW}Loading environment variables from .env file...${NC}"
+        set -a  # automatically export all variables
+        source .env
+        set +a  # stop automatically exporting
+    fi
+
     local verbose_flag=$(get_verbose_flag)
 
     echo -e "${YELLOW}🔄 Running Health tests...${NC}"
-    if go test $verbose_flag ./test/e2e -tags="@health"; then
+    if go test $verbose_flag -count=1 ./test/e2e -godog.tags="@health"; then
         echo -e "${GREEN}✓ Health tests passed${NC}"
     else
         echo -e "${RED}✗ Health tests failed${NC}"
         return 1
     fi
 
-    echo -e "${YELLOW}🔄 Running User tests...${NC}"
-    if go test $verbose_flag ./test/e2e -tags="@user"; then
+    echo -e "${YELLOW}🔄 Running User tests (excluding concurrent tests to avoid Firebase rate limiting)...${NC}"
+    if go test $verbose_flag -count=1 ./test/e2e -godog.tags="@user && ~@skip_firebase_rate_limit"; then
         echo -e "${GREEN}✓ User tests passed${NC}"
     else
         echo -e "${RED}✗ User tests failed${NC}"
@@ -81,11 +89,19 @@ run_specific_scenarios() {
     # Change to project root directory (scripts is one level down from root)
     cd "$(dirname "$0")/.."
 
+    # Load environment variables from .env file if it exists
+    if [ -f ".env" ]; then
+        echo -e "${YELLOW}Loading environment variables from .env file...${NC}"
+        set -a  # automatically export all variables
+        source .env
+        set +a  # stop automatically exporting
+    fi
+
     local verbose_flag=$(get_verbose_flag)
     local godog_args=""
 
     if [ -n "$tags" ]; then
-        godog_args="$godog_args -tags=\"$tags\""
+        godog_args="$godog_args -godog.tags=\"$tags\""
         echo -e "${YELLOW}Using tags: $tags${NC}"
     fi
 
@@ -95,7 +111,7 @@ run_specific_scenarios() {
     fi
 
     # Run specific scenarios
-    if eval "go test $verbose_flag ./test/e2e $godog_args"; then
+    if eval "go test $verbose_flag -count=1 ./test/e2e $godog_args"; then
         echo -e "${GREEN}✓ Specific scenarios passed${NC}"
         return 0
     else

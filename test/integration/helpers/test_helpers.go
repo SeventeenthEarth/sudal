@@ -181,7 +181,7 @@ func (ctx *IntegrationTestContext) SetupTestServer() error {
 
 	// Create handlers
 	ctx.HealthHandler = healthInterface.NewHealthHandler(service)
-	ctx.HealthConnectHandler = healthInterface.NewHealthAdapter(service)
+	ctx.HealthConnectHandler = healthInterface.NewHealthManager(service)
 
 	// Create router
 	mux := http.NewServeMux()

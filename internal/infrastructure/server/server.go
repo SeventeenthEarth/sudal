@@ -10,16 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
-	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
-	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 // Server represents the HTTP server
@@ -57,81 +52,45 @@ func (s *Server) TriggerShutdown() {
 	}
 }
 
-// Start initializes and starts the HTTP server
+// Start initializes and starts the HTTP server using middleware chains
 func (s *Server) Start() error {
-	// Create a new ServeMux
+	// Initialize Firebase handler for middleware chains
+	firebaseHandler, err := di.InitializeFirebaseHandler()
+	if err != nil {
+		return fmt.Errorf("failed to initialize firebase handler: %w", err)
+	}
+
+	// Initialize service registry
+	serviceRegistry, err := NewServiceRegistry()
+	if err != nil {
+		return fmt.Errorf("failed to initialize service registry: %w", err)
+	}
+
+	// Build middleware chains
+	chainBuilder := NewMiddlewareChainBuilder(firebaseHandler, log.GetLogger())
+	serviceConfig := GetDefaultServiceConfiguration()
+	chains := chainBuilder.BuildServiceChains(serviceConfig.ProtectedProcedures)
+
+	// Setup routes with middleware chains
 	mux := http.NewServeMux()
+	routeRegistrar := NewRouteRegistrar(mux, chains, serviceRegistry)
 
-	// Initialize handlers using dependency injection
-	// Initialize Connect-go health service handler (gRPC only)
-	healthConnectHandler, err := di.InitializeHealthConnectHandler()
+	// Register all routes
+	if err := routeRegistrar.RegisterRESTRoutes(); err != nil {
+		return fmt.Errorf("failed to register REST routes: %w", err)
+	}
+	routeRegistrar.RegisterGRPCRoutes()
+
+	// Create the final HTTP handler
+	httpHandler := mux
+
+	// Setup HTTP/2 server for gRPC support
+	finalHandler, server, err := s.setupHTTP2Server(httpHandler)
 	if err != nil {
-		return fmt.Errorf("failed to initialize health connect handler: %w", err)
+		return fmt.Errorf("failed to setup HTTP/2 server: %w", err)
 	}
-	// Initialize Connect-go user service handler (gRPC only)
-	userConnectHandler, err := di.InitializeUserConnectHandler()
-	if err != nil {
-		return fmt.Errorf("failed to initialize user connect handler: %w", err)
-	}
-	// Initialize OpenAPI handler for REST endpoints
-	openAPIHandler, err := di.InitializeOpenAPIHandler()
-	if err != nil {
-		return fmt.Errorf("failed to initialize OpenAPI handler: %w", err)
-	}
-	// Initialize Swagger UI handler
-	swaggerHandler := di.InitializeSwaggerHandler()
-
-	// Register OpenAPI routes for REST endpoints (/api/ping, /api/healthz, /api/health/database)
-	openAPIServer, err := openapi.NewServer(openAPIHandler)
-	if err != nil {
-		return fmt.Errorf("failed to create OpenAPI server: %w", err)
-	}
-	mux.Handle("/api/", openAPIServer)
-
-	// Register Swagger UI routes
-	mux.HandleFunc("/docs", swaggerHandler.ServeSwaggerUI)
-	mux.HandleFunc("/docs/", swaggerHandler.ServeSwaggerUI)
-	mux.HandleFunc("/api/openapi.yaml", swaggerHandler.ServeOpenAPISpec)
-
-	// Register Connect-go routes with gRPC support
-	// These are restricted to gRPC-only via middleware
-	healthPath, healthConnectHTTPHandler := healthv1connect.NewHealthServiceHandler(healthConnectHandler)
-	mux.Handle(healthPath, healthConnectHTTPHandler)
-
-	// Register UserService Connect-go routes
-	userPath, userHTTPHandler := userv1connect.NewUserServiceHandler(userConnectHandler)
-	mux.Handle(userPath, userHTTPHandler)
-
-	// Apply middleware stack
-	// 1. Protocol filtering for specified paths (gRPC-only restriction)
-	protocolFilterHandler := middleware.ProtocolFilterMiddleware(middleware.GetGRPCOnlyPaths())(mux)
-	// 2. Request logging
-	httpHandler := middleware.RequestLogger(protocolFilterHandler)
-
-	// Configure HTTP/2 server for gRPC support
-	h2s := &http2.Server{
-		// Allow HTTP/2 connections without prior knowledge
-		// This is important for gRPC clients
-		IdleTimeout: 60 * time.Second,
-	}
-
-	// Wrap handler with h2c (HTTP/2 Cleartext) to support gRPC over HTTP/2 without TLS
-	// This allows both HTTP/1.1 and HTTP/2 clients to connect
-	h2cHandler := h2c.NewHandler(httpHandler, h2s)
-
-	// Create the HTTP server with HTTP/2 support
-	s.server = &http.Server{
-		Addr:         ":" + s.port,
-		Handler:      h2cHandler,
-		ReadTimeout:  0, // Disable read timeout for gRPC streaming
-		WriteTimeout: 0, // Disable write timeout for gRPC streaming
-		IdleTimeout:  60 * time.Second,
-	}
-
-	// Configure HTTP/2 on the server
-	if err := http2.ConfigureServer(s.server, h2s); err != nil {
-		return fmt.Errorf("failed to configure HTTP/2 server: %w", err)
-	}
+	s.server = server
+	s.server.Handler = finalHandler
 
 	// Channel to listen for errors coming from the listener
 	serverErrors := make(chan error, 1)
@@ -176,4 +135,33 @@ func (s *Server) Start() error {
 	}
 
 	return nil
+}
+
+// setupHTTP2Server configures HTTP/2 server for gRPC support
+func (s *Server) setupHTTP2Server(handler http.Handler) (http.Handler, *http.Server, error) {
+	// Configure HTTP/2 server for gRPC support
+	h2s := &http2.Server{
+		// Allow HTTP/2 connections without prior knowledge
+		// This is important for gRPC clients
+		IdleTimeout: 60 * time.Second,
+	}
+
+	// Wrap handler with h2c (HTTP/2 Cleartext) to support gRPC over HTTP/2 without TLS
+	// This allows both HTTP/1.1 and HTTP/2 clients to connect
+	h2cHandler := h2c.NewHandler(handler, h2s)
+
+	// Create the HTTP server with HTTP/2 support
+	server := &http.Server{
+		Addr:         ":" + s.port,
+		ReadTimeout:  0, // Disable read timeout for gRPC streaming
+		WriteTimeout: 0, // Disable write timeout for gRPC streaming
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Configure HTTP/2 on the server
+	if err := http2.ConfigureServer(server, h2s); err != nil {
+		return nil, nil, fmt.Errorf("failed to configure HTTP/2 server: %w", err)
+	}
+
+	return h2cHandler, server, nil
 }

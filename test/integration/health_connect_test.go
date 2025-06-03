@@ -3,11 +3,12 @@ package integration_test
 import (
 	"context"
 	"errors"
-	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"net"
 	"net/http"
 	"strings"
 	"time"
+
+	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 
 	"connectrpc.com/connect"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,7 +44,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 		service := application.NewService(mockRepo)
 
 		// Create the Connect handler
-		healthHandler := healthConnect.NewHealthAdapter(service)
+		healthHandler := healthConnect.NewHealthManager(service)
 		path, handler := healthv1connect.NewHealthServiceHandler(healthHandler)
 
 		// Create a router and register the Connect handler

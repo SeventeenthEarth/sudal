@@ -29,6 +29,7 @@ help: ## Show this help message
 	@echo "  make generate      # Generate all code"
 	@echo "  make test          # Run all tests"
 	@echo "  make test.e2e      # Run all godog E2E tests"
+	@echo "  make test.e2e.auth # Run Firebase authentication E2E tests"
 	@echo "  make test.e2e.only # Run specific godog E2E scenarios"
 	@echo "  VERBOSE=1 make test.e2e  # Run with verbose output"
 	@echo "  make run           # Run the application"
@@ -140,6 +141,20 @@ test.e2e.only: ## Run specific godog E2E scenarios (usage: make test.e2e.only TA
 		./scripts/run-e2e-tests.sh --only $(TAGS) $(SCENARIO); \
 	fi
 	@echo "✅ Specific godog E2E scenarios completed"
+
+test.e2e.auth: ## Run Firebase authentication E2E tests (requires FIREBASE_WEB_API_KEY)
+	@echo "🔥 Running Firebase authentication E2E tests..."
+	@echo "📋 Prerequisites:"
+	@echo "  - Server must be running on localhost:8080"
+	@echo "  - FIREBASE_WEB_API_KEY must be set in .env"
+	@echo "  - Firebase Admin SDK credentials must be available"
+	@echo ""
+	@if [ -z "$(shell grep '^FIREBASE_WEB_API_KEY=.*[^[:space:]]' .env 2>/dev/null)" ]; then \
+		echo "❌ FIREBASE_WEB_API_KEY not configured. Run: ./scripts/setup-firebase-e2e.sh"; \
+		exit 1; \
+	fi
+	@cd test/e2e && go test -v -godog.format=pretty -godog.tags="@user_auth" .
+	@echo "✅ Firebase authentication E2E tests completed"
 
 # Code quality targets
 fmt: ## Format Go code

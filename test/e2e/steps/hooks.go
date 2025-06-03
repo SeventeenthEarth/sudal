@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/cucumber/godog"
 )
@@ -27,6 +29,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Create contexts
 	healthCtx := NewHealthCtx()
 	userCtx := NewUserCtx()
+	userAuthCtx := NewUserAuthCtx()
 
 	// Create shared HTTP response holder
 	sharedResponse := &SharedHTTPResponse{}
@@ -36,10 +39,52 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		// Log scenario start
 		fmt.Printf("Starting scenario: %s\n", scn.Name)
 
+		// Add delay between scenarios only for user tests that actually create Firebase users
+		// Health tests and some user tests don't need delays
+		needsFirebaseDelay := false
+		isUserTest := false
+
+		for _, tag := range scn.Tags {
+			if tag.Name == "@user" || tag.Name == "@user_auth" {
+				isUserTest = true
+			}
+			// Skip delay for scenarios that don't create Firebase users
+			if tag.Name == "@skip_firebase_rate_limit" || tag.Name == "@negative" {
+				needsFirebaseDelay = false
+				break
+			}
+		}
+
+		// Only apply delay for positive user tests that actually CREATE Firebase users
+		if isUserTest && !needsFirebaseDelay {
+			// Check if scenario involves Firebase user CREATION (not just usage)
+			scenarioText := strings.ToLower(scn.Name)
+
+			// Scenarios that definitely create Firebase users
+			if strings.Contains(scenarioText, "registration") ||
+				strings.Contains(scenarioText, "register") ||
+				strings.Contains(scenarioText, "sign up") ||
+				strings.Contains(scenarioText, "signup") {
+				needsFirebaseDelay = true
+			}
+
+			// Special case: "existing user is registered" creates a user in the background
+			// but "get user profile" or "update user profile" just use existing users
+			if strings.Contains(scenarioText, "existing user") && strings.Contains(scenarioText, "registered") {
+				needsFirebaseDelay = true
+			}
+		}
+
+		if needsFirebaseDelay {
+			fmt.Printf("Adding Firebase rate limiting delay for user scenario...\n")
+			time.Sleep(1 * time.Second) // Reduced from 2 seconds to 1 second
+		}
+
 		// Reset context state for each scenario by reinitializing the same instances
 		// instead of creating new ones
 		*healthCtx = *NewHealthCtx()
 		*userCtx = *NewUserCtx()
+		*userAuthCtx = *NewUserAuthCtx()
 
 		// Reset shared response
 		*sharedResponse = SharedHTTPResponse{}
@@ -55,6 +100,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		// Cleanup resources
 		healthCtx.Cleanup()
 		userCtx.Cleanup()
+		userAuthCtx.Cleanup()
 
 		// Log scenario completion
 		if err != nil {
@@ -69,6 +115,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	// Register step definitions
 	healthCtx.Register(sc)
 	userCtx.Register(sc)
+	userAuthCtx.Register(sc)
 }
 
 // GetHealthProtocol returns the current health protocol being tested

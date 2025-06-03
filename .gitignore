@@ -78,3 +78,6 @@ internal/infrastructure/openapi/oas_*.go
 .compiledaemon.*
 
 mcp-servers/
+
+# Firebase
+secrets/firebase_admin_key.json

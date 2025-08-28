@@ -1,5 +1,11 @@
 # Cache Utility Documentation
 
+Note: This document focuses on cache-specific behavior and APIs. General build/test workflows are centralized in the following documents:
+- Testing overview: `docs/test.md`
+- E2E details: `docs/e2e-testing-guide.md`
+- Scripts and make targets: `docs/script_guide.md`
+- Protocol boundary: `docs/protocols.md`
+
 ## Overview
 
 The Cache Utility provides a simple key-value caching interface using Redis as the backend. It supports basic CRUD operations with optional Time-To-Live (TTL) functionality and is designed to be thread-safe for concurrent operations.

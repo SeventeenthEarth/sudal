@@ -24,22 +24,10 @@ To run only unit tests (with preparation steps):
 make test.unit
 ```
 
-To run only unit tests (without preparation steps):
-
-```bash
-make test.unit.only
-```
-
 To run only integration tests (with preparation steps):
 
 ```bash
 make test.int
-```
-
-To run only integration tests (without preparation steps):
-
-```bash
-make test.int.only
 ```
 
 To run end-to-end tests (with preparation steps):
@@ -57,19 +45,23 @@ make test.e2e.only
 ### What Each Test Command Does
 
 Each test command first runs `make test.prepare`, which:
+
 1. Formats the code with `go fmt`
 2. Runs static analysis with `go vet`
 3. Runs linter checks with `golangci-lint`
 4. Runs all code generation tasks via `make generate`
 
 Then, the test command:
+
 1. Runs the specified tests with Ginkgo
 2. Generates a coverage report (both console summary and HTML report)
 
 After running tests, you can view the detailed coverage reports:
+
 - Unit tests: `coverage.unit.html`
 - Integration tests: `coverage.int.html`
-- End-to-end tests: `coverage.e2e.html`
+
+Note: E2E tests do not generate coverage reports; see E2E guide below.
 
 Note: Integration and E2E tests measure coverage of the internal packages using the `-coverpkg` flag.
 
@@ -98,9 +90,9 @@ The project follows a Behavior-Driven Development (BDD) approach to testing usin
 
 ## End-to-End Tests
 
-End-to-End tests use **Godog v0.14** with **Gherkin** syntax for human-readable BDD scenarios. These tests verify the complete functionality of the service by making actual HTTP/gRPC requests to a running server instance.
+E2E는 **Godog v0.14** + **Gherkin** 기반으로, 실제 서버에 HTTP/gRPC 요청을 보내 전체 동작을 검증합니다.
 
-### Quick Start
+Quick Start:
 
 ```bash
 # Run all E2E tests
@@ -113,18 +105,7 @@ make test.e2e.only TAGS=@rest
 make test.e2e.only TAGS=@grpc
 ```
 
-### Features Covered
-
-- **Health Service**: REST endpoints (`/api/ping`, `/api/healthz`, `/api/health/database`) and gRPC health checks
-- **User Service**: gRPC user management (registration, profile retrieval, updates)
-
-### Test Organization
-
-- **Feature Files**: Located in `/test/e2e/features/` using Gherkin syntax
-- **Step Definitions**: Located in `/test/e2e/steps/` with Go implementations
-- **Tag-Based Execution**: Use `@rest`, `@grpc`, `@health`, `@user`, `@positive`, `@negative` tags
-
-For comprehensive information about E2E testing, including Gherkin syntax, step definitions, troubleshooting, and adding new tests, please refer to the [E2E Testing Guide](e2e-testing-guide.md).
+자세한 작성/태깅/트러블슈팅은 E2E 가이드를 참고하세요: [E2E Testing Guide](e2e-testing-guide.md).
 
 ## Writing BDD Tests
 

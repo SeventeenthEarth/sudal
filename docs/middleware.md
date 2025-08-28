@@ -41,6 +41,8 @@ The following paths are restricted to gRPC-only access:
 - `/health.v1.HealthService/` - gRPC health service
 - `/user.v1.UserService/` - All user service methods
 
+See also: [Protocols & Boundaries](protocols.md) for the project-wide HTTP vs gRPC boundary and contribution rules.
+
 #### Security Features
 
 **Protocol-Level Security:**

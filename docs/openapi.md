@@ -71,10 +71,10 @@ The following files are manually maintained and should be committed to version c
 
 ```bash
 # Generate OpenAPI code only
-make ogen-generate
+make generate-ogen   # alias: ogen-generate
 
 # Clean generated OpenAPI code
-make ogen-clean
+make clean-ogen
 
 # Generate all code (including OpenAPI)
 make generate
@@ -105,6 +105,8 @@ go run github.com/ogen-go/ogen/cmd/ogen \
 3. **Implement Handlers**: Update `internal/infrastructure/openapi/handler.go` with new endpoint logic
 4. **Update Dependency Injection**: Add new handlers to `internal/infrastructure/di/wire.go` if needed
 5. **Test**: Write tests for the new endpoints
+
+Note: By project policy, REST is health/monitor링 전용입니다. 신규 비즈니스 기능은 기본적으로 gRPC로 구현하고, 불가피한 경우에만 REST를 추가하세요. 자세한 경계 정책은 [Protocols & Boundaries](protocols.md)를 참고하세요.
 
 ### Modifying Existing Endpoints
 

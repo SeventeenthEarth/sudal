@@ -24,10 +24,12 @@ make run
 ## 📋 Available Make Targets
 
 ### Development Environment
+
 - `make init` - Initialize development environment (quick setup)
 - `make install-tools` - Install all development tools
 
 ### Build & Test
+
 - `make build` - Build the application
 - `make test` - Run all tests (unit and integration)
 - `make test.unit` - Run unit tests only
@@ -35,11 +37,13 @@ make run
 - `make test.e2e` - Run end-to-end tests
 
 ### Code Quality
+
 - `make fmt` - Format Go code
 - `make vet` - Run Go vet
 - `make lint` - Run linter checks
 
 ### Code Generation
+
 - `make generate` - Generate all code (test suites, proto, wire, mocks)
 - `make buf-setup` - Setup buf configuration files
 - `make buf-generate` - Generate protobuf code
@@ -50,6 +54,7 @@ make run
 - `make ginkgo-bootstrap` - Bootstrap Ginkgo test suites
 
 ### Cleanup Operations
+
 - `make clean` - Standard cleanup (build artifacts and generated files)
 - `make clean-all` - Complete cleanup including Go module cache
 - `make clean-proto` - Clean only Protocol Buffer generated files
@@ -64,6 +69,7 @@ make run
 - `make clean-go-modules` - Clean only Go module cache
 
 ### Database Operations
+
 - `make migrate-up` - Apply database migrations
 - `make migrate-down` - Rollback last migration
 - `make migrate-status` - Show migration status
@@ -75,6 +81,7 @@ make run
 - `make migrate-fresh` - Fresh migration setup - backup old migrations and start clean
 
 ### Application
+
 - `make run` - Run the application using Docker Compose
 
 ## 🔧 Direct Script Usage
@@ -82,6 +89,7 @@ make run
 All scripts are also available for direct execution with advanced options:
 
 ### ./scripts/setup-dev-env.sh
+
 Advanced environment setup with Git configuration.
 
 ```bash
@@ -96,6 +104,7 @@ Advanced environment setup with Git configuration.
 ```
 
 ### ./scripts/install-tools.sh
+
 Install all development tools with detailed output.
 
 ```bash
@@ -109,6 +118,7 @@ Install all development tools with detailed output.
 ```
 
 ### ./scripts/setup-buf.sh
+
 Manage buf configuration and operations.
 
 ```bash
@@ -129,6 +139,7 @@ Manage buf configuration and operations.
 ```
 
 ### ./scripts/migrate.sh
+
 Database migration operations.
 
 ```bash
@@ -155,6 +166,7 @@ Database migration operations.
 ```
 
 ### ./scripts/clean-all.sh
+
 Advanced cleanup operations.
 
 ```bash
@@ -174,6 +186,7 @@ Advanced cleanup operations.
 ```
 
 ### ./scripts/run-e2e-tests.sh
+
 Run end-to-end tests with server availability check.
 
 ```bash
@@ -191,6 +204,7 @@ Run end-to-end tests with server availability check.
 ```
 
 ### ./scripts/setup_tests.sh
+
 Set up the test environment by installing required tools and bootstrapping Ginkgo test suites.
 
 ```bash
@@ -210,11 +224,13 @@ Set up the test environment by installing required tools and bootstrapping Ginkg
 ### Common Issues
 
 1. **Permission denied when running scripts**
+
    ```bash
    chmod +x scripts/*.sh
    ```
 
 2. **Tools not found**
+
    ```bash
    make install-tools
    ```
@@ -224,6 +240,7 @@ Set up the test environment by installing required tools and bootstrapping Ginkg
    - Ensure Docker containers are running: `make run`
 
 4. **Migration errors**
+
    ```bash
    # Check status first
    make migrate-status

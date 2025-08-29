@@ -1,0 +1,44 @@
+@startuml
+
+actor "Host(UserA)" as A
+actor "Participant(UserB)" as B
+participant "Backend (connect-go)" as BE
+database "Redis" as REDIS
+queue "GCP Pub/Sub" as PUBSUB
+
+== 방 생성 ==
+A -> BE: CreateRoom(quiz_set_id)
+BE -> REDIS: room:<roomId>:status = "WAITING"
+BE -> A: returns {roomId, qrcodeUrl}
+
+== 참여 ==
+B -> BE: JoinRoom(roomId)
+BE -> REDIS: SADD room:<roomId>:participants B
+note right
+  Publish 'PARTICIPANT_JOINED' event
+end note
+BE -> PUBSUB: Publish "roomJoin" msg
+PUBSUB -> BE: (Push to other instances, if any)
+BE -> B: JoinSuccess
+
+== 퀴즈 완료 ==
+B -> BE: SubmitQuiz(answers)
+BE -> REDIS: Mark B's quiz_done=true
+BE -> B: Ack
+
+== 사탕 기부 ==
+B -> BE: ContributeCandy(2)
+BE -> REDIS: INCR room:<roomId>:candy_pot by 2
+BE -> B: newPot=2
+
+== 비교 시작 ==
+A -> BE: StartComparison
+BE -> REDIS: status="COMPARING"
+note right
+  Publish 'ROOM_COMPARISON_START' event
+end note
+BE -> PUBSUB: Publish "comparisonStart" msg
+BE -> A: Broadcasting "Comparison results"
+BE -> B: Broadcasting "Comparison results"
+
+@enduml

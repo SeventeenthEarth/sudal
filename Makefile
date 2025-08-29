@@ -15,7 +15,7 @@ GOLANGCILINT := $(shell command -v golangci-lint 2> /dev/null)
 GINKGO := $(shell command -v ginkgo 2> /dev/null)
 MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 
-.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh
+.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh push-docs pull-docs
 
 .DEFAULT_GOAL := help
 
@@ -71,6 +71,10 @@ help: ## Show this help message
 	@echo ""
 	@echo "💡 All operations are now available via make commands!"
 	@echo "📚 For script help: ./scripts/SCRIPT_NAME.sh --help"
+	@echo ""
+	@echo "📝 Documentation Operations:"
+	@echo "  make push-docs                 # Push changes to docs subtree"
+	@echo "  make pull-docs                 # Pull latest changes from docs subtree"
 
 init: ## Initialize development environment (quick setup)
 	@echo "🚀 Initializing development environment..."
@@ -375,6 +379,17 @@ migrate-fresh: ## Fresh migration setup - backup old migrations and start clean
 	@read dummy
 	@./scripts/migrate.sh fresh
 	@echo "✅ Fresh migration setup completed"
+
+# Documentation subtree targets
+push-docs: ## Push changes to docs subtree
+	@echo "📝 Pushing docs to subtree remote..."
+	@git subtree push --prefix=docs github.com-17thearth:SeventeenthEarth/sudal_docs main
+	@echo "✅ Docs pushed to subtree"
+
+pull-docs: ## Pull latest changes from docs subtree
+	@echo "📝 Pulling docs from subtree remote..."
+	@git subtree pull --prefix=docs github.com-17thearth:SeventeenthEarth/sudal_docs main --squash
+	@echo "✅ Docs pulled from subtree"
 
 # Application targets
 run: ## Run the application using Docker Compose

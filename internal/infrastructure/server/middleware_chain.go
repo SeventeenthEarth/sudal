@@ -67,12 +67,12 @@ func (ic *InterceptorChain) ToConnectOptions() []connect.HandlerOption {
 
 // MiddlewareChainBuilder helps build different types of middleware chains
 type MiddlewareChainBuilder struct {
-	firebaseHandler *firebase.FirebaseHandler
+	firebaseHandler firebase.AuthVerifier
 	logger          *zap.Logger
 }
 
 // NewMiddlewareChainBuilder creates a new middleware chain builder
-func NewMiddlewareChainBuilder(firebaseHandler *firebase.FirebaseHandler, logger *zap.Logger) *MiddlewareChainBuilder {
+func NewMiddlewareChainBuilder(firebaseHandler firebase.AuthVerifier, logger *zap.Logger) *MiddlewareChainBuilder {
 	return &MiddlewareChainBuilder{
 		firebaseHandler: firebaseHandler,
 		logger:          logger,
@@ -88,6 +88,12 @@ func (mcb *MiddlewareChainBuilder) PublicHTTPChain() *MiddlewareChain {
 
 // ProtectedHTTPChain creates a middleware chain for protected HTTP endpoints
 func (mcb *MiddlewareChainBuilder) ProtectedHTTPChain() *MiddlewareChain {
+	// If no auth verifier is provided, skip auth middleware (useful for tests)
+	if mcb.firebaseHandler == nil {
+		return NewMiddlewareChain(
+			middleware.RequestLogger,
+		)
+	}
 	return NewMiddlewareChain(
 		middleware.RequestLogger,
 		middleware.AuthenticationMiddleware(mcb.firebaseHandler, mcb.logger),
@@ -109,12 +115,18 @@ func (mcb *MiddlewareChainBuilder) PublicGRPCChain() *InterceptorChain {
 
 // ProtectedGRPCChain creates an interceptor chain for protected gRPC endpoints
 func (mcb *MiddlewareChainBuilder) ProtectedGRPCChain() *InterceptorChain {
+	if mcb.firebaseHandler == nil {
+		return NewInterceptorChain()
+	}
 	authInterceptor := ConnectInterceptor(middleware.AuthenticationInterceptor(mcb.firebaseHandler, mcb.logger))
 	return NewInterceptorChain(authInterceptor)
 }
 
 // SelectiveGRPCChain creates an interceptor chain for selective gRPC authentication
 func (mcb *MiddlewareChainBuilder) SelectiveGRPCChain(protectedProcedures []string) *InterceptorChain {
+	if mcb.firebaseHandler == nil {
+		return NewInterceptorChain()
+	}
 	authInterceptor := ConnectInterceptor(middleware.SelectiveAuthenticationInterceptor(mcb.firebaseHandler, mcb.logger, protectedProcedures))
 	return NewInterceptorChain(authInterceptor)
 }

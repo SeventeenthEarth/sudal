@@ -21,18 +21,15 @@ import (
 type UserManager struct {
 	userv1connect.UnimplementedUserServiceHandler
 	userService     application.UserService
-	firebaseHandler *firebase.FirebaseHandler
+	firebaseHandler firebase.AuthVerifier
 	logger          *zap.Logger
 }
 
 // NewUserManager creates a new user handler with the provided dependencies
 // It validates that the logger is not nil, but allows nil userService for testing
-func NewUserManager(userService application.UserService, firebaseHandler *firebase.FirebaseHandler, logger *zap.Logger) *UserManager {
+func NewUserManager(userService application.UserService, firebaseHandler firebase.AuthVerifier, logger *zap.Logger) *UserManager {
 	if logger == nil {
 		panic("Logger cannot be nil")
-	}
-	if firebaseHandler == nil {
-		panic("Firebase handler cannot be nil")
 	}
 
 	return &UserManager{
@@ -69,6 +66,10 @@ func (h *UserManager) RegisterUser(
 	}
 
 	// Verify Firebase ID token
+	if h.firebaseHandler == nil {
+		h.logger.Warn("Firebase auth verifier is not configured")
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication not available"))
+	}
 	verifiedUser, err := h.firebaseHandler.VerifyIDToken(ctx, token)
 	if err != nil {
 		h.logger.Warn("Firebase token verification failed for RegisterUser", zap.Error(err))
@@ -238,6 +239,6 @@ func extractBearerToken(authHeader string) (string, error) {
 
 // NewUserHandler creates a new UserManager instance for Wire dependency injection
 // This function is used by Wire to create the UserManager with all required dependencies
-func NewUserHandler(userService application.UserService, firebaseHandler *firebase.FirebaseHandler, logger *zap.Logger) *UserManager {
+func NewUserHandler(userService application.UserService, firebaseHandler firebase.AuthVerifier, logger *zap.Logger) *UserManager {
 	return NewUserManager(userService, firebaseHandler, logger)
 }

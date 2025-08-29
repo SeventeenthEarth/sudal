@@ -15,7 +15,7 @@ GOLANGCILINT := $(shell command -v golangci-lint 2> /dev/null)
 GINKGO := $(shell command -v ginkgo 2> /dev/null)
 MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 
-.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh push-docs pull-docs
+.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh push-docs pull-docs test.e2e.cleanup-users
 
 .DEFAULT_GOAL := help
 
@@ -126,7 +126,7 @@ endif
 	@go tool cover -func=coverage.int.out
 	@go tool cover -html=coverage.int.out -o coverage.int.html
 	@echo "✅ Integration tests completed - coverage report: coverage.int.html"
-	@echo "ℹ️  Note: Infrastructure coverage is not measured because mock infrastructure is used."
+	@echo "ℹ️  Info: Integration tests use mocked infrastructure; infra package coverage is intentionally excluded."
 
 test.e2e: ## Run all godog E2E tests (usage: make test.e2e [VERBOSE=1])
 	@echo "🧪 Running all godog E2E tests..."
@@ -157,10 +157,19 @@ test.e2e.auth: ## Run Firebase authentication E2E tests (requires FIREBASE_WEB_A
 		echo "❌ FIREBASE_WEB_API_KEY not configured. Run: ./scripts/setup-firebase-e2e.sh"; \
 		exit 1; \
 	fi
-	@cd test/e2e && go test -v -godog.format=pretty -godog.tags="@user_auth" .
+	@echo "🔑 Loading environment variables from .env..." 
+	@set -a; \
+	 source .env; \
+	 set +a; \
+	 cd test/e2e && go test -v -godog.format=pretty -godog.tags="@user_auth" .
 	@echo "✅ Firebase authentication E2E tests completed"
 
-# Code quality targets
+test.e2e.cleanup-users: ## Cleanup all test users in Firebase using Go program
+	@echo "🧹 Cleaning up Firebase E2E test users using Go program..."
+	@set -a; \
+	if [ -f .env ]; then source .env; fi; \
+	set +a; \
+	go run ./cmd/cleanup-users/main.go
 fmt: ## Format Go code
 	@echo "🎨 Formatting code..."
 	@go fmt ./...

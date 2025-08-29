@@ -122,7 +122,7 @@ func (c *FirebaseAuthClient) DeleteUser(idToken string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -206,7 +206,7 @@ func (c *FirebaseAuthClient) makeAuthRequest(url string, payload interface{}) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -218,7 +218,7 @@ func (c *FirebaseAuthClient) makeAuthRequest(url string, payload interface{}) (*
 		if err := json.Unmarshal(body, &errorResp); err != nil {
 			return nil, fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
 		}
-		return nil, fmt.Errorf("Firebase Auth error: %s", errorResp.Error.Message)
+		return nil, fmt.Errorf("firebase auth error: %s", errorResp.Error.Message)
 	}
 
 	var authResp AuthResponse

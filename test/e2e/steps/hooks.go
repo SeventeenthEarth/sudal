@@ -138,10 +138,10 @@ func GetUserProtocol() string {
 func SetupTestEnvironment() {
 	// Set default environment variables if not already set
 	if os.Getenv("BASE_URL") == "" {
-		os.Setenv("BASE_URL", "http://localhost:8080")
+		_ = os.Setenv("BASE_URL", "http://localhost:8080")
 	}
 
 	if os.Getenv("GRPC_ADDR") == "" {
-		os.Setenv("GRPC_ADDR", "localhost:8080")
+		_ = os.Setenv("GRPC_ADDR", "localhost:8080")
 	}
 }

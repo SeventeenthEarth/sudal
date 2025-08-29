@@ -54,7 +54,15 @@ func NewUserAuthCtx() *UserAuthCtx {
 func (u *UserAuthCtx) Cleanup() {
 	// Delete Firebase user if we created one
 	if u.firebaseClient != nil && u.firebaseUID != "" {
-		if err := u.firebaseClient.DeleteUser(u.firebaseUID); err != nil {
+		// Prefer deleting with a valid ID token. If missing, try to sign in to obtain one.
+		idToken := u.firebaseIDToken
+		if idToken == "" && u.email != "" && u.password != "" {
+			if authResp, err := u.firebaseClient.SignInWithEmailPassword(u.email, u.password); err == nil {
+				idToken = authResp.IDToken
+			}
+		}
+
+		if err := u.firebaseClient.DeleteUser(idToken); err != nil {
 			// Log error but don't fail the test
 			fmt.Printf("Warning: Failed to cleanup Firebase user %s: %v\n", u.firebaseUID, err)
 		}

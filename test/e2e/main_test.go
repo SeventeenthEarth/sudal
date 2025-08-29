@@ -31,6 +31,9 @@ func TestFeatures(t *testing.T) {
 		userProtocol = "grpc" // default
 	}
 
+	// Mark variables as used to avoid ineffectual assignment warnings
+	_ = healthProtocol
+
 	// Set up godog options
 	opts := godog.Options{
 		Format:        *godogFormat,

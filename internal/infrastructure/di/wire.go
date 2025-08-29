@@ -147,9 +147,10 @@ func ProvideUserService(repository userDomainRepo.UserRepository) userApplicatio
 }
 
 // ProvideFirebaseHandler provides a Firebase handler instance
-func ProvideFirebaseHandler(cfg *config.Config, userRepo userDomainRepo.UserRepository, logger *zap.Logger) (*firebase.FirebaseHandler, error) {
-	// Check if we're in test environment and return nil to use mock
+func ProvideFirebaseHandler(cfg *config.Config, userRepo userDomainRepo.UserRepository, logger *zap.Logger) (firebase.AuthVerifier, error) {
+	// In test environment, return a stub handler to avoid real SDK init
 	if isTestEnvironmentWire() {
+		// For tests, we return nil to allow upper layers to skip auth, or tests can inject mocks explicitly.
 		return nil, nil
 	}
 
@@ -213,8 +214,8 @@ func InitializeUserConnectHandler() (*userConnect.UserManager, error) {
 	return nil, nil // Wire will fill this in
 }
 
-// InitializeFirebaseHandler initializes and returns a Firebase handler
-func InitializeFirebaseHandler() (*firebase.FirebaseHandler, error) {
+// InitializeFirebaseHandler initializes and returns a Firebase auth verifier
+func InitializeFirebaseHandler() (firebase.AuthVerifier, error) {
 	wire.Build(FirebaseSet)
 	return nil, nil // Wire will fill this in
 }

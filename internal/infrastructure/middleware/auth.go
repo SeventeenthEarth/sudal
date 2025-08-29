@@ -33,7 +33,7 @@ const (
 //
 // Returns:
 //   - connect.UnaryInterceptorFunc: Connect-go interceptor function
-func AuthenticationInterceptor(firebaseHandler *firebase.FirebaseHandler, logger *zap.Logger) connect.UnaryInterceptorFunc {
+func AuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *zap.Logger) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			// Extract Authorization header
@@ -86,7 +86,7 @@ func AuthenticationInterceptor(firebaseHandler *firebase.FirebaseHandler, logger
 //
 // Returns:
 //   - connect.UnaryInterceptorFunc: Connect-go interceptor function
-func SelectiveAuthenticationInterceptor(firebaseHandler *firebase.FirebaseHandler, logger *zap.Logger, protectedProcedures []string) connect.UnaryInterceptorFunc {
+func SelectiveAuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *zap.Logger, protectedProcedures []string) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			procedure := req.Spec().Procedure
@@ -204,7 +204,7 @@ func GetAuthenticatedUser(ctx context.Context) (*entity.User, error) {
 //
 // Returns:
 //   - func(http.Handler) http.Handler: HTTP middleware function
-func AuthenticationMiddleware(firebaseHandler *firebase.FirebaseHandler, logger *zap.Logger) func(http.Handler) http.Handler {
+func AuthenticationMiddleware(firebaseHandler firebase.AuthVerifier, logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract Authorization header
@@ -266,5 +266,5 @@ func writeUnauthenticatedError(w http.ResponseWriter, message string) {
 
 	// Write standardized error response as specified in the requirements
 	errorResponse := fmt.Sprintf(`{"code":"unauthenticated","message":"%s"}`, message)
-	w.Write([]byte(errorResponse))
+	_, _ = w.Write([]byte(errorResponse))
 }

@@ -17,7 +17,7 @@ type ServiceRegistry struct {
 	// gRPC service handlers
 	HealthHandler *healthConnect.HealthManager
 	UserHandler   *userConnect.UserManager
-	
+
 	// REST service handlers
 	OpenAPIHandler *openapi.OpenAPIHandler
 	SwaggerHandler *openapi.SwaggerHandler
@@ -56,16 +56,16 @@ func NewServiceRegistry() (*ServiceRegistry, error) {
 
 // RouteRegistrar handles route registration with appropriate middleware chains
 type RouteRegistrar struct {
-	mux     *http.ServeMux
-	chains  *ServiceChains
+	mux      *http.ServeMux
+	chains   *ServiceChains
 	registry *ServiceRegistry
 }
 
 // NewRouteRegistrar creates a new route registrar
 func NewRouteRegistrar(mux *http.ServeMux, chains *ServiceChains, registry *ServiceRegistry) *RouteRegistrar {
 	return &RouteRegistrar{
-		mux:     mux,
-		chains:  chains,
+		mux:      mux,
+		chains:   chains,
 		registry: registry,
 	}
 }
@@ -77,7 +77,7 @@ func (rr *RouteRegistrar) RegisterRESTRoutes() error {
 	if err != nil {
 		return fmt.Errorf("failed to create OpenAPI server: %w", err)
 	}
-	
+
 	// Apply public HTTP middleware chain to REST endpoints
 	restHandler := rr.chains.PublicHTTP.Apply(openAPIServer)
 	rr.mux.Handle("/api/", restHandler)
@@ -94,7 +94,7 @@ func (rr *RouteRegistrar) RegisterRESTRoutes() error {
 func (rr *RouteRegistrar) RegisterGRPCRoutes() {
 	// Register Health Service (public, gRPC-only)
 	rr.registerHealthService()
-	
+
 	// Register User Service (selective authentication, gRPC-only)
 	rr.registerUserService()
 }
@@ -106,7 +106,7 @@ func (rr *RouteRegistrar) registerHealthService() {
 		rr.registry.HealthHandler,
 		rr.chains.PublicGRPC.ToConnectOptions()...,
 	)
-	
+
 	// Apply gRPC-only HTTP middleware chain
 	healthHandler := rr.chains.GRPCOnlyHTTP.Apply(healthHTTPHandler)
 	rr.mux.Handle(healthPath, healthHandler)
@@ -119,7 +119,7 @@ func (rr *RouteRegistrar) registerUserService() {
 		rr.registry.UserHandler,
 		rr.chains.SelectiveGRPC.ToConnectOptions()...,
 	)
-	
+
 	// Apply gRPC-only HTTP middleware chain
 	userHandler := rr.chains.GRPCOnlyHTTP.Apply(userHTTPHandler)
 	rr.mux.Handle(userPath, userHandler)

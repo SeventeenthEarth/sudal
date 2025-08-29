@@ -12,6 +12,12 @@ import (
 	"google.golang.org/api/option"
 )
 
+// AuthVerifier abstracts Firebase ID token verification and user retrieval/creation.
+// Production uses FirebaseHandler; tests can mock this interface.
+type AuthVerifier interface {
+	VerifyIDToken(ctx context.Context, idToken string) (*entity.User, error)
+}
+
 // FirebaseHandler handles Firebase Admin SDK operations
 // This handler is responsible for initializing the Firebase Admin SDK
 // and providing token verification functionality for authentication middleware

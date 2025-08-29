@@ -108,7 +108,7 @@ func (h *HealthCtx) theServerIsRunning() error {
 		if err != nil {
 			continue // Try next endpoint
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode == http.StatusOK {
 			return nil // Server is running
@@ -166,7 +166,7 @@ func (h *HealthCtx) iMakeAGETRequestTo(endpoint string) error {
 		} else {
 			h.lastBody = body
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	return h.lastError
@@ -194,7 +194,7 @@ func (h *HealthCtx) iMakeAPOSTRequestToWithContentTypeAndBody(endpoint, contentT
 		} else {
 			h.lastBody = respBody
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	return h.lastError
@@ -222,7 +222,7 @@ func (h *HealthCtx) iMakeAConnectGoHealthRequest() error {
 		} else {
 			h.lastBody = body
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 
 	return h.lastError
@@ -325,7 +325,7 @@ func (h *HealthCtx) makeConcurrentRESTRequests(numRequests int) error {
 				} else {
 					result.Body = body
 				}
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 
 			results[index] = result
@@ -499,7 +499,7 @@ func (h *HealthCtx) theGRPCResponseShouldNotBeEmpty() error {
 }
 
 func (h *HealthCtx) theGRPCResponseShouldContainMetadata() error {
-	if h.grpcMetadata == nil || len(h.grpcMetadata) == 0 {
+	if len(h.grpcMetadata) == 0 {
 		return fmt.Errorf("gRPC response does not contain metadata")
 	}
 
@@ -741,7 +741,7 @@ func (h *HealthCtx) iMakeConcurrentGETRequestsTo(numRequests int, endpoint strin
 
 			var body []byte
 			if resp != nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 				body, _ = io.ReadAll(resp.Body)
 			}
 
@@ -993,6 +993,6 @@ func (h *HealthCtx) allResponsesShouldContainStatus(expectedStatus string) error
 // Cleanup cleans up resources
 func (h *HealthCtx) Cleanup() {
 	if h.grpcConn != nil {
-		h.grpcConn.Close()
+		_ = h.grpcConn.Close()
 	}
 }

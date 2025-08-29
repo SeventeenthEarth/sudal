@@ -33,7 +33,6 @@ type UserCtx struct {
 	// HTTP-related fields (for negative REST tests)
 	httpClient   *http.Client
 	lastResponse *http.Response
-	lastBody     []byte
 	lastError    error
 
 	// gRPC-related fields
@@ -55,7 +54,6 @@ type UserCtx struct {
 	// Test data
 	testFirebaseUID string
 	testDisplayName string
-	testAvatarURL   string
 	createdUserID   string
 
 	// Concurrent test results
@@ -116,7 +114,7 @@ func NewUserCtx() *UserCtx {
 func (u *UserCtx) Cleanup() {
 	// Close HTTP response if exists
 	if u.lastResponse != nil {
-		u.lastResponse.Body.Close()
+		_ = u.lastResponse.Body.Close()
 	}
 
 	// Clean up Firebase user if exists
@@ -131,7 +129,7 @@ func (u *UserCtx) Cleanup() {
 // createFirebaseUser creates a new Firebase user and returns authentication data
 func (u *UserCtx) createFirebaseUser() error {
 	if u.firebaseClient == nil {
-		return fmt.Errorf("Firebase client not initialized")
+		return fmt.Errorf("firebase client not initialized")
 	}
 
 	// Generate random credentials
@@ -169,7 +167,7 @@ func (u *UserCtx) theServerIsRunning() error {
 	if err != nil {
 		return fmt.Errorf("server is not running: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("server is not healthy, status: %d", resp.StatusCode)
@@ -501,7 +499,7 @@ func (u *UserCtx) iMakeAGETRequestTo(endpoint string) error {
 	u.lastError = err
 
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 
 	return nil
@@ -536,7 +534,7 @@ func (u *UserCtx) iMakeAPOSTRequestToWithContentTypeAndBody(endpoint, contentTyp
 	}
 
 	if resp != nil {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 	}
 
 	return nil
@@ -548,7 +546,7 @@ func (u *UserCtx) iMakeConcurrentUserRegistrations(numRequests int) error {
 	}
 
 	if u.firebaseClient == nil {
-		return fmt.Errorf("Firebase client not initialized")
+		return fmt.Errorf("firebase client not initialized")
 	}
 
 	var wg sync.WaitGroup
@@ -761,17 +759,7 @@ func (u *UserCtx) theUserProfileUpdateShouldSucceed() error {
 	return nil
 }
 
-func (u *UserCtx) theHTTPStatusShouldBe(expectedStatus int) error {
-	if u.lastResponse == nil {
-		return fmt.Errorf("no HTTP response available")
-	}
-
-	if u.lastResponse.StatusCode != expectedStatus {
-		return fmt.Errorf("expected HTTP status %d, got %d", expectedStatus, u.lastResponse.StatusCode)
-	}
-
-	return nil
-}
+// Removed unused step: theHTTPStatusShouldBe
 
 func (u *UserCtx) allConcurrentUserRegistrationsShouldSucceed() error {
 	if len(u.concurrentResults) == 0 {
@@ -828,7 +816,7 @@ func (u *UserCtx) iMakeConcurrentPOSTRequestsToWithContentTypeAndBody(numRequest
 			}
 
 			if resp != nil {
-				defer resp.Body.Close()
+				defer func() { _ = resp.Body.Close() }()
 			}
 		}(i)
 	}

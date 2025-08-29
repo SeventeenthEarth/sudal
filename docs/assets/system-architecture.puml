@@ -1,0 +1,46 @@
+@startuml
+!theme vibrant
+
+cloud "Client (Flutter)" as Client
+package "Backend (connect-go @ Cloud Run)" {
+  component "connect-go Server" as Connect {
+    component "Protocol Buffer Services" as PBServices
+    component "Business Logic" as Logic
+    component "Circuit Breaker" as CircuitBreaker #LightGreen
+  }
+}
+database "PostgreSQL (Cloud SQL)" as PSQL
+database "Redis (Cloud Memorystore)" as Redis
+cloud "GCP Pub/Sub" as PubSub #MediumPurple
+database "Event Store" as EventStore #Orange
+cloud "Firebase" {
+  component "Authentication" as FirebaseAuth
+  component "Storage (GCS)" as FirebaseStorage
+}
+
+Client --> FirebaseAuth : Login (SDK)
+FirebaseAuth --> Client : ID Token
+
+Client --> Connect : Unary Requests (HTTP/JSON or gRPC, w/ Token)
+Client <--> Connect : Streaming (gRPC or HTTP/2, w/ Token)
+PBServices --> Logic : Process Request
+Logic --> FirebaseAuth : Verify Token (Admin SDK)
+
+Logic --> CircuitBreaker
+CircuitBreaker --> PSQL : Read/Write Persistent Data
+CircuitBreaker --> Redis : Real-time State / Cache
+CircuitBreaker --> FirebaseStorage : Upload Photo (GCS SDK)
+
+Logic --> EventStore : Append Domain Events
+EventStore --> PSQL : Rebuild State (Projections)
+
+Logic --> PubSub : Publish State Change Event
+PubSub --> Logic : Push/Pull Event (Subscription)
+Logic --> PBServices : Broadcast State to Clients via Stream
+
+FirebaseStorage --> Logic : Photo URL
+Logic --> PSQL : Store Photo URL
+
+Client --> FirebaseStorage : Download Photo (HTTP GET via URL)
+
+@enduml

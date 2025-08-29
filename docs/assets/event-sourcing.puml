@@ -1,0 +1,46 @@
+@startuml
+!theme vibrant
+
+participant "Command Handler" as Command
+participant "Domain Model" as Domain
+database "Event Store" as EventStore
+participant "Event Consumer" as Consumer
+database "Read Model" as ReadModel
+participant "Query Handler" as Query
+actor Client
+
+== 이벤트 생성 흐름 ==
+Client -> Command : 명령 전송 (CreateRoom)
+activate Command
+Command -> Domain : 명령 실행
+activate Domain
+Domain -> Domain : 상태 변경
+Domain -> EventStore : 이벤트 저장 (RoomCreated)
+Domain --> Command : 응답
+deactivate Domain
+Command --> Client : 응답
+deactivate Command
+
+== 이벤트 구독 및 처리 ==
+EventStore -> Consumer : 이벤트 발행
+activate Consumer
+Consumer -> ReadModel : 읽기 모델 갱신
+deactivate Consumer
+
+== 쿼리 처리 ==
+Client -> Query : 쿼리 전송 (GetRoomInfo)
+activate Query
+Query -> ReadModel : 데이터 조회
+ReadModel --> Query : 최신 데이터
+Query --> Client : 응답
+deactivate Query
+
+== 스냅샷 및 이벤트 재생 ==
+note over Domain, EventStore
+  시스템 재시작 또는 복구 시:
+  1. 마지막 스냅샷 로드
+  2. 스냅샷 이후 이벤트 재생
+  3. 현재 상태 복원
+end note
+
+@enduml

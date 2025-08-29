@@ -1,0 +1,53 @@
+@startuml
+!theme vibrant
+
+participant "Client Service" as Client
+participant "Circuit Breaker" as CB
+participant "Remote Service" as Remote
+database "Failure Metrics" as Metrics
+
+state "Closed (정상)" as Closed
+state "Open (차단)" as Open
+state "Half-Open (시험)" as HalfOpen
+
+Closed --> Open : 실패 임계값 초과
+Open --> HalfOpen : 타임아웃 후
+HalfOpen --> Closed : 테스트 요청 성공
+HalfOpen --> Open : 테스트 요청 실패
+
+Client -> CB : 서비스 요청
+activate CB
+
+alt 회로 닫힘 (정상 상태)
+  CB -> Remote : 요청 전달
+  activate Remote
+  alt 요청 성공
+    Remote --> CB : 성공 응답
+    CB -> Metrics : 성공 기록
+    CB --> Client : 성공 응답 전달
+  else 요청 실패
+    Remote --> CB : 오류/타임아웃
+    CB -> Metrics : 실패 기록
+    note right: 실패 카운터 증가
+    CB --> Client : 오류 응답
+  end
+  deactivate Remote
+else 회로 열림 (차단 상태)
+  CB --> Client : 즉시 실패 (Fast Fail)
+  note right: 원격 서비스 호출 없음
+else 회로 반열림 (테스트 상태)
+  CB -> Remote : 테스트 요청
+  activate Remote
+  alt 테스트 성공
+    Remote --> CB : 성공 응답
+    CB -> Metrics : 성공 기록(회로 닫힘)
+  else 테스트 실패
+    Remote --> CB : 오류
+    CB -> Metrics : 실패 기록(회로 열림)
+  end
+  deactivate Remote
+end
+
+deactivate CB
+
+@enduml

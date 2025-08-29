@@ -47,9 +47,9 @@
 
 | PR 번호 | 제목 | 상태 | 주요 작업 | 구현시 주의 사항 |
 | ----- | ----- | ----- | ----- | ----- |
-| PR-18 | Repository Interfaces (User) | Planned | - UserRepository 인터페이스 정의</br>- (추후 DB, Redis 등 구현 분리 가능토록 인터페이스화) | - interfaces 패키지 구조 논의(도메인별 분리 vs 단일화</br>- 다중 저장소(DB+Redis) 혼합 사용 시 Read/Write 우선순위 결정 |
-| PR-19 | Repository Interfaces (Quiz, Comparison, Candy) | Planned | - QuizRepository, ComparisonRepository, CandyRepository 등 도메인별 인터페이스 구조 설계</br>- 의존성/패키지 구조 점검 | - 파일/패키지 분할 전략(퀴즈, 비교, 사탕 등 각각 모듈화) |
-| PR-20 | Base Repo Implementation & Tests | Planned | - PostgreSQL 구현체 초안 + 단위 테스트</br>- 추후 세부 도메인 별로 확장 (Transaction, JOIN 등) | - 트랜잭션 단위(메서드별 트랜잭션 vs 상위에서 컨트롤) 결정</br>- Repo 레벨에서 에러 정의(에러 wrapping) |
+| PR-18 | Repository Interfaces (User) | Completed | - UserRepository 인터페이스 정의</br>- (추후 DB, Redis 등 구현 분리 가능토록 인터페이스화) | - interfaces 패키지 구조 논의(도메인별 분리 vs 단일화</br>- 다중 저장소(DB+Redis) 혼합 사용 시 Read/Write 우선순위 결정 |
+| PR-19 | Repository Interfaces (Quiz, Comparison, Candy) | Completed | - QuizRepository, ComparisonRepository, CandyRepository 등 도메인별 인터페이스 구조 설계</br>- 의존성/패키지 구조 점검 | - 파일/패키지 분할 전략(퀴즈, 비교, 사탕 등 각각 모듈화) |
+| PR-20 | Base Repo Implementation & Tests | Completed | - PostgreSQL 구현체 초안 + 단위 테스트</br>- 추후 세부 도메인 별로 확장 (Transaction, JOIN 등) | - 트랜잭션 단위(메서드별 트랜잭션 vs 상위에서 컨트롤) 결정</br>- Repo 레벨에서 에러 정의(에러 wrapping) |
 
 ### 5-2. 사용자(User) 도메인
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/seventeenthearth/sudal/internal/infrastructure/apispec"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"go.uber.org/zap"
 )
@@ -129,7 +130,7 @@ func detectGRPCProtocol(r *http.Request) string {
 // GetGRPCOnlyPaths returns the list of paths that should be restricted to gRPC only
 func GetGRPCOnlyPaths() []string {
 	return []string{
-		"/health.v1.HealthService/", // health.v1.HealthService/Check
-		"/user.v1.UserService/",     // user.v1.UserService/* (all methods)
+		apispec.HealthServiceBase, // health.v1.HealthService/Check
+		apispec.UserServiceBase,   // user.v1.UserService/* (all methods)
 	}
 }

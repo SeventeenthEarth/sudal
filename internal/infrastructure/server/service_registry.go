@@ -8,6 +8,7 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
+	"github.com/seventeenthearth/sudal/internal/infrastructure/apispec"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 )
@@ -134,9 +135,6 @@ type ServiceConfiguration struct {
 // GetDefaultServiceConfiguration returns the default service configuration
 func GetDefaultServiceConfiguration() *ServiceConfiguration {
 	return &ServiceConfiguration{
-		ProtectedProcedures: []string{
-			"/user.v1.UserService/GetUserProfile",
-			"/user.v1.UserService/UpdateUserProfile",
-		},
+		ProtectedProcedures: apispec.ProtectedProcedures(),
 	}
 }

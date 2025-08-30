@@ -65,15 +65,17 @@ func TestExtractBearerToken(t *testing.T) {
 			token, err := ExtractBearerToken(tc.authHeader)
 			if tc.expectError {
 				if err == nil {
-					t.Errorf("expected an error, but got none")
+					t.Fatal("expected an error, but got none")
 				}
-			} else {
-				if err != nil {
-					t.Errorf("expected no error, but got: %v", err)
-				}
-				if token != tc.expectedToken {
-					t.Errorf("expected token '%s', but got '%s'", tc.expectedToken, token)
-				}
+				return // Correctly handled expected error
+			}
+
+			if err != nil {
+				t.Fatalf("expected no error, but got: %v", err)
+			}
+
+			if token != tc.expectedToken {
+				t.Errorf("expected token '%s', but got '%s'", tc.expectedToken, token)
 			}
 		})
 	}

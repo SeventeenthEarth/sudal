@@ -6,8 +6,10 @@ const (
 	HealthServiceBase = "/health.v1.HealthService/"
 )
 
-// ProtectedProcedures lists fully-qualified procedure paths that require authentication
-var ProtectedProcedures = []string{
-	UserServiceBase + "GetUserProfile",
-	UserServiceBase + "UpdateUserProfile",
+// ProtectedProcedures returns a list of fully-qualified procedure paths that require authentication.
+func ProtectedProcedures() []string {
+	return []string{
+		UserServiceBase + "GetUserProfile",
+		UserServiceBase + "UpdateUserProfile",
+	}
 }

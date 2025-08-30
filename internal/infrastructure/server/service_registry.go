@@ -135,6 +135,6 @@ type ServiceConfiguration struct {
 // GetDefaultServiceConfiguration returns the default service configuration
 func GetDefaultServiceConfiguration() *ServiceConfiguration {
 	return &ServiceConfiguration{
-		ProtectedProcedures: apispec.ProtectedProcedures,
+		ProtectedProcedures: apispec.ProtectedProcedures(),
 	}
 }

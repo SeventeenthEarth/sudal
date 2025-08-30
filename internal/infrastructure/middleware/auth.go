@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
+	"github.com/seventeenthearth/sudal/internal/service/authutil"
 	"go.uber.org/zap"
 )
 
@@ -45,7 +45,7 @@ func AuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *za
 			}
 
 			// Extract Bearer token
-			token, err := extractBearerToken(authHeader)
+			token, err := authutil.ExtractBearerToken(authHeader)
 			if err != nil {
 				logger.Warn("Invalid Authorization header format",
 					zap.String("procedure", req.Spec().Procedure),
@@ -120,7 +120,7 @@ func SelectiveAuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, l
 			}
 
 			// Extract Bearer token
-			token, err := extractBearerToken(authHeader)
+			token, err := authutil.ExtractBearerToken(authHeader)
 			if err != nil {
 				logger.Warn("Invalid Authorization header format",
 					zap.String("procedure", procedure),
@@ -149,32 +149,6 @@ func SelectiveAuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, l
 			return next(ctxWithUser, req)
 		}
 	}
-}
-
-// extractBearerToken extracts the token from the Authorization header
-// Expected format: "Bearer <token>"
-//
-// Parameters:
-//   - authHeader: Authorization header value
-//
-// Returns:
-//   - string: Extracted token
-//   - error: Extraction error if format is invalid
-func extractBearerToken(authHeader string) (string, error) {
-	const bearerPrefix = "Bearer "
-
-	if !strings.HasPrefix(authHeader, bearerPrefix) {
-		return "", fmt.Errorf("authorization header must start with 'Bearer '")
-	}
-
-	token := strings.TrimPrefix(authHeader, bearerPrefix)
-	token = strings.TrimSpace(token)
-
-	if token == "" {
-		return "", fmt.Errorf("bearer token is empty")
-	}
-
-	return token, nil
 }
 
 // GetAuthenticatedUser retrieves the authenticated user from the request context
@@ -218,7 +192,7 @@ func AuthenticationMiddleware(firebaseHandler firebase.AuthVerifier, logger *zap
 			}
 
 			// Extract Bearer token
-			token, err := extractBearerToken(authHeader)
+			token, err := authutil.ExtractBearerToken(authHeader)
 			if err != nil {
 				logger.Warn("Invalid Authorization header format",
 					zap.String("path", r.URL.Path),

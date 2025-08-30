@@ -64,7 +64,9 @@ func TestExtractBearerToken(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc // Capture range variable to ensure it's unique for each parallel test.
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			token, err := ExtractBearerToken(tc.authHeader)
 			if !errors.Is(err, tc.expectedErr) {
 				t.Fatalf("ExtractBearerToken() error = %v, wantErr %v", err, tc.expectedErr)

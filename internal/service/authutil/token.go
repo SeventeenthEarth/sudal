@@ -14,11 +14,8 @@ func ExtractBearerToken(authHeader string) (string, error) {
 	}
 
 	// Accept case-insensitive scheme per RFC 6750, while preserving existing messages
-	parts := strings.Fields(authHeader)
-	if len(parts) < 2 {
-		return "", fmt.Errorf("authorization header must start with 'Bearer '")
-	}
-	if strings.ToLower(parts[0]) != "bearer" {
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
 		return "", fmt.Errorf("authorization header must start with 'Bearer '")
 	}
 	token := strings.TrimSpace(parts[1])

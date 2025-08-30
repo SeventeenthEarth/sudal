@@ -3,7 +3,6 @@ package protocol
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"connectrpc.com/connect"
 	userv1 "github.com/seventeenthearth/sudal/gen/go/user/v1"
@@ -12,6 +11,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
+	"github.com/seventeenthearth/sudal/internal/service/authutil"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -59,7 +59,7 @@ func (h *UserManager) RegisterUser(
 	}
 
 	// Extract Bearer token
-	token, err := extractBearerToken(authHeader)
+	token, err := authutil.ExtractBearerToken(authHeader)
 	if err != nil {
 		h.logger.Warn("Invalid Authorization header format for RegisterUser", zap.Error(err))
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authorization header format"))
@@ -216,25 +216,6 @@ func convertUserToProto(user *entity.User) *userv1.UserProfile {
 	}
 
 	return profile
-}
-
-// extractBearerToken extracts the token from the Authorization header
-// Expected format: "Bearer <token>"
-func extractBearerToken(authHeader string) (string, error) {
-	const bearerPrefix = "Bearer "
-
-	if !strings.HasPrefix(authHeader, bearerPrefix) {
-		return "", fmt.Errorf("authorization header must start with 'Bearer '")
-	}
-
-	token := strings.TrimPrefix(authHeader, bearerPrefix)
-	token = strings.TrimSpace(token)
-
-	if token == "" {
-		return "", fmt.Errorf("bearer token is empty")
-	}
-
-	return token, nil
 }
 
 // NewUserHandler creates a new UserManager instance for Wire dependency injection

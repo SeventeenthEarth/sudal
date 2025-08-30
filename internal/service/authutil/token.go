@@ -9,7 +9,7 @@ var (
 	// ErrMissingHeader is returned when the Authorization header is missing.
 	ErrMissingHeader = errors.New("missing authorization header")
 	// ErrInvalidFormat is returned when the Authorization header doesn't start with the Bearer scheme.
-	ErrInvalidFormat = errors.New("authorization header must start with 'Bearer '")
+	ErrInvalidFormat = errors.New("authorization header format must be 'Bearer <token>'")
 	// ErrEmptyToken is returned when the bearer token is empty.
 	ErrEmptyToken = errors.New("bearer token is empty")
 )

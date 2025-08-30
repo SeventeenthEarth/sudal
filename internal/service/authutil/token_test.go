@@ -1,81 +1,82 @@
 package authutil
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestExtractBearerToken(t *testing.T) {
 	testCases := []struct {
 		name          string
 		authHeader    string
 		expectedToken string
-		expectError   bool
+		expectedErr   error
 	}{
 		{
 			name:          "Success",
 			authHeader:    "Bearer abc.def.ghi",
 			expectedToken: "abc.def.ghi",
-			expectError:   false,
+			expectedErr:   nil,
 		},
 		{
 			name:          "Success with case-insensitive scheme",
 			authHeader:    "bearer abc.def.ghi",
 			expectedToken: "abc.def.ghi",
-			expectError:   false,
+			expectedErr:   nil,
 		},
 		{
 			name:          "Success with extra space",
 			authHeader:    "Bearer   abc.def.ghi",
 			expectedToken: "abc.def.ghi",
-			expectError:   false,
+			expectedErr:   nil,
 		},
 		{
 			name:        "Missing header",
 			authHeader:  "",
-			expectError: true,
+			expectedErr: ErrMissingHeader,
 		},
 		{
 			name:        "Whitespace header",
 			authHeader:  "   ",
-			expectError: true,
+			expectedErr: ErrMissingHeader,
 		},
 		{
 			name:        "Invalid prefix",
 			authHeader:  "Token abc",
-			expectError: true,
+			expectedErr: ErrInvalidFormat,
 		},
 		{
 			name:        "Empty token",
 			authHeader:  "Bearer   ",
-			expectError: true,
+			expectedErr: ErrEmptyToken,
 		},
 		{
 			name:        "Header with only Bearer",
 			authHeader:  "Bearer",
-			expectError: true,
+			expectedErr: ErrInvalidFormat,
 		},
 		{
 			name:          "Token contains spaces (compat)",
 			authHeader:    "Bearer abc def ghi",
 			expectedToken: "abc def ghi",
-			expectError:   false,
+			expectedErr:   nil,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			token, err := ExtractBearerToken(tc.authHeader)
-			if tc.expectError {
-				if err == nil {
-					t.Fatal("expected an error, but got none")
+			if tc.expectedErr != nil {
+				if !errors.Is(err, tc.expectedErr) {
+					t.Fatalf("expected error %v, got %v", tc.expectedErr, err)
 				}
-				return // Correctly handled expected error
-			}
-
-			if err != nil {
-				t.Fatalf("expected no error, but got: %v", err)
-			}
-
-			if token != tc.expectedToken {
-				t.Errorf("expected token '%s', but got '%s'", tc.expectedToken, token)
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, but got: %v", err)
+				}
+				if token != tc.expectedToken {
+					t.Errorf("expected token '%s', but got '%s'", tc.expectedToken, token)
+				}
 			}
 		})
 	}

@@ -66,17 +66,11 @@ func TestExtractBearerToken(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			token, err := ExtractBearerToken(tc.authHeader)
-			if tc.expectedErr != nil {
-				if !errors.Is(err, tc.expectedErr) {
-					t.Fatalf("expected error %v, got %v", tc.expectedErr, err)
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("expected no error, but got: %v", err)
-				}
-				if token != tc.expectedToken {
-					t.Errorf("expected token '%s', but got '%s'", tc.expectedToken, token)
-				}
+			if !errors.Is(err, tc.expectedErr) {
+				t.Fatalf("ExtractBearerToken() error = %v, wantErr %v", err, tc.expectedErr)
+			}
+			if tc.expectedErr == nil && token != tc.expectedToken {
+				t.Errorf("ExtractBearerToken() token = %q, want %q", token, tc.expectedToken)
 			}
 		})
 	}

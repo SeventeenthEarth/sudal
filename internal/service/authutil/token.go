@@ -23,11 +23,11 @@ func ExtractBearerToken(authHeader string) (string, error) {
 	}
 
 	// Accept case-insensitive scheme per RFC 6750, while preserving existing messages
-	parts := strings.SplitN(authHeader, " ", 2)
-	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
+	scheme, rawToken, found := strings.Cut(authHeader, " ")
+	if !found || !strings.EqualFold(scheme, "bearer") {
 		return "", ErrInvalidFormat
 	}
-	token := strings.TrimSpace(parts[1])
+	token := strings.TrimSpace(rawToken)
 	if token == "" {
 		return "", ErrEmptyToken
 	}

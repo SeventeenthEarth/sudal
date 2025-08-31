@@ -15,7 +15,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
@@ -24,7 +24,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthInterface.HealthHandler
-		testServer *testMocks.TestServer
+		testServer *testhelpers.TestServer
 		baseURL    string
 		httpClient *http.Client
 	)
@@ -45,7 +45,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 		// Start test server via helper
 		var err error
-		testServer, err = testMocks.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 	})
@@ -65,7 +65,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 		Context("when database connection fails", func() {
 			It("should handle connection timeout errors", func() {
 				// Given: Mock configured to return connection timeout error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("connection timeout: dial tcp 127.0.0.1:5432: i/o timeout"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("connection timeout: dial tcp 127.0.0.1:5432: i/o timeout"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -89,7 +89,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should handle connection refused errors", func() {
 				// Given: Mock configured to return connection refused error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("connection refused: dial tcp 127.0.0.1:5432: connect: connection refused"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("connection refused: dial tcp 127.0.0.1:5432: connect: connection refused"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -109,7 +109,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should handle authentication errors", func() {
 				// Given: Mock configured to return authentication error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: password authentication failed for user \"testuser\""))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: password authentication failed for user \"testuser\""))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -129,7 +129,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should handle database not found errors", func() {
 				// Given: Mock configured to return database not found error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: database \"nonexistent_db\" does not exist"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: database \"nonexistent_db\" does not exist"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -241,7 +241,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 		Context("when database operations timeout", func() {
 			It("should handle database query timeout", func() {
 				// Given: Mock configured to return query timeout error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: canceling statement due to statement timeout"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: canceling statement due to statement timeout"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -261,7 +261,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should handle connection timeout during health check", func() {
 				// Given: Mock configured to return connection timeout during health check
-				testMocks.SetUnhealthyStatus(mockRepo, context.DeadlineExceeded)
+				testhelpers.SetUnhealthyStatus(mockRepo, context.DeadlineExceeded)
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -285,7 +285,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 		Context("when database is in maintenance mode", func() {
 			It("should handle database maintenance mode", func() {
 				// Given: Mock configured to simulate maintenance mode
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: the database system is starting up"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: the database system is starting up"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -305,7 +305,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should handle database shutdown", func() {
 				// Given: Mock configured to simulate database shutdown
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: the database system is shutting down"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: the database system is shutting down"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -327,7 +327,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 		Context("when database has permission issues", func() {
 			It("should handle insufficient privileges", func() {
 				// Given: Mock configured to simulate permission error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: permission denied for relation health_check"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("pq: permission denied for relation health_check"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -365,7 +365,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 					By(fmt.Sprintf("testing %s", scenario.name))
 
 					// Given: Mock configured with specific error
-					testMocks.SetUnhealthyStatus(mockRepo, scenario.error)
+					testhelpers.SetUnhealthyStatus(mockRepo, scenario.error)
 
 					// When: Making GET request to database health endpoint
 					resp, err := httpClient.Get(baseURL + "/health/database")
@@ -396,7 +396,7 @@ var _ = Describe("Database Health Error Scenarios Integration Tests", func() {
 
 			It("should include proper content type for error responses", func() {
 				// Given: Mock configured to return error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("database error"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("database error"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")

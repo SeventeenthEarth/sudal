@@ -16,7 +16,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 // DatabaseHealthResult represents the result of a database health request
@@ -35,7 +35,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthInterface.HealthHandler
-		testServer *testMocks.TestServer
+		testServer *testhelpers.TestServer
 		baseURL    string
 		httpClient *http.Client
 	)
@@ -56,7 +56,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 		// Start test server via helper
 		var err error
-		testServer, err = testMocks.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 
@@ -78,7 +78,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 		Context("when making multiple concurrent requests", func() {
 			It("should handle 5 concurrent database health requests successfully", func() {
 				// Given: Healthy database state
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: Multiple concurrent requests
 				numRequests := 5
@@ -138,7 +138,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 			It("should handle 10 concurrent database health requests with consistent performance", func() {
 				// Given: Healthy database state
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: High number of concurrent requests
 				numRequests := 10
@@ -196,7 +196,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 
 			It("should return consistent connection statistics across concurrent requests", func() {
 				// Given: Healthy database state
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: Concurrent requests to database health endpoint
 				numRequests := 8
@@ -274,7 +274,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 		Context("when database becomes unhealthy during concurrent requests", func() {
 			It("should handle database errors consistently across concurrent requests", func() {
 				// Given: Database that will fail
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("database connection lost"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("database connection lost"))
 
 				numRequests := 6
 				results := make([]DatabaseHealthResult, numRequests)
@@ -328,7 +328,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 		Context("when testing concurrent request timing", func() {
 			It("should handle concurrent requests with varied timing", func() {
 				// Given: Initially healthy database
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				numRequests := 10
 				results := make([]DatabaseHealthResult, numRequests)
@@ -386,7 +386,7 @@ var _ = Describe("Database Health Concurrency Integration Tests", func() {
 		Context("when testing resource cleanup", func() {
 			It("should properly clean up resources during concurrent requests", func() {
 				// Given: Healthy database state
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: Many concurrent requests to test resource management
 				numRequests := 15

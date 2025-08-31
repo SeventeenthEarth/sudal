@@ -11,13 +11,13 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
-	testHelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Server Connect Integration", func() {
 	var (
 		baseURL    string
-		testServer *testHelpers.TestServer
+		testServer *testhelpers.TestServer
 	)
 
 	BeforeEach(func() {
@@ -44,7 +44,7 @@ var _ = Describe("Server Connect Integration", func() {
 		})
 
 		var err error
-		testServer, err = testHelpers.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 	})

@@ -15,7 +15,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Database Health Validation Integration Tests", func() {
@@ -24,7 +24,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthInterface.HealthHandler
-		testServer *testMocks.TestServer
+		testServer *testhelpers.TestServer
 		baseURL    string
 		httpClient *http.Client
 	)
@@ -45,7 +45,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 		// Start test server via helper
 		var err error
-		testServer, err = testMocks.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 
@@ -82,7 +82,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					Message: "Database is healthy",
 					Stats:   stats,
 				}
-				testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+				testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -122,7 +122,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					Message: "Database at capacity",
 					Stats:   stats,
 				}
-				testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+				testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -164,7 +164,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 						Message: description,
 						Stats:   stats,
 					}
-					testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+					testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 
 					// When: Making GET request to database health endpoint
 					resp, err := httpClient.Get(baseURL + "/health/database")
@@ -221,7 +221,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					Message: "Database starting up",
 					Stats:   stats,
 				}
-				testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+				testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -261,7 +261,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 					Message: "Database at maximum capacity",
 					Stats:   stats,
 				}
-				testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+				testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -289,7 +289,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 	Describe("Response Format Validation", func() {
 		Context("when validating response structure", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should include all required fields in successful response", func() {
@@ -403,7 +403,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 
 		Context("when validating data types", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should return correct data types for all fields", func() {

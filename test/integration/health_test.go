@@ -16,7 +16,7 @@ import (
 	healthHandler "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	internalMocks "github.com/seventeenthearth/sudal/internal/mocks"
 
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = ginkgo.Describe("Health Endpoints", func() {
@@ -111,7 +111,7 @@ var _ = ginkgo.Describe("Health Endpoints", func() {
 		ginkgo.Context("when JSON encoding fails", func() {
 			ginkgo.It("should handle encoding errors", func() {
 				// Create a failing response writer
-				frw := testMocks.NewFailingResponseWriter()
+				frw := testhelpers.NewFailingResponseWriter()
 
 				// Call the ping handler with the failing response writer
 				handler.Ping(frw, req)

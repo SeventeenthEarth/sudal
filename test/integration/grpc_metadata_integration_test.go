@@ -18,7 +18,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
@@ -27,7 +27,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthConnect.HealthManager
-		testServer *testMocks.TestServer
+		testServer *testhelpers.TestServer
 		baseURL    string
 	)
 
@@ -47,7 +47,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 
 		// Start test server via helper
 		var err error
-		testServer, err = testMocks.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 
@@ -68,7 +68,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 	Describe("gRPC Metadata Handling", func() {
 		Context("when sending custom headers with gRPC-Web", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should handle standard HTTP headers correctly", func() {
@@ -154,7 +154,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 
 		Context("when sending custom headers with HTTP/JSON", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should handle JSON-specific headers correctly", func() {
@@ -192,7 +192,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 		Context("when service returns different types of errors", func() {
 			It("should handle repository errors appropriately", func() {
 				// Given: Mock configured to return repository error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("database connection failed"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("database connection failed"))
 
 				client := healthv1connect.NewHealthServiceClient(
 					http.DefaultClient,
@@ -302,7 +302,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 					By(fmt.Sprintf("testing %s", scenario.name))
 
 					// Given: Mock configured with specific error
-					testMocks.SetUnhealthyStatus(mockRepo, scenario.mockError)
+					testhelpers.SetUnhealthyStatus(mockRepo, scenario.mockError)
 
 					client := healthv1connect.NewHealthServiceClient(
 						http.DefaultClient,
@@ -332,7 +332,7 @@ var _ = Describe("gRPC Metadata and Error Handling Integration Tests", func() {
 		Context("when comparing error handling across protocols", func() {
 			It("should return consistent error types for gRPC-Web and HTTP/JSON", func() {
 				// Given: Mock configured to return error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("service unavailable"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("service unavailable"))
 
 				grpcWebClient := healthv1connect.NewHealthServiceClient(
 					http.DefaultClient,

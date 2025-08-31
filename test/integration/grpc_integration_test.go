@@ -18,7 +18,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("gRPC Protocol Integration Tests", func() {
@@ -27,7 +27,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthConnect.HealthManager
-		testServer *testMocks.TestServer
+		testServer *testhelpers.TestServer
 		baseURL    string
 	)
 
@@ -47,7 +47,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 
 		// Start test server via helper
 		var err error
-		testServer, err = testMocks.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 
@@ -68,7 +68,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 	Describe("Connect-Go gRPC-Web Protocol", func() {
 		Context("when service is healthy", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should return SERVING status for gRPC-Web requests", func() {
@@ -126,7 +126,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 
 		Context("when service is unhealthy", func() {
 			BeforeEach(func() {
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("mock service error"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("mock service error"))
 			})
 
 			It("should return internal error for gRPC-Web requests", func() {
@@ -159,7 +159,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 	Describe("Connect-Go HTTP/JSON Protocol", func() {
 		Context("when service is healthy", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should return SERVING status for HTTP/JSON requests", func() {
@@ -213,7 +213,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 			It("should return NOT_SERVING for unhealthy status", func() {
 				// Given: Mock configured to return unhealthy status
 				unhealthyStatus := entity.UnhealthyStatus()
-				testMocks.SetCustomStatus(mockRepo, unhealthyStatus)
+				testhelpers.SetCustomStatus(mockRepo, unhealthyStatus)
 
 				client := healthv1connect.NewHealthServiceClient(
 					http.DefaultClient,
@@ -236,7 +236,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 			It("should return UNKNOWN for unknown status", func() {
 				// Given: Mock configured to return unknown status
 				unknownStatus := entity.UnknownStatus()
-				testMocks.SetCustomStatus(mockRepo, unknownStatus)
+				testhelpers.SetCustomStatus(mockRepo, unknownStatus)
 
 				client := healthv1connect.NewHealthServiceClient(
 					http.DefaultClient,
@@ -284,7 +284,7 @@ var _ = Describe("gRPC Protocol Integration Tests", func() {
 		Context("when server returns errors", func() {
 			It("should handle internal server errors appropriately", func() {
 				// Given: Mock configured to return errors
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("internal server error"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("internal server error"))
 
 				client := healthv1connect.NewHealthServiceClient(
 					http.DefaultClient,

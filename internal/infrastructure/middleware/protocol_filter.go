@@ -68,6 +68,13 @@ func isGRPCRequest(r *http.Request) bool {
 		return true
 	}
 
+	// Connect protocol (connect-go)
+	// Explicitly allow common Connect content types
+	if contentType == "application/connect+proto" || contentType == "application/connect+json" ||
+		strings.HasPrefix(contentType, "application/connect+") {
+		return true
+	}
+
 	// Check for gRPC-specific headers
 	// TE header with "trailers" is required for gRPC over HTTP/2
 	if te := r.Header.Get("TE"); strings.Contains(te, "trailers") {

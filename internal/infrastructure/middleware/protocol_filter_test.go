@@ -109,6 +109,24 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 			})
+
+			ginkgo.It("should allow Connect requests with application/connect+proto", func() {
+				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader("connect-proto-data"))
+				req.Header.Set("Content-Type", "application/connect+proto")
+
+				handler.ServeHTTP(recorder, req)
+
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+			})
+
+			ginkgo.It("should allow Connect requests with application/connect+json", func() {
+				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader("{\"x\":1}"))
+				req.Header.Set("Content-Type", "application/connect+json")
+
+				handler.ServeHTTP(recorder, req)
+
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+			})
 		})
 	})
 

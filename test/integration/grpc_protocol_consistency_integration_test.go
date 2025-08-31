@@ -56,9 +56,9 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 
 	AfterEach(func() {
 		if testServer != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			_ = testServer.Close(ctx)
+			Expect(testServer.Close(ctx)).To(Succeed())
 		}
 		if ctrl != nil {
 			ctrl.Finish()

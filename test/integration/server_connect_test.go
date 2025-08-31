@@ -54,7 +54,7 @@ var _ = Describe("Server Connect Integration", func() {
 		if testServer != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = testServer.Close(ctx)
+			Expect(testServer.Close(ctx)).To(Succeed())
 		}
 
 		// Reset config

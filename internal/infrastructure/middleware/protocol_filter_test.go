@@ -110,23 +110,18 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 			})
 
-			ginkgo.It("should allow Connect requests with application/connect+proto", func() {
-				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader("connect-proto-data"))
-				req.Header.Set("Content-Type", "application/connect+proto")
+			ginkgo.DescribeTable("should allow Connect requests",
+				func(contentType, body string) {
+					req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader(body))
+					req.Header.Set("Content-Type", contentType)
 
-				handler.ServeHTTP(recorder, req)
+					handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
-			})
-
-			ginkgo.It("should allow Connect requests with application/connect+json", func() {
-				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader("{\"x\":1}"))
-				req.Header.Set("Content-Type", "application/connect+json")
-
-				handler.ServeHTTP(recorder, req)
-
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
-			})
+					gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				},
+				ginkgo.Entry("with application/connect+proto", "application/connect+proto", "connect-proto-data"),
+				ginkgo.Entry("with application/connect+json", "application/connect+json", "{\"x\":1}"),
+			)
 		})
 	})
 

@@ -70,8 +70,7 @@ func isGRPCRequest(r *http.Request) bool {
 
 	// Connect protocol (connect-go)
 	// Explicitly allow common Connect content types
-	if contentType == "application/connect+proto" || contentType == "application/connect+json" ||
-		strings.HasPrefix(contentType, "application/connect+") {
+	if strings.HasPrefix(contentType, "application/connect+") {
 		return true
 	}
 

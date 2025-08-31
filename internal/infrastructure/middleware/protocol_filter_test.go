@@ -109,6 +109,67 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 			})
+
+			ginkgo.DescribeTable("should block Connect protocol requests",
+				func(path string, contentType string, headers map[string]string, body string) {
+					req := httptest.NewRequest("POST", path, strings.NewReader(body))
+					req.Header.Set("Content-Type", contentType)
+					for key, value := range headers {
+						req.Header.Set(key, value)
+					}
+
+					handler.ServeHTTP(recorder, req)
+
+					gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
+				},
+				// Connect streaming requests
+				ginkgo.Entry("streaming with connect+proto",
+					"/user.v1.UserService/GetUserProfile",
+					"application/connect+proto",
+					map[string]string{},
+					"stream-data"),
+				// Connect unary with Connect-Protocol-Version
+				ginkgo.Entry("unary with Connect-Protocol-Version",
+					"/user.v1.UserService/GetUserProfile",
+					"application/json",
+					map[string]string{"Connect-Protocol-Version": "1"},
+					`{"id":"123"}`),
+				ginkgo.Entry("proto with Connect-Protocol-Version",
+					"/health.v1.HealthService/Check",
+					"application/proto",
+					map[string]string{"Connect-Protocol-Version": "1"},
+					"proto-data"),
+				// Connect with specific headers
+				ginkgo.Entry("with Connect-Accept-Encoding",
+					"/user.v1.UserService/RegisterUser",
+					"application/json",
+					map[string]string{"Connect-Accept-Encoding": "gzip"},
+					`{"email":"test@example.com"}`),
+				ginkgo.Entry("with Connect-Content-Encoding",
+					"/user.v1.UserService/UpdateUserProfile",
+					"application/json",
+					map[string]string{"Connect-Content-Encoding": "gzip"},
+					"compressed-data"),
+				ginkgo.Entry("with Connect-Timeout-Ms",
+					"/health.v1.HealthService/Check",
+					"application/json",
+					map[string]string{"Connect-Timeout-Ms": "30000"},
+					`{}`),
+			)
+
+			ginkgo.DescribeTable("should block various Connect streaming content types",
+				func(contentType string) {
+					req := httptest.NewRequest("POST", "/user.v1.UserService/StreamData", strings.NewReader("stream-data"))
+					req.Header.Set("Content-Type", contentType)
+
+					handler.ServeHTTP(recorder, req)
+
+					gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
+				},
+				ginkgo.Entry("application/connect+proto", "application/connect+proto"),
+				ginkgo.Entry("application/connect+json", "application/connect+json"),
+				ginkgo.Entry("application/connect+codec", "application/connect+codec"),
+			)
 		})
 	})
 
@@ -130,6 +191,28 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 			handler.ServeHTTP(recorder, req)
 
 			// Should be blocked as it's not clearly a gRPC request
+			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
+		})
+
+		ginkgo.It("should block JSON requests without Connect headers", func() {
+			req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader(`{"id":"789"}`))
+			req.Header.Set("Content-Type", "application/json")
+			// No Connect-specific headers
+
+			handler.ServeHTTP(recorder, req)
+
+			// Should be blocked as it's a plain JSON request without Connect indicators
+			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
+		})
+
+		ginkgo.It("should block proto requests without Connect headers", func() {
+			req := httptest.NewRequest("POST", "/health.v1.HealthService/Check", strings.NewReader("proto-data"))
+			req.Header.Set("Content-Type", "application/proto")
+			// No Connect-specific headers
+
+			handler.ServeHTTP(recorder, req)
+
+			// Should be blocked as it's a plain proto request without Connect indicators
 			gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 		})
 

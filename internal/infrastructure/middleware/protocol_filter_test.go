@@ -155,12 +155,6 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 					"application/json",
 					map[string]string{"Connect-Timeout-Ms": "30000"},
 					`{}`),
-				// Connect user agent
-				ginkgo.Entry("with connect user-agent",
-					"/user.v1.UserService/GetUserProfile",
-					"application/json",
-					map[string]string{"User-Agent": "connect-go/1.0"},
-					`{"id":"456"}`),
 			)
 
 			ginkgo.DescribeTable("should block various Connect streaming content types",

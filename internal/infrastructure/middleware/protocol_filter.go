@@ -127,7 +127,7 @@ func detectGRPCProtocol(r *http.Request) string {
 	contentType := r.Header.Get("Content-Type")
 
 	// Check for Connect protocol (not allowed on gRPC-only paths)
-	if isConnectProtocol(r) {
+	if isConnectProtocol(r, contentType) {
 		if strings.HasPrefix(contentType, "application/connect+") {
 			return "connect-streaming"
 		}
@@ -151,14 +151,13 @@ func detectGRPCProtocol(r *http.Request) string {
 }
 
 // isConnectProtocol checks if the request is using Connect protocol
-func isConnectProtocol(r *http.Request) bool {
+func isConnectProtocol(r *http.Request, contentType string) bool {
 	// Check for Connect-Protocol-Version header (most reliable)
 	if r.Header.Get("Connect-Protocol-Version") != "" {
 		return true
 	}
 
 	// Check for Connect streaming content types
-	contentType := r.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "application/connect+") {
 		return true
 	}

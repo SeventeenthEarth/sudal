@@ -1,8 +1,7 @@
 package integration_test
 
 import (
-	"fmt"
-	"net"
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -12,86 +11,50 @@ import (
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	testHelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Server Connect Integration", func() {
 	var (
 		baseURL    string
-		serverPort string
-		listener   net.Listener
-		stopCh     chan struct{}
-		errCh      chan error
+		testServer *testHelpers.TestServer
 	)
 
 	BeforeEach(func() {
 		// Initialize logger
 		log.Init(log.InfoLevel)
 
-		// Create a listener on a random available port
-		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
-		Expect(err).NotTo(HaveOccurred())
-
-		// Get the actual port
-		addr := listener.Addr().(*net.TCPAddr)
-		serverPort = fmt.Sprintf("%d", addr.Port)
-
-		// Set up configuration
-		cfg := &config.Config{
-			ServerPort: serverPort,
-			LogLevel:   "info",
-			AppEnv:     "test",
-		}
+		// Set up configuration (port is implicit via helper BaseURL)
+		cfg := &config.Config{LogLevel: "info", AppEnv: "test"}
 		config.SetConfig(cfg)
 
 		// Note: We're not using the actual server implementation for this test
 		// Instead, we're using a simple HTTP handler to simulate the server
 
-		// Create a custom HTTP server that uses our listener
-		httpServer := &http.Server{
-			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Simple handler that responds to health checks
-				if strings.Contains(r.URL.Path, "/health.v1.HealthService/Check") {
-					if r.Method == "POST" {
-						w.Header().Set("Content-Type", "application/json")
-						w.WriteHeader(http.StatusOK)
-						_, _ = w.Write([]byte(`{"status":"SERVING"}`))
-						return
-					}
-				}
-				w.WriteHeader(http.StatusNotFound)
-			}),
-		}
+		// Create mux with simple handler and run via helper
+		mux := http.NewServeMux()
+		mux.HandleFunc("/health.v1.HealthService/Check", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == "POST" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{"status":"SERVING"}`))
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		})
 
-		// Start the server in a goroutine
-		stopCh = make(chan struct{})
-		errCh = make(chan error, 1)
-
-		go func() {
-			// This will block until the server is stopped
-			errCh <- httpServer.Serve(listener)
-			close(stopCh)
-		}()
-
-		// Wait a moment for the server to start
-		time.Sleep(100 * time.Millisecond)
-
-		// Set the base URL with the actual port
-		baseURL = fmt.Sprintf("http://localhost:%s", serverPort)
+		var err error
+		testServer, err = testHelpers.NewTestServer(mux)
+		Expect(err).NotTo(HaveOccurred())
+		baseURL = testServer.BaseURL
 	})
 
 	AfterEach(func() {
-		// Close the listener to stop the server
-		err := listener.Close()
-		Expect(err).NotTo(HaveOccurred())
-
-		// Wait for the server to stop
-		select {
-		case <-stopCh:
-			// Server stopped
-		case <-time.After(5 * time.Second):
-			// Timeout waiting for server to stop
-			Fail("Timeout waiting for server to stop")
+		// Gracefully shutdown test server
+		if testServer != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = testServer.Close(ctx)
 		}
 
 		// Reset config

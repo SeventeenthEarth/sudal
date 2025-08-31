@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -19,15 +18,15 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	testHelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Health Connect Service Integration", func() {
 	var (
-		server   *http.Server
-		client   healthv1connect.HealthServiceClient
-		baseURL  string
-		listener net.Listener
-		mockRepo *mockRepository
+		testServer *testHelpers.TestServer
+		client     healthv1connect.HealthServiceClient
+		baseURL    string
+		mockRepo   *mockRepository
 	)
 
 	BeforeEach(func() {
@@ -51,24 +50,11 @@ var _ = Describe("Health Connect Service Integration", func() {
 		mux := http.NewServeMux()
 		mux.Handle(path, handler)
 
-		// Start a test server on a random port
+		// Start a test server via helper
 		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		testServer, err = testHelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
-
-		// Get the server address
-		addr := listener.Addr().String()
-		baseURL = "http://" + addr
-
-		// Create the HTTP server
-		server = &http.Server{
-			Handler: mux,
-		}
-
-		// Start the server in a goroutine
-		go func() {
-			_ = server.Serve(listener)
-		}()
+		baseURL = testServer.BaseURL
 
 		// Create a Connect client
 		client = healthv1connect.NewHealthServiceClient(
@@ -78,11 +64,10 @@ var _ = Describe("Health Connect Service Integration", func() {
 	})
 
 	AfterEach(func() {
-		// Shutdown the server
+		// Shutdown the test server
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_ = server.Shutdown(ctx)
-		_ = listener.Close()
+		_ = testServer.Close(ctx)
 	})
 
 	Describe("Check", func() {

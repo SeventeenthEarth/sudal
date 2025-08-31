@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -24,13 +23,12 @@ import (
 
 var _ = Describe("gRPC Concurrency Integration Tests", func() {
 	var (
-		ctrl     *gomock.Controller
-		mockRepo *mocks.MockHealthRepository
-		service  application.HealthService
-		handler  *healthConnect.HealthManager
-		server   *http.Server
-		listener net.Listener
-		baseURL  string
+		ctrl       *gomock.Controller
+		mockRepo   *mocks.MockHealthRepository
+		service    application.HealthService
+		handler    *healthConnect.HealthManager
+		testServer *helpers.TestServer
+		baseURL    string
 	)
 
 	BeforeEach(func() {
@@ -47,31 +45,18 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		path, connectHandler := healthv1connect.NewHealthServiceHandler(handler)
 		mux.Handle(path, connectHandler)
 
-		// Start test server
+		// Start test server via helper
 		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		testServer, err = helpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
-
-		addr := listener.Addr().String()
-		baseURL = "http://" + addr
-
-		server = &http.Server{Handler: mux}
-		go func() {
-			_ = server.Serve(listener)
-		}()
-
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+		baseURL = testServer.BaseURL
 	})
 
 	AfterEach(func() {
-		if server != nil {
+		if testServer != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = server.Shutdown(ctx)
-		}
-		if listener != nil {
-			_ = listener.Close()
+			_ = testServer.Close(ctx)
 		}
 		if ctrl != nil {
 			ctrl.Finish()

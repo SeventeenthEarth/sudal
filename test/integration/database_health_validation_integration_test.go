@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -25,8 +24,7 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthInterface.HealthHandler
-		server     *http.Server
-		listener   net.Listener
+		testServer *testMocks.TestServer
 		baseURL    string
 		httpClient *http.Client
 	)
@@ -45,33 +43,20 @@ var _ = Describe("Database Health Validation Integration Tests", func() {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux)
 
-		// Start test server
+		// Start test server via helper
 		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		testServer, err = testMocks.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
-
-		addr := listener.Addr().String()
-		baseURL = "http://" + addr
-
-		server = &http.Server{Handler: mux}
-		go func() {
-			_ = server.Serve(listener)
-		}()
-
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+		baseURL = testServer.BaseURL
 
 		// Note: Mock configuration is done in each test case
 	})
 
 	AfterEach(func() {
-		if server != nil {
+		if testServer != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = server.Shutdown(ctx)
-		}
-		if listener != nil {
-			_ = listener.Close()
+			_ = testServer.Close(ctx)
 		}
 		if ctrl != nil {
 			ctrl.Finish()

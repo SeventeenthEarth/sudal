@@ -18,12 +18,12 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
-	testHelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Health Connect Service Integration", func() {
 	var (
-		testServer *testHelpers.TestServer
+		testServer *testhelpers.TestServer
 		client     healthv1connect.HealthServiceClient
 		baseURL    string
 		mockRepo   *mockRepository
@@ -52,7 +52,7 @@ var _ = Describe("Health Connect Service Integration", func() {
 
 		// Start a test server via helper
 		var err error
-		testServer, err = testHelpers.NewTestServer(mux)
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
 		baseURL = testServer.BaseURL
 

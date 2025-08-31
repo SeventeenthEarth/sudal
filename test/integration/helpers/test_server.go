@@ -13,23 +13,23 @@ import (
 // ensures graceful shutdown to avoid port leaks and test flakiness.
 type TestServer struct {
 	Server   *http.Server
-	Listener net.Listener
 	BaseURL  string
+	listener net.Listener
 }
 
 // NewTestServer starts an HTTP server with the provided mux on a random port.
 // It waits briefly to ensure the server is accepting connections.
-func NewTestServer(mux *http.ServeMux) (*TestServer, error) {
+func NewTestServer(handler http.Handler) (*TestServer, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create listener: %w", err)
 	}
 
-	srv := &http.Server{Handler: mux}
+	srv := &http.Server{Handler: handler}
 	ts := &TestServer{
 		Server:   srv,
-		Listener: listener,
 		BaseURL:  "http://" + listener.Addr().String(),
+		listener: listener,
 	}
 
 	go func() {
@@ -37,24 +37,27 @@ func NewTestServer(mux *http.ServeMux) (*TestServer, error) {
 		_ = srv.Serve(listener)
 	}()
 
-	// Small wait to reduce flakiness in fast tests
-	time.Sleep(100 * time.Millisecond)
+	// Wait for the server to be ready by polling for a connection.
+	for i := 0; i < 20; i++ { // Poll for up to 1 second
+		conn, err := net.DialTimeout("tcp", listener.Addr().String(), 50*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			return ts, nil // Server is ready
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 
-	return ts, nil
+	// If we can't connect, shutdown and return an error.
+	_ = srv.Shutdown(context.Background())
+	return nil, fmt.Errorf("server failed to start on %s", listener.Addr().String())
 }
 
 // Close gracefully shuts down the server and closes the listener.
+// Close gracefully shuts down the server.
 func (ts *TestServer) Close(ctx context.Context) error {
-	var firstErr error
 	if ts.Server != nil {
-		if err := ts.Server.Shutdown(ctx); err != nil && firstErr == nil {
-			firstErr = err
-		}
+		// Shutdown will also close the listener.
+		return ts.Server.Shutdown(ctx)
 	}
-	if ts.Listener != nil {
-		if err := ts.Listener.Close(); err != nil && firstErr == nil {
-			firstErr = err
-		}
-	}
-	return firstErr
+	return nil
 }

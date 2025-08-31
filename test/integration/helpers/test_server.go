@@ -50,9 +50,12 @@ func NewTestServer(handler http.Handler) (*TestServer, error) {
 	// If we can't connect, shutdown and return an error.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = srv.Shutdown(ctx)
 
-	return nil, fmt.Errorf("server failed to start on %s", listener.Addr().String())
+	startErr := fmt.Errorf("server failed to start on %s", listener.Addr().String())
+	if shutdownErr := srv.Shutdown(ctx); shutdownErr != nil {
+		return nil, fmt.Errorf("%w; also failed to shutdown: %v", startErr, shutdownErr)
+	}
+	return nil, startErr
 }
 
 // Close gracefully shuts down the server.

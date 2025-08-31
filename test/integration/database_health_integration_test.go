@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -16,7 +15,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthInterface "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("Database Health Integration Tests", func() {
@@ -25,8 +24,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 		mockRepo   *mocks.MockHealthRepository
 		service    application.HealthService
 		handler    *healthInterface.HealthHandler
-		server     *http.Server
-		listener   net.Listener
+		testServer *testhelpers.TestServer
 		baseURL    string
 		httpClient *http.Client
 	)
@@ -45,33 +43,20 @@ var _ = Describe("Database Health Integration Tests", func() {
 		mux := http.NewServeMux()
 		handler.RegisterRoutes(mux)
 
-		// Start test server
+		// Start test server via helper
 		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
-
-		addr := listener.Addr().String()
-		baseURL = "http://" + addr
-
-		server = &http.Server{Handler: mux}
-		go func() {
-			_ = server.Serve(listener)
-		}()
-
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+		baseURL = testServer.BaseURL
 
 		// Note: Mock configuration is done in each test case
 	})
 
 	AfterEach(func() {
-		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if testServer != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			_ = server.Shutdown(ctx)
-		}
-		if listener != nil {
-			_ = listener.Close()
+			Expect(testServer.Close(ctx)).To(Succeed())
 		}
 		if ctrl != nil {
 			ctrl.Finish()
@@ -81,7 +66,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 	Describe("Database Health Endpoint", func() {
 		Context("when database is healthy", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should return 200 status with healthy database information", func() {
@@ -182,7 +167,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 		Context("when database is unhealthy", func() {
 			It("should return 503 status with error information", func() {
 				// Given: Mock configured with database connection error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("database connection failed"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("database connection failed"))
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
 
@@ -208,7 +193,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 
 			It("should include error details in response", func() {
 				// Given: Mock configured with specific error
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("connection timeout"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("connection timeout"))
 
 				// When: Making GET request to database health endpoint
 				resp, err := httpClient.Get(baseURL + "/health/database")
@@ -229,7 +214,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 
 		Context("when database is in degraded state", func() {
 			BeforeEach(func() {
-				testMocks.SetDegradedStatus(mockRepo)
+				testhelpers.SetDegradedStatus(mockRepo)
 			})
 
 			It("should return degraded status with high connection usage", func() {
@@ -277,7 +262,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 					Message: "Database is healthy",
 					Stats:   stats,
 				}
-				testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+				testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 			})
 
 			It("should validate mathematical consistency of connection statistics", func() {
@@ -358,7 +343,7 @@ var _ = Describe("Database Health Integration Tests", func() {
 						Message: "Database connection pool status",
 						Stats:   stats,
 					}
-					testMocks.SetDatabaseStatus(mockRepo, dbStatus)
+					testhelpers.SetDatabaseStatus(mockRepo, dbStatus)
 
 					// When: Making GET request to database health endpoint
 					resp, err := httpClient.Get(baseURL + "/health/database")

@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -19,18 +18,17 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	"github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("gRPC Concurrency Integration Tests", func() {
 	var (
-		ctrl     *gomock.Controller
-		mockRepo *mocks.MockHealthRepository
-		service  application.HealthService
-		handler  *healthConnect.HealthManager
-		server   *http.Server
-		listener net.Listener
-		baseURL  string
+		ctrl       *gomock.Controller
+		mockRepo   *mocks.MockHealthRepository
+		service    application.HealthService
+		handler    *healthConnect.HealthManager
+		testServer *testhelpers.TestServer
+		baseURL    string
 	)
 
 	BeforeEach(func() {
@@ -47,31 +45,18 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		path, connectHandler := healthv1connect.NewHealthServiceHandler(handler)
 		mux.Handle(path, connectHandler)
 
-		// Start test server
+		// Start test server via helper
 		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
-
-		addr := listener.Addr().String()
-		baseURL = "http://" + addr
-
-		server = &http.Server{Handler: mux}
-		go func() {
-			_ = server.Serve(listener)
-		}()
-
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+		baseURL = testServer.BaseURL
 	})
 
 	AfterEach(func() {
-		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if testServer != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			_ = server.Shutdown(ctx)
-		}
-		if listener != nil {
-			_ = listener.Close()
+			Expect(testServer.Close(ctx)).To(Succeed())
 		}
 		if ctrl != nil {
 			ctrl.Finish()
@@ -82,11 +67,11 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when making multiple concurrent requests", func() {
 			It("should handle 10 concurrent gRPC-Web requests successfully", func() {
 				// Given: Service configured for healthy state
-				helpers.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: Multiple clients with gRPC-Web protocol
 				numRequests := 10
-				results := make([]helpers.ConcurrentTestResult, numRequests)
+				results := make([]testhelpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests
@@ -111,7 +96,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[index] = helpers.ConcurrentTestResult{
+						results[index] = testhelpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -148,11 +133,11 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 			It("should handle 25 concurrent gRPC-Web requests with consistent performance", func() {
 				// Given: Service configured for healthy state
-				helpers.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: High number of concurrent clients
 				numRequests := 25
-				results := make([]helpers.ConcurrentTestResult, numRequests)
+				results := make([]testhelpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making many concurrent requests
@@ -178,7 +163,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						requestDuration := time.Since(requestStart)
 
-						results[index] = helpers.ConcurrentTestResult{
+						results[index] = testhelpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil,
 							Error:    err,
 							Duration: requestDuration,
@@ -215,11 +200,11 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when making multiple concurrent requests", func() {
 			It("should handle 15 concurrent HTTP/JSON requests successfully", func() {
 				// Given: Service configured for healthy state
-				helpers.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: Multiple clients with HTTP/JSON protocol
 				numRequests := 15
-				results := make([]helpers.ConcurrentTestResult, numRequests)
+				results := make([]testhelpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests
@@ -244,7 +229,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[index] = helpers.ConcurrentTestResult{
+						results[index] = testhelpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -269,12 +254,12 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when making concurrent requests with different protocols", func() {
 			It("should handle mixed gRPC-Web and HTTP/JSON requests consistently", func() {
 				// Given: Service configured for healthy state
-				helpers.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 
 				// Given: Mixed protocol clients
 				numRequestsPerProtocol := 10
 				totalRequests := numRequestsPerProtocol * 2
-				results := make([]helpers.ConcurrentTestResult, totalRequests)
+				results := make([]testhelpers.ConcurrentTestResult, totalRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests with different protocols
@@ -300,7 +285,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[index] = helpers.ConcurrentTestResult{
+						results[index] = testhelpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -330,7 +315,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 
 						duration := time.Since(start)
 
-						results[numRequestsPerProtocol+index] = helpers.ConcurrentTestResult{
+						results[numRequestsPerProtocol+index] = testhelpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil && resp.Msg.Status == healthv1.ServingStatus_SERVING_STATUS_SERVING,
 							Error:    err,
 							Duration: duration,
@@ -368,10 +353,10 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 		Context("when service becomes unhealthy during concurrent requests", func() {
 			It("should handle service errors consistently across concurrent requests", func() {
 				// Given: Service that will fail
-				helpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("service unavailable"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("service unavailable"))
 
 				numRequests := 8
-				results := make([]helpers.ConcurrentTestResult, numRequests)
+				results := make([]testhelpers.ConcurrentTestResult, numRequests)
 				var wg sync.WaitGroup
 
 				// When: Making concurrent requests to failing service
@@ -392,7 +377,7 @@ var _ = Describe("gRPC Concurrency Integration Tests", func() {
 						req := connect.NewRequest(&healthv1.CheckRequest{})
 						resp, err := client.Check(ctx, req)
 
-						results[index] = helpers.ConcurrentTestResult{
+						results[index] = testhelpers.ConcurrentTestResult{
 							Success:  err == nil && resp != nil,
 							Error:    err,
 							Duration: 0,

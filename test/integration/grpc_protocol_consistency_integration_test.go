@@ -3,7 +3,6 @@ package integration_test
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -19,18 +18,17 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/mocks"
-	testMocks "github.com/seventeenthearth/sudal/test/integration/helpers"
+	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
 var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 	var (
-		ctrl     *gomock.Controller
-		mockRepo *mocks.MockHealthRepository
-		service  application.HealthService
-		handler  *healthConnect.HealthManager
-		server   *http.Server
-		listener net.Listener
-		baseURL  string
+		ctrl       *gomock.Controller
+		mockRepo   *mocks.MockHealthRepository
+		service    application.HealthService
+		handler    *healthConnect.HealthManager
+		testServer *testhelpers.TestServer
+		baseURL    string
 	)
 
 	BeforeEach(func() {
@@ -47,33 +45,20 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 		path, connectHandler := healthv1connect.NewHealthServiceHandler(handler)
 		mux.Handle(path, connectHandler)
 
-		// Start test server
+		// Start test server via helper
 		var err error
-		listener, err = net.Listen("tcp", "127.0.0.1:0")
+		testServer, err = testhelpers.NewTestServer(mux)
 		Expect(err).NotTo(HaveOccurred())
-
-		addr := listener.Addr().String()
-		baseURL = "http://" + addr
-
-		server = &http.Server{Handler: mux}
-		go func() {
-			_ = server.Serve(listener)
-		}()
-
-		// Wait for server to be ready
-		time.Sleep(100 * time.Millisecond)
+		baseURL = testServer.BaseURL
 
 		// Note: Mock configuration is done in each test case
 	})
 
 	AfterEach(func() {
-		if server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if testServer != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			_ = server.Shutdown(ctx)
-		}
-		if listener != nil {
-			_ = listener.Close()
+			Expect(testServer.Close(ctx)).To(Succeed())
 		}
 		if ctrl != nil {
 			ctrl.Finish()
@@ -83,7 +68,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 	Describe("Protocol Response Consistency", func() {
 		Context("when service is healthy", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should return consistent SERVING status across all protocols", func() {
@@ -155,7 +140,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 
 		Context("when service is unhealthy", func() {
 			BeforeEach(func() {
-				testMocks.SetUnhealthyStatus(mockRepo, fmt.Errorf("service error"))
+				testhelpers.SetUnhealthyStatus(mockRepo, fmt.Errorf("service error"))
 			})
 
 			It("should return consistent errors across all protocols", func() {
@@ -205,7 +190,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 				func(domainStatus string, expectedProtoStatus healthv1.ServingStatus) {
 					// Given: Mock configured with specific domain status
 					customStatus := entity.NewHealthStatus(domainStatus)
-					testMocks.SetCustomStatus(mockRepo, customStatus)
+					testhelpers.SetCustomStatus(mockRepo, customStatus)
 
 					grpcWebClient := healthv1connect.NewHealthServiceClient(
 						http.DefaultClient,
@@ -246,7 +231,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 	Describe("Protocol Header Consistency", func() {
 		Context("when making requests with custom headers", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should handle custom headers appropriately for each protocol", func() {
@@ -299,7 +284,7 @@ var _ = Describe("gRPC Protocol Consistency Integration Tests", func() {
 	Describe("Protocol Performance Consistency", func() {
 		Context("when measuring response times", func() {
 			BeforeEach(func() {
-				testMocks.SetHealthyStatus(mockRepo)
+				testhelpers.SetHealthyStatus(mockRepo)
 			})
 
 			It("should have comparable performance across protocols", func() {

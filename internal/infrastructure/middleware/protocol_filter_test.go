@@ -110,83 +110,83 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
 			})
 
-			ginkgo.It("should allow Connect streaming requests with connect+ content types", func() {
+			ginkgo.It("should block Connect streaming requests with connect+ content types", func() {
 				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader("stream-data"))
 				req.Header.Set("Content-Type", "application/connect+proto")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.It("should allow Connect unary requests with Connect-Protocol-Version header", func() {
+			ginkgo.It("should block Connect unary requests with Connect-Protocol-Version header", func() {
 				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader(`{"id":"123"}`))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Connect-Protocol-Version", "1")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.It("should allow Connect unary requests with proto content type and Connect headers", func() {
+			ginkgo.It("should block Connect unary requests with proto content type and Connect headers", func() {
 				req := httptest.NewRequest("POST", "/health.v1.HealthService/Check", strings.NewReader("proto-data"))
 				req.Header.Set("Content-Type", "application/proto")
 				req.Header.Set("Connect-Protocol-Version", "1")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.It("should allow Connect requests with Connect-Accept-Encoding header", func() {
+			ginkgo.It("should block Connect requests with Connect-Accept-Encoding header", func() {
 				req := httptest.NewRequest("POST", "/user.v1.UserService/RegisterUser", strings.NewReader(`{"email":"test@example.com"}`))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Connect-Accept-Encoding", "gzip")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.It("should allow Connect requests with Connect-Content-Encoding header", func() {
+			ginkgo.It("should block Connect requests with Connect-Content-Encoding header", func() {
 				req := httptest.NewRequest("POST", "/user.v1.UserService/UpdateUserProfile", strings.NewReader(`compressed-data`))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Connect-Content-Encoding", "gzip")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.It("should allow Connect requests with Connect-Timeout-Ms header", func() {
+			ginkgo.It("should block Connect requests with Connect-Timeout-Ms header", func() {
 				req := httptest.NewRequest("POST", "/health.v1.HealthService/Check", strings.NewReader(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Connect-Timeout-Ms", "30000")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.It("should allow Connect requests with connect user-agent", func() {
+			ginkgo.It("should block Connect requests with connect user-agent", func() {
 				req := httptest.NewRequest("POST", "/user.v1.UserService/GetUserProfile", strings.NewReader(`{"id":"456"}`))
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("User-Agent", "connect-go/1.0")
 
 				handler.ServeHTTP(recorder, req)
 
-				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+				gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 			})
 
-			ginkgo.DescribeTable("should allow various Connect streaming content types",
+			ginkgo.DescribeTable("should block various Connect streaming content types",
 				func(contentType string) {
 					req := httptest.NewRequest("POST", "/user.v1.UserService/StreamData", strings.NewReader("stream-data"))
 					req.Header.Set("Content-Type", contentType)
 
 					handler.ServeHTTP(recorder, req)
 
-					gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusOK))
+					gomega.Expect(recorder.Code).To(gomega.Equal(http.StatusNotFound))
 				},
 				ginkgo.Entry("application/connect+proto", "application/connect+proto"),
 				ginkgo.Entry("application/connect+json", "application/connect+json"),

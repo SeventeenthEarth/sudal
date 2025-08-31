@@ -41,7 +41,7 @@ func NewTestServer(handler http.Handler) (*TestServer, error) {
 	for i := 0; i < 20; i++ { // Poll for up to 1 second
 		conn, err := net.DialTimeout("tcp", listener.Addr().String(), 50*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return ts, nil // Server is ready
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -52,7 +52,6 @@ func NewTestServer(handler http.Handler) (*TestServer, error) {
 	return nil, fmt.Errorf("server failed to start on %s", listener.Addr().String())
 }
 
-// Close gracefully shuts down the server and closes the listener.
 // Close gracefully shuts down the server.
 func (ts *TestServer) Close(ctx context.Context) error {
 	if ts.Server != nil {

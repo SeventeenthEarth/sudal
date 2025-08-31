@@ -88,16 +88,17 @@ func Init(level LogLevel) {
 			zapLevel(level),
 		)
 
-		// Create logger with caller and stacktrace options
-		globalLogger = zap.New(
+		// Build logger fully before publishing the global pointer to avoid races
+		logger := zap.New(
 			core,
 			zap.AddCaller(),
 			zap.AddCallerSkip(1), // Skip the logger wrapper
 			zap.AddStacktrace(zapcore.ErrorLevel),
 		)
-
-		// Log initialization
-		globalLogger.Info("Logger initialized", zap.String("level", string(level)))
+		// Optionally log initialization using the local logger
+		logger.Info("Logger initialized", zap.String("level", string(level)))
+		// Publish the initialized logger at the very end of once.Do
+		globalLogger = logger
 	})
 }
 

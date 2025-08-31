@@ -22,6 +22,7 @@ func ProtocolFilterMiddleware(grpcOnlyPaths []string) func(http.Handler) http.Ha
 						zap.String("method", r.Method),
 						zap.String("content_type", r.Header.Get("Content-Type")),
 						zap.String("user_agent", r.UserAgent()),
+						zap.String("protocol_detected", detectGRPCProtocol(r)),
 					)
 
 					// Return 404 Not Found to hide the existence of the endpoint for non-gRPC clients
@@ -54,50 +55,60 @@ func shouldRestrictToGRPC(requestPath string, grpcOnlyPaths []string) bool {
 
 // isGRPCRequest determines if the incoming request is a gRPC request
 // It checks for gRPC-specific headers and content types
+// Note: Connect protocol requests are intentionally NOT treated as gRPC
 func isGRPCRequest(r *http.Request) bool {
-	// Check Content-Type header for gRPC protocols
 	contentType := r.Header.Get("Content-Type")
 
-	// gRPC over HTTP/2 (standard gRPC)
-	if strings.HasPrefix(contentType, "application/grpc") {
+	// Check for standard gRPC protocols
+	if isStandardGRPCContentType(contentType) {
 		return true
 	}
-
-	// gRPC-Web protocol
-	if strings.HasPrefix(contentType, "application/grpc-web") {
-		return true
-	}
-
-	// Note: Do NOT treat Connect HTTP (application/connect+json|proto) as gRPC here.
-	// gRPC-only paths allow only gRPC/grpc-web. Connect over HTTP should be blocked.
 
 	// Check for gRPC-specific headers
+	if hasGRPCHeaders(r) {
+		return true
+	}
+
+	// Check for HTTP/2 with gRPC indicators
+	if isHTTP2GRPCRequest(r, contentType) {
+		return true
+	}
+
+	return false
+}
+
+// isStandardGRPCContentType checks if the content type indicates gRPC or gRPC-Web
+func isStandardGRPCContentType(contentType string) bool {
+	return strings.HasPrefix(contentType, "application/grpc") ||
+		strings.HasPrefix(contentType, "application/grpc-web")
+}
+
+// hasGRPCHeaders checks for gRPC-specific headers
+func hasGRPCHeaders(r *http.Request) bool {
 	// TE header with "trailers" is required for gRPC over HTTP/2
 	if te := r.Header.Get("TE"); strings.Contains(te, "trailers") {
 		return true
 	}
 
-	// Check for gRPC-Web specific headers
+	// gRPC-Web specific header
 	if r.Header.Get("X-Grpc-Web") != "" {
 		return true
 	}
 
-	// Check for HTTP/2 with gRPC content type patterns
-	// Connect-go may use different content types but still be gRPC
-	if r.ProtoMajor == 2 {
-		// For HTTP/2, check if it's likely a gRPC request based on other indicators
-		userAgent := r.UserAgent()
-		if strings.Contains(userAgent, "grpc") {
-			return true
-		}
+	return false
+}
 
-		// Check for gRPC method patterns (POST to service paths)
-		if r.Method == "POST" && isGRPCServicePath(r.URL.Path) {
-			// Additional check: if it's HTTP/2 POST to a service path with binary content
-			// or no explicit JSON content type, it's likely gRPC
-			if !strings.Contains(contentType, "application/json") {
-				return true
-			}
+// isHTTP2GRPCRequest checks if this is likely a gRPC request over HTTP/2
+func isHTTP2GRPCRequest(r *http.Request, contentType string) bool {
+	if r.ProtoMajor != 2 {
+		return false
+	}
+
+	// Only allow when it's clearly gRPC: POST to a service path AND
+	// either standard gRPC Content-Type or gRPC headers present.
+	if r.Method == "POST" && isGRPCServicePath(r.URL.Path) {
+		if isStandardGRPCContentType(contentType) || hasGRPCHeaders(r) {
+			return true
 		}
 	}
 
@@ -111,19 +122,19 @@ func isGRPCServicePath(path string) bool {
 	return strings.Contains(path, ".") && strings.Count(path, "/") >= 2
 }
 
-// detectGRPCProtocol detects which gRPC protocol is being used
+// detectGRPCProtocol detects which protocol is being used
 func detectGRPCProtocol(r *http.Request) string {
 	contentType := r.Header.Get("Content-Type")
 
-	// Check for Connect protocol first (most specific)
-	if r.Header.Get("Connect-Protocol-Version") != "" {
+	// Check for Connect protocol (not allowed on gRPC-only paths)
+	if isConnectProtocol(r) {
+		if strings.HasPrefix(contentType, "application/connect+") {
+			return "connect-streaming"
+		}
 		return "connect"
 	}
 
-	if strings.HasPrefix(contentType, "application/connect+") {
-		return "connect-streaming"
-	}
-
+	// Standard gRPC protocols
 	if strings.HasPrefix(contentType, "application/grpc-web") {
 		return "grpc-web"
 	}
@@ -136,15 +147,28 @@ func detectGRPCProtocol(r *http.Request) string {
 		return "grpc-http2"
 	}
 
-	// Check for Connect unary with standard content types
-	if (strings.HasPrefix(contentType, "application/json") || strings.HasPrefix(contentType, "application/proto")) &&
-		(r.Header.Get("Connect-Accept-Encoding") != "" ||
-			r.Header.Get("Connect-Content-Encoding") != "" ||
-			r.Header.Get("Connect-Timeout-Ms") != "") {
-		return "connect-unary"
+	return "unknown"
+}
+
+// isConnectProtocol checks if the request is using Connect protocol
+func isConnectProtocol(r *http.Request) bool {
+	// Check for Connect-Protocol-Version header (most reliable)
+	if r.Header.Get("Connect-Protocol-Version") != "" {
+		return true
 	}
 
-	return "unknown"
+	// Check for Connect streaming content types
+	contentType := r.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "application/connect+") {
+		return true
+	}
+
+	// Check for Connect-specific headers with standard content types
+	hasConnectHeaders := r.Header.Get("Connect-Accept-Encoding") != "" ||
+		r.Header.Get("Connect-Content-Encoding") != "" ||
+		r.Header.Get("Connect-Timeout-Ms") != ""
+
+	return hasConnectHeaders
 }
 
 // GetGRPCOnlyPaths returns the list of paths that should be restricted to gRPC only

@@ -21,8 +21,6 @@ var _ = ginkgo.Describe("LoadConfig", func() {
 			// Clear environment variables that might interfere with config file loading
 			err := os.Unsetenv("APP_ENV")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			err = os.Unsetenv("ENVIRONMENT")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			err = os.Unsetenv("SERVER_PORT")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			err = os.Unsetenv("LOG_LEVEL")
@@ -43,7 +41,6 @@ var _ = ginkgo.Describe("LoadConfig", func() {
 server_port: 9999
 log_level: debug
 app_env: test
-environment: test
 
 # Database Configuration
 db:
@@ -75,7 +72,7 @@ redis:
 			gomega.Expect(cfg.ServerPort).To(gomega.Equal("9999"))
 			gomega.Expect(cfg.LogLevel).To(gomega.Equal("debug"))
 			gomega.Expect(cfg.AppEnv).To(gomega.Equal("test"))
-			gomega.Expect(cfg.Environment).To(gomega.Equal("test"))
+			// Environment field removed; AppEnv only
 			gomega.Expect(cfg.DB.DSN).To(gomega.Equal("postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"))
 			gomega.Expect(cfg.Redis.Addr).To(gomega.Equal("localhost:6379"))
 			gomega.Expect(cfg.Redis.Password).To(gomega.Equal("testpassword"))
@@ -128,8 +125,7 @@ redis:
 			err = os.Setenv("APP_ENV", "test")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			err = os.Setenv("ENVIRONMENT", "test")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			// ENVIRONMENT no longer used
 		})
 
 		ginkgo.AfterEach(func() {
@@ -143,8 +139,7 @@ redis:
 			err = os.Unsetenv("APP_ENV")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			err = os.Unsetenv("ENVIRONMENT")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			// ENVIRONMENT no longer used
 		})
 
 		ginkgo.It("should load configuration from environment variables", func() {
@@ -156,7 +151,7 @@ redis:
 			gomega.Expect(cfg.ServerPort).To(gomega.Equal("9090"))
 			gomega.Expect(cfg.LogLevel).To(gomega.Equal("debug"))
 			gomega.Expect(cfg.AppEnv).To(gomega.Equal("test"))
-			gomega.Expect(cfg.Environment).To(gomega.Equal("test"))
+			// Environment field removed; AppEnv only
 		})
 	})
 
@@ -175,8 +170,7 @@ redis:
 			err = os.Unsetenv("APP_ENV")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			err = os.Unsetenv("ENVIRONMENT")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			// ENVIRONMENT no longer used
 		})
 
 		ginkgo.It("should use default values when environment variables are not set", func() {
@@ -188,7 +182,7 @@ redis:
 			gomega.Expect(cfg.ServerPort).To(gomega.Equal("8080"))
 			gomega.Expect(cfg.LogLevel).To(gomega.Equal("info"))
 			gomega.Expect(cfg.AppEnv).To(gomega.Equal("dev"))
-			gomega.Expect(cfg.Environment).To(gomega.Equal("dev"))
+			// Environment field removed; default AppEnv is dev
 		})
 	})
 
@@ -339,8 +333,7 @@ redis:
 			err := os.Setenv("APP_ENV", "production")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			err = os.Setenv("ENVIRONMENT", "production")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			// ENVIRONMENT no longer used
 
 			// Set SERVER_PORT to avoid that validation error
 			err = os.Setenv("SERVER_PORT", "8080")
@@ -352,8 +345,7 @@ redis:
 			err := os.Unsetenv("APP_ENV")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-			err = os.Unsetenv("ENVIRONMENT")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			// ENVIRONMENT no longer used
 
 			err = os.Unsetenv("SERVER_PORT")
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -381,13 +373,10 @@ redis:
 				// Set APP_ENV to dev to avoid production validation
 				err := os.Setenv("APP_ENV", "dev")
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				err = os.Setenv("ENVIRONMENT", "dev")
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			})
 
 			ginkgo.AfterEach(func() {
 				_ = os.Unsetenv("APP_ENV")
-				_ = os.Unsetenv("ENVIRONMENT")
 			})
 
 			ginkgo.It("should map PORT to SERVER_PORT when SERVER_PORT is not set", func() {
@@ -432,13 +421,10 @@ redis:
 				// Set APP_ENV to dev to avoid production validation
 				err := os.Setenv("APP_ENV", "dev")
 				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				err = os.Setenv("ENVIRONMENT", "dev")
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			})
 
 			ginkgo.AfterEach(func() {
 				_ = os.Unsetenv("APP_ENV")
-				_ = os.Unsetenv("ENVIRONMENT")
 			})
 
 			ginkgo.It("should handle POSTGRES_DSN environment variable", func() {
@@ -551,8 +537,8 @@ var _ = ginkgo.Describe("validateConfig", func() {
 		ginkgo.It("should return an error for missing ServerPort", func() {
 			// Create a config with missing ServerPort
 			cfg := &config.Config{
-				Environment: "development",
-				ServerPort:  "", // Missing required field
+				ServerPort: "", // Missing required field
+				AppEnv:     "dev",
 			}
 
 			// Directly validate the config
@@ -579,9 +565,8 @@ var _ = ginkgo.Describe("validateConfig", func() {
 		ginkgo.It("should pass validation when database DSN is provided", func() {
 			// Create a production config with database DSN
 			cfg := &config.Config{
-				AppEnv:      "production",
-				Environment: "production",
-				ServerPort:  "8080",
+				AppEnv:     "production",
+				ServerPort: "8080",
 				DB: config.DBConfig{
 					DSN: "postgres://user:pass@localhost:5432/db",
 				},
@@ -595,9 +580,8 @@ var _ = ginkgo.Describe("validateConfig", func() {
 		ginkgo.It("should pass validation when database components are provided", func() {
 			// Create a production config with database components
 			cfg := &config.Config{
-				AppEnv:      "production",
-				Environment: "production",
-				ServerPort:  "8080",
+				AppEnv:     "production",
+				ServerPort: "8080",
 				DB: config.DBConfig{
 					Host:     "localhost",
 					Port:     "5432",
@@ -616,10 +600,9 @@ var _ = ginkgo.Describe("validateConfig", func() {
 		ginkgo.It("should fail validation when database configuration is missing", func() {
 			// Create a production config without database configuration
 			cfg := &config.Config{
-				AppEnv:      "production",
-				Environment: "production",
-				ServerPort:  "8080",
-				DB:          config.DBConfig{}, // Empty database config
+				AppEnv:     "production",
+				ServerPort: "8080",
+				DB:         config.DBConfig{}, // Empty database config
 			}
 
 			// Directly validate the config - should fail validation

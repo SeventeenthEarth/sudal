@@ -176,7 +176,7 @@ func isTestEnvironmentWire() bool {
 	// Check if config indicates test environment
 	cfg := config.GetConfig()
 	if cfg != nil {
-		if cfg.AppEnv == "test" || cfg.Environment == "test" {
+		if cfg.AppEnv == "test" {
 			return true
 		}
 	}

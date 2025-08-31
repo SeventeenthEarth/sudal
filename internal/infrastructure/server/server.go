@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -113,6 +114,11 @@ func (s *Server) Start() error {
 	// Block until we receive a signal or an error
 	select {
 	case err := <-serverErrors:
+		// Treat http.ErrServerClosed as a normal, graceful shutdown
+		if errors.Is(err, http.ErrServerClosed) {
+			log.Info("Server closed gracefully")
+			return nil
+		}
 		return fmt.Errorf("error starting server: %w", err)
 
 	case <-shutdown:

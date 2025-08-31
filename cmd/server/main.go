@@ -15,8 +15,6 @@ import (
 )
 
 func main() {
-	fmt.Println("Starting Sudal Server...")
-
 	// Initialize application
 	cfg := initializeApplication()
 
@@ -107,6 +105,6 @@ func startServer(cfg *config.Config) {
 func cleanup() {
 	// Ensure logs are flushed before exiting
 	if err := log.Sync(); err != nil {
-		fmt.Printf("Failed to sync logger: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Failed to sync logger: %v\n", err)
 	}
 }

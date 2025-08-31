@@ -11,18 +11,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Environment represents the application environment
-type Environment string
+// AppEnvValue represents valid application environment values
+type AppEnvValue string
 
 const (
 	// DevEnvironment represents the development environment
-	DevEnvironment Environment = "dev"
+	DevEnvironment AppEnvValue = "dev"
 	// CanaryEnvironment represents the canary environment
-	CanaryEnvironment Environment = "canary"
+	CanaryEnvironment AppEnvValue = "canary"
 	// ProductionEnvironment represents the production environment
-	ProductionEnvironment Environment = "production"
+	ProductionEnvironment AppEnvValue = "production"
 	// TestEnvironment represents the test environment (for testing only)
-	TestEnvironment Environment = "test"
+	TestEnvironment AppEnvValue = "test"
 )
 
 // DBConfig holds database-specific configuration
@@ -95,8 +95,7 @@ type Config struct {
 	JwtSecretKey string `mapstructure:"JWT_SECRET_KEY"`
 
 	// Application settings
-	AppEnv      string `mapstructure:"APP_ENV"`
-	Environment string `mapstructure:"ENVIRONMENT"` // Legacy field, use AppEnv instead
+	AppEnv string `mapstructure:"APP_ENV"`
 }
 
 // LoadEnvFiles loads environment variables from .env files
@@ -191,11 +190,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	// Set the AppEnv field
 	if config.AppEnv == "" {
 		config.AppEnv = appEnv
-	}
-
-	// For backward compatibility, set Environment if it's not set
-	if config.Environment == "" {
-		config.Environment = config.AppEnv
 	}
 
 	// Handle nested DB configuration from YAML
@@ -413,7 +407,6 @@ func setDefaults() {
 
 	// Environment defaults
 	viper.SetDefault("APP_ENV", string(DevEnvironment))
-	viper.SetDefault("ENVIRONMENT", string(DevEnvironment))
 
 	// Database defaults
 	viper.SetDefault("DB_PORT", "5432")
@@ -465,8 +458,7 @@ func ValidateConfig(config *Config) error {
 	}
 
 	// Validate database configuration based on environment
-	isProduction := strings.ToLower(config.AppEnv) == string(ProductionEnvironment) ||
-		strings.ToLower(config.Environment) == string(ProductionEnvironment)
+	isProduction := strings.ToLower(config.AppEnv) == string(ProductionEnvironment)
 
 	if isProduction {
 		// In production, database connection is required

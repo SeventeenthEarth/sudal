@@ -50,10 +50,9 @@ var _ = ginkgo.Describe("Server", func() {
 
 			// Ensure we have a valid config for dependency injection with database configuration
 			cfg := &config.Config{
-				ServerPort:  "8080",
-				LogLevel:    "debug",
-				Environment: "test",
-				AppEnv:      "test",
+				ServerPort: "8080",
+				LogLevel:   "debug",
+				AppEnv:     "test",
 				DB: config.DBConfig{
 					DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 					Host:                   "localhost",
@@ -137,10 +136,9 @@ var _ = ginkgo.Describe("Server", func() {
 
 				// Ensure we have a valid config for dependency injection with database configuration
 				cfg := &config.Config{
-					ServerPort:  "8080",
-					LogLevel:    "debug",
-					Environment: "test",
-					AppEnv:      "test",
+					ServerPort: "8080",
+					LogLevel:   "debug",
+					AppEnv:     "test",
 					DB: config.DBConfig{
 						DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 						Host:                   "localhost",
@@ -218,10 +216,9 @@ var _ = ginkgo.Describe("Server", func() {
 
 			// Ensure we have a valid config for dependency injection with database configuration
 			cfg := &config.Config{
-				ServerPort:  "8080",
-				LogLevel:    "debug",
-				Environment: "test",
-				AppEnv:      "test",
+				ServerPort: "8080",
+				LogLevel:   "debug",
+				AppEnv:     "test",
 				DB: config.DBConfig{
 					DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 					Host:                   "localhost",

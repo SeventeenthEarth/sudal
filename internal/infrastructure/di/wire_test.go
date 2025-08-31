@@ -26,7 +26,6 @@ var _ = ginkgo.Describe("DI", func() {
 
 		// Set test-specific configuration values
 		originalConfig.AppEnv = "test"
-		originalConfig.Environment = "test"
 		originalConfig.DB.DSN = "postgres://test:test@localhost:5432/testdb?sslmode=disable"
 		originalConfig.DB.Host = "localhost"
 		originalConfig.DB.Port = "5432"
@@ -140,18 +139,7 @@ var _ = ginkgo.Describe("DI", func() {
 				gomega.Expect(manager).To(gomega.BeNil())
 			})
 
-			ginkgo.It("should return nil when config Environment is test", func() {
-				// Arrange
-				testConfig := *originalConfig
-				testConfig.Environment = "test"
-
-				// Act
-				manager, err := di.ProvidePostgresManager(&testConfig)
-
-				// Assert
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(manager).To(gomega.BeNil())
-			})
+			// Environment field removed; AppEnv is the only switch
 		})
 
 		ginkgo.Context("when not in test environment", func() {
@@ -162,18 +150,14 @@ var _ = ginkgo.Describe("DI", func() {
 				// Set production config
 				prodConfig := *originalConfig
 				prodConfig.AppEnv = "production"
-				prodConfig.Environment = "production"
 				config.SetConfig(&prodConfig)
 			})
 
 			ginkgo.It("should return error for invalid configuration", func() {
 				// Arrange
 				invalidConfig := &config.Config{
-					AppEnv:      "production",
-					Environment: "production",
-					DB: config.DBConfig{
-						DSN: "", // Invalid empty DSN
-					},
+					AppEnv: "production",
+					DB:     config.DBConfig{DSN: ""}, // Invalid empty DSN
 				}
 
 				// Act
@@ -227,18 +211,7 @@ var _ = ginkgo.Describe("DI", func() {
 				gomega.Expect(manager).To(gomega.BeNil())
 			})
 
-			ginkgo.It("should return nil when config Environment is test", func() {
-				// Arrange
-				testConfig := *originalConfig
-				testConfig.Environment = "test"
-
-				// Act
-				manager, err := di.ProvideRedisManager(&testConfig)
-
-				// Assert
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(manager).To(gomega.BeNil())
-			})
+			// Environment field removed; AppEnv is the only switch
 		})
 
 		ginkgo.Context("when not in test environment", func() {
@@ -249,18 +222,14 @@ var _ = ginkgo.Describe("DI", func() {
 				// Set production config
 				prodConfig := *originalConfig
 				prodConfig.AppEnv = "production"
-				prodConfig.Environment = "production"
 				config.SetConfig(&prodConfig)
 			})
 
 			ginkgo.It("should return error for invalid configuration", func() {
 				// Arrange
 				invalidConfig := &config.Config{
-					AppEnv:      "production",
-					Environment: "production",
-					Redis: config.RedisConfig{
-						Addr: "", // Invalid empty address
-					},
+					AppEnv: "production",
+					Redis:  config.RedisConfig{Addr: ""}, // Invalid empty address
 				}
 
 				// Act
@@ -312,18 +281,7 @@ var _ = ginkgo.Describe("DI", func() {
 				gomega.Expect(cacheUtil).To(gomega.BeNil())
 			})
 
-			ginkgo.It("should return nil when config Environment is test", func() {
-				// Arrange
-				testConfig := *originalConfig
-				testConfig.Environment = "test"
-				config.SetConfig(&testConfig)
-
-				// Act
-				cacheUtil := di.ProvideCacheUtil(nil)
-
-				// Assert
-				gomega.Expect(cacheUtil).To(gomega.BeNil())
-			})
+			// Environment field removed; AppEnv is the only switch
 		})
 
 		ginkgo.Context("when not in test environment", func() {
@@ -334,7 +292,6 @@ var _ = ginkgo.Describe("DI", func() {
 				// Set production config
 				prodConfig := *originalConfig
 				prodConfig.AppEnv = "production"
-				prodConfig.Environment = "production"
 				config.SetConfig(&prodConfig)
 			})
 

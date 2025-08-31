@@ -27,7 +27,6 @@ var _ = Describe("Configuration System Integration", func() {
 			"SERVER_PORT":                   os.Getenv("SERVER_PORT"),
 			"LOG_LEVEL":                     os.Getenv("LOG_LEVEL"),
 			"APP_ENV":                       os.Getenv("APP_ENV"),
-			"ENVIRONMENT":                   os.Getenv("ENVIRONMENT"),
 			"POSTGRES_DSN":                  os.Getenv("POSTGRES_DSN"),
 			"DB_HOST":                       os.Getenv("DB_HOST"),
 			"DB_PORT":                       os.Getenv("DB_PORT"),
@@ -76,7 +75,6 @@ var _ = Describe("Configuration System Integration", func() {
 				_ = os.Setenv("SERVER_PORT", "9090") // Ignore error
 				_ = os.Setenv("LOG_LEVEL", "debug")  // Ignore error
 				_ = os.Setenv("APP_ENV", "test")     // Ignore error
-				_ = os.Setenv("ENVIRONMENT", "test") // Ignore error
 
 				// Load config
 				cfg, err := config.LoadConfig("")
@@ -87,7 +85,7 @@ var _ = Describe("Configuration System Integration", func() {
 				Expect(cfg.ServerPort).To(Equal("9090"))
 				Expect(cfg.LogLevel).To(Equal("debug"))
 				Expect(cfg.AppEnv).To(Equal("test"))
-				Expect(cfg.Environment).To(Equal("test"))
+				// Environment field removed; AppEnv only
 			})
 		})
 
@@ -98,7 +96,6 @@ var _ = Describe("Configuration System Integration", func() {
 server_port: "8888"
 log_level: "info"
 app_env: "test"
-environment: "test"
 db:
   dsn: "postgres://user:pass@host:5432/db?sslmode=disable"
 `
@@ -115,7 +112,7 @@ db:
 				Expect(cfg.ServerPort).To(Equal("8888"))
 				Expect(cfg.LogLevel).To(Equal("info"))
 				Expect(cfg.AppEnv).To(Equal("test"))
-				Expect(cfg.Environment).To(Equal("test"))
+				// Environment field removed; AppEnv only
 				Expect(cfg.DB.DSN).To(Equal("postgres://user:pass@host:5432/db?sslmode=disable"))
 			})
 
@@ -140,7 +137,7 @@ db:
 				Expect(cfg.ServerPort).To(Equal("8080"))
 				Expect(cfg.LogLevel).To(Equal("info"))
 				Expect(cfg.AppEnv).To(Equal("test"))
-				Expect(cfg.Environment).To(Equal("dev")) // Environment still defaults to dev
+				// Environment field removed; default AppEnv is dev
 			})
 		})
 
@@ -200,9 +197,8 @@ db:
 			It("should return an error for missing ServerPort", func() {
 				// Create a config with missing ServerPort
 				cfg := &config.Config{
-					LogLevel:    "info",
-					AppEnv:      "test",
-					Environment: "test",
+					LogLevel: "info",
+					AppEnv:   "test",
 				}
 
 				// Validate config
@@ -229,10 +225,9 @@ db:
 			It("should fail validation when required database fields are missing in production", func() {
 				// Create a production config with missing database configuration
 				cfg := &config.Config{
-					ServerPort:  "8080",
-					LogLevel:    "info",
-					AppEnv:      "production",
-					Environment: "production",
+					ServerPort: "8080",
+					LogLevel:   "info",
+					AppEnv:     "production",
 					// Missing DB.DSN
 				}
 
@@ -245,10 +240,9 @@ db:
 			It("should pass validation when database configuration is provided in production", func() {
 				// Create a production config with database configuration
 				cfg := &config.Config{
-					ServerPort:  "8080",
-					LogLevel:    "info",
-					AppEnv:      "production",
-					Environment: "production",
+					ServerPort: "8080",
+					LogLevel:   "info",
+					AppEnv:     "production",
 					DB: config.DBConfig{
 						DSN:                    "postgres://user:pass@host:5432/db",
 						MaxOpenConns:           25,
@@ -267,10 +261,9 @@ db:
 			It("should pass validation when database components are provided in production", func() {
 				// Create a production config with database components
 				cfg := &config.Config{
-					ServerPort:  "8080",
-					LogLevel:    "info",
-					AppEnv:      "production",
-					Environment: "production",
+					ServerPort: "8080",
+					LogLevel:   "info",
+					AppEnv:     "production",
 					DB: config.DBConfig{
 						Host:                   "localhost",
 						Port:                   "5432",
@@ -298,10 +291,9 @@ db:
 		It("should return the expected config instance", func() {
 			// Create a config
 			cfg := &config.Config{
-				ServerPort:  "8080",
-				LogLevel:    "info",
-				AppEnv:      "test",
-				Environment: "test",
+				ServerPort: "8080",
+				LogLevel:   "info",
+				AppEnv:     "test",
 			}
 
 			// Set the config

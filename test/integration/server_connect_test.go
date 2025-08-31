@@ -38,9 +38,9 @@ var _ = Describe("Server Connect Integration", func() {
 
 		// Set up configuration
 		cfg := &config.Config{
-			ServerPort:  serverPort,
-			LogLevel:    "info",
-			Environment: "test",
+			ServerPort: serverPort,
+			LogLevel:   "info",
+			AppEnv:     "test",
 		}
 		config.SetConfig(cfg)
 

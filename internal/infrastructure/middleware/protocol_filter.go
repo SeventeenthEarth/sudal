@@ -69,11 +69,6 @@ func isGRPCRequest(r *http.Request) bool {
 		return true
 	}
 
-	// Check for HTTP/2 with gRPC indicators
-	if isHTTP2GRPCRequest(r, contentType) {
-		return true
-	}
-
 	return false
 }
 
@@ -96,30 +91,6 @@ func hasGRPCHeaders(r *http.Request) bool {
 	}
 
 	return false
-}
-
-// isHTTP2GRPCRequest checks if this is likely a gRPC request over HTTP/2
-func isHTTP2GRPCRequest(r *http.Request, contentType string) bool {
-	if r.ProtoMajor != 2 {
-		return false
-	}
-
-	// Only allow when it's clearly gRPC: POST to a service path AND
-	// either standard gRPC Content-Type or gRPC headers present.
-	if r.Method == "POST" && isGRPCServicePath(r.URL.Path) {
-		if isStandardGRPCContentType(contentType) || hasGRPCHeaders(r) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// isGRPCServicePath checks if the path looks like a gRPC service path
-func isGRPCServicePath(path string) bool {
-	// gRPC service paths typically follow the pattern: /package.service/method
-	// For our services: /health.v1.HealthService/Check, /user.v1.UserService/RegisterUser, etc.
-	return strings.Contains(path, ".") && strings.Count(path, "/") >= 2
 }
 
 // detectGRPCProtocol detects which protocol is being used
@@ -163,11 +134,9 @@ func isConnectProtocol(r *http.Request, contentType string) bool {
 	}
 
 	// Check for Connect-specific headers with standard content types
-	hasConnectHeaders := r.Header.Get("Connect-Accept-Encoding") != "" ||
+	return r.Header.Get("Connect-Accept-Encoding") != "" ||
 		r.Header.Get("Connect-Content-Encoding") != "" ||
 		r.Header.Get("Connect-Timeout-Ms") != ""
-
-	return hasConnectHeaders
 }
 
 // GetGRPCOnlyPaths returns the list of paths that should be restricted to gRPC only

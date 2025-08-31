@@ -68,10 +68,40 @@ func isGRPCRequest(r *http.Request) bool {
 		return true
 	}
 
-	// Connect protocol (connect-go)
-	// Explicitly allow common Connect content types
+	// Connect protocol detection (connect-go)
+	// Check for Connect-Protocol-Version header (most reliable way to detect Connect requests)
+	if r.Header.Get("Connect-Protocol-Version") != "" {
+		return true
+	}
+
+	// Connect protocol streaming RPCs use special content types
 	if strings.HasPrefix(contentType, "application/connect+") {
 		return true
+	}
+
+	// Connect protocol unary RPCs can use standard content types with special headers
+	// Check if this is a Connect unary RPC by looking for Connect-specific headers
+	if r.Method == "POST" && isGRPCServicePath(r.URL.Path) {
+		// Connect unary RPCs may use application/json or application/proto
+		// but will have other Connect-specific indicators
+		if contentType == "application/json" || contentType == "application/proto" ||
+			strings.HasPrefix(contentType, "application/json") || 
+			strings.HasPrefix(contentType, "application/proto") {
+			// Check for Connect-specific headers or patterns
+			// Connect clients may send requests with these content types
+			// We need to allow them if they're targeting gRPC service paths
+			userAgent := r.UserAgent()
+			if strings.Contains(userAgent, "connect") {
+				return true
+			}
+			// If it's a POST to a gRPC service path with proto/json content,
+			// and has Connect headers, it's a Connect request
+			if r.Header.Get("Connect-Accept-Encoding") != "" ||
+				r.Header.Get("Connect-Content-Encoding") != "" ||
+				r.Header.Get("Connect-Timeout-Ms") != "" {
+				return true
+			}
+		}
 	}
 
 	// Check for gRPC-specific headers
@@ -118,6 +148,15 @@ func isGRPCServicePath(path string) bool {
 func detectGRPCProtocol(r *http.Request) string {
 	contentType := r.Header.Get("Content-Type")
 
+	// Check for Connect protocol first (most specific)
+	if r.Header.Get("Connect-Protocol-Version") != "" {
+		return "connect"
+	}
+
+	if strings.HasPrefix(contentType, "application/connect+") {
+		return "connect-streaming"
+	}
+
 	if strings.HasPrefix(contentType, "application/grpc-web") {
 		return "grpc-web"
 	}
@@ -128,6 +167,14 @@ func detectGRPCProtocol(r *http.Request) string {
 
 	if r.ProtoMajor == 2 && r.Header.Get("TE") != "" {
 		return "grpc-http2"
+	}
+
+	// Check for Connect unary with standard content types
+	if (contentType == "application/json" || contentType == "application/proto") &&
+		(r.Header.Get("Connect-Accept-Encoding") != "" ||
+			r.Header.Get("Connect-Content-Encoding") != "" ||
+			r.Header.Get("Connect-Timeout-Ms") != "") {
+		return "connect-unary"
 	}
 
 	return "unknown"

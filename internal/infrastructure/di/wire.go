@@ -25,6 +25,8 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
+	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
+	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 	"go.uber.org/zap"
 )
 
@@ -135,6 +137,25 @@ func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logge
 		return nil
 	}
 	return userRepo.NewUserRepoImpl(pgManager.GetDB(), logger)
+}
+
+// ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB
+// Note: This only wires the constructor; repositories will be migrated to depend on this in later PRs.
+func ProvideSQLExecutor(pgManager postgres.PostgresManager) ssql.Executor {
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	exec, _ := ssqlpg.NewFromDB(pgManager.GetDB())
+	return exec
+}
+
+// ProvideSQLTransactor provides a transactor for beginning transactions
+func ProvideSQLTransactor(pgManager postgres.PostgresManager) ssql.Transactor {
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	_, tx := ssqlpg.NewFromDB(pgManager.GetDB())
+	return tx
 }
 
 // ProvideUserService provides a user application service instance

@@ -6,6 +6,8 @@ import (
 	"errors"
 
 	"go.uber.org/zap"
+
+	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
 )
 
 // Standardized PostgreSQL repository errors
@@ -44,14 +46,8 @@ var (
 // Repository implementations should embed this struct and use its methods
 // for common database operations while implementing feature-specific logic.
 type Repository struct {
-	// db holds the database connection pool or transaction
-	// This can be either *sql.DB (for regular operations) or *sql.Tx (for transactional operations)
-	db interface {
-		QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-		QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-		ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-		PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
-	}
+	// exec provides the minimal SQL execution surface
+	exec ssql.Executor
 
 	// logger provides structured logging for repository operations
 	logger *zap.Logger
@@ -74,7 +70,7 @@ type Repository struct {
 //	userRepo := &userRepoImpl{Repository: baseRepo}
 func NewRepository(db *sql.DB, logger *zap.Logger) *Repository {
 	return &Repository{
-		db:     db,
+		exec:   &dbAdapter{db: db},
 		logger: logger.With(zap.String("component", "postgres_repository")),
 	}
 }
@@ -112,7 +108,7 @@ func NewRepository(db *sql.DB, logger *zap.Logger) *Repository {
 //	return tx.Commit()
 func (r *Repository) WithTx(tx *sql.Tx) *Repository {
 	return &Repository{
-		db:     tx,
+		exec:   &txAdapter{tx: tx},
 		logger: r.logger.With(zap.String("scope", "transaction")),
 	}
 }
@@ -126,8 +122,13 @@ func (r *Repository) WithTx(tx *sql.Tx) *Repository {
 //
 // Note: This method should be used sparingly and only when the standard
 // repository patterns are insufficient for the required operation.
-func (r *Repository) GetDB() interface{} {
-	return r.db
+func (r *Repository) GetDB() interface{} { // Deprecated: prefer GetExecutor
+	return r.exec
+}
+
+// GetExecutor returns the minimal SQL execution surface for repositories
+func (r *Repository) GetExecutor() ssql.Executor {
+	return r.exec
 }
 
 // GetLogger returns the repository's logger instance
@@ -138,4 +139,54 @@ func (r *Repository) GetDB() interface{} {
 //   - *zap.Logger: The structured logger configured for this repository
 func (r *Repository) GetLogger() *zap.Logger {
 	return r.logger
+}
+
+// dbAdapter is a minimal adapter to expose *sql.DB as ssql.Executor
+type dbAdapter struct {
+	db *sql.DB
+}
+
+func (d *dbAdapter) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return d.db.QueryContext(ctx, query, args...)
+}
+
+func (d *dbAdapter) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return d.db.QueryRowContext(ctx, query, args...)
+}
+
+func (d *dbAdapter) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return d.db.ExecContext(ctx, query, args...)
+}
+
+func (d *dbAdapter) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	return d.db.PrepareContext(ctx, query)
+}
+
+// txAdapter is a minimal adapter to expose *sql.Tx as ssql.Tx
+type txAdapter struct {
+	tx *sql.Tx
+}
+
+func (t *txAdapter) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return t.tx.QueryContext(ctx, query, args...)
+}
+
+func (t *txAdapter) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return t.tx.QueryRowContext(ctx, query, args...)
+}
+
+func (t *txAdapter) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return t.tx.ExecContext(ctx, query, args...)
+}
+
+func (t *txAdapter) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	return t.tx.PrepareContext(ctx, query)
+}
+
+func (t *txAdapter) Commit() error {
+	return t.tx.Commit()
+}
+
+func (t *txAdapter) Rollback() error {
+	return t.tx.Rollback()
 }

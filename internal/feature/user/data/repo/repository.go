@@ -86,11 +86,7 @@ func (r *userRepoImpl) Create(ctx context.Context, user *entity.User) (*entity.U
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at`
 
-	db := r.GetDB().(interface {
-		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	})
-
-	row := db.QueryRowContext(ctx, query,
+	row := r.GetExecutor().QueryRowContext(ctx, query,
 		user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL,
 		user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt)
 
@@ -129,11 +125,7 @@ func (r *userRepoImpl) GetByID(ctx context.Context, userID uuid.UUID) (*entity.U
 		FROM sudal.users
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	db := r.GetDB().(interface {
-		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	})
-
-	row := db.QueryRowContext(ctx, query, userID)
+	row := r.GetExecutor().QueryRowContext(ctx, query, userID)
 
 	user := &entity.User{}
 	err := row.Scan(
@@ -169,11 +161,7 @@ func (r *userRepoImpl) GetByFirebaseUID(ctx context.Context, firebaseUID string)
 		FROM sudal.users
 		WHERE firebase_uid = $1 AND deleted_at IS NULL`
 
-	db := r.GetDB().(interface {
-		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	})
-
-	row := db.QueryRowContext(ctx, query, firebaseUID)
+	row := r.GetExecutor().QueryRowContext(ctx, query, firebaseUID)
 
 	user := &entity.User{}
 	err := row.Scan(
@@ -251,11 +239,7 @@ func (r *userRepoImpl) Update(ctx context.Context, user *entity.User) (*entity.U
 		RETURNING id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at`,
 		strings.Join(setParts, ", "), argIndex)
 
-	db := r.GetDB().(interface {
-		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	})
-
-	row := db.QueryRowContext(ctx, query, args...)
+	row := r.GetExecutor().QueryRowContext(ctx, query, args...)
 
 	updatedUser := &entity.User{}
 	err := row.Scan(
@@ -311,11 +295,7 @@ func (r *userRepoImpl) Delete(ctx context.Context, userID uuid.UUID) error {
 		SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	db := r.GetDB().(interface {
-		ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-	})
-
-	result, err := db.ExecContext(ctx, query, userID)
+	result, err := r.GetExecutor().ExecContext(ctx, query, userID)
 	if err != nil {
 		r.GetLogger().Error("Failed to soft delete user",
 			zap.String("user_id", userID.String()),
@@ -359,11 +339,7 @@ func (r *userRepoImpl) Exists(ctx context.Context, firebaseUID string) (bool, er
 	// Execute COUNT query (exclude soft-deleted users)
 	query := `SELECT COUNT(1) FROM sudal.users WHERE firebase_uid = $1 AND deleted_at IS NULL`
 
-	db := r.GetDB().(interface {
-		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	})
-
-	row := db.QueryRowContext(ctx, query, firebaseUID)
+	row := r.GetExecutor().QueryRowContext(ctx, query, firebaseUID)
 
 	var count int
 	err := row.Scan(&count)
@@ -402,11 +378,7 @@ func (r *userRepoImpl) List(ctx context.Context, offset, limit int) ([]*entity.U
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
 
-	db := r.GetDB().(interface {
-		QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
-	})
-
-	rows, err := db.QueryContext(ctx, query, limit, offset)
+	rows, err := r.GetExecutor().QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		r.GetLogger().Error("Failed to list users",
 			zap.Int("offset", offset),
@@ -452,11 +424,7 @@ func (r *userRepoImpl) Count(ctx context.Context) (int64, error) {
 	// Execute COUNT query (exclude soft-deleted users)
 	query := `SELECT COUNT(*) FROM sudal.users WHERE deleted_at IS NULL`
 
-	db := r.GetDB().(interface {
-		QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
-	})
-
-	row := db.QueryRowContext(ctx, query)
+	row := r.GetExecutor().QueryRowContext(ctx, query)
 
 	var count int64
 	err := row.Scan(&count)

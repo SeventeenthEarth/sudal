@@ -173,9 +173,6 @@ func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsq
 
 // ScanOne scans a single row into the provided destination values and maps common errors.
 func (r *Repository) ScanOne(row *stdsql.Row, dest ...any) error {
-	if row == nil {
-		return ErrInvalidInput
-	}
 	if err := row.Scan(dest...); err != nil {
 		return mapPGError(err)
 	}

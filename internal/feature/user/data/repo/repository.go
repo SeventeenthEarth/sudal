@@ -31,7 +31,16 @@ type userRepoImpl struct {
 	*postgres.Repository
 }
 
-// NewUserRepo creates a repository using the minimal SQL executor interface.
+// NewUserRepo creates a new PostgreSQL-based user repository implementation.
+// This constructor initializes the repository with a SQL executor and returns an
+// instance that satisfies the user.UserRepository protocol.
+//
+// Parameters:
+//   - exec: The SQL executor for database operations.
+//   - logger: Structured logger for recording repository operations and errors.
+//
+// Returns:
+//   - repo.UserRepository: A repository instance that implements the user domain protocol.
 func NewUserRepo(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
 	return &userRepoImpl{Repository: postgres.NewRepository(exec, logger)}
 }

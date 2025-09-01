@@ -136,36 +136,36 @@ func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logge
 	if isTestEnvironmentWire() {
 		return nil
 	}
-    // Prefer wiring through the service SQL executor to avoid duplicating adapters
-    exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
-    return userRepo.NewUserRepoWithExecutor(exec, logger)
+	// Prefer wiring through the service SQL executor to avoid duplicating adapters
+	exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
+	return userRepo.NewUserRepoWithExecutor(exec, logger)
 }
 
 // ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB
 // Note: This only wires the constructor; repositories will be migrated to depend on this in later PRs.
 func ProvideSQLExecutor(pgManager postgres.PostgresManager) ssql.Executor {
-    if isTestEnvironmentWire() {
-        return nil
-    }
-    exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
-    return exec
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
+	return exec
 }
 
 // ProvideSQLTransactor provides a transactor for beginning transactions
 func ProvideSQLTransactor(pgManager postgres.PostgresManager) ssql.Transactor {
-    if isTestEnvironmentWire() {
-        return nil
-    }
-    _, tx := ProvideSQLExecutorAndTransactor(pgManager)
-    return tx
+	if isTestEnvironmentWire() {
+		return nil
+	}
+	_, tx := ProvideSQLExecutorAndTransactor(pgManager)
+	return tx
 }
 
 // ProvideSQLExecutorAndTransactor provides both an executor and transactor.
 func ProvideSQLExecutorAndTransactor(pgManager postgres.PostgresManager) (ssql.Executor, ssql.Transactor) {
-    if isTestEnvironmentWire() {
-        return nil, nil
-    }
-    return ssqlpg.NewFromDB(pgManager.GetDB())
+	if isTestEnvironmentWire() {
+		return nil, nil
+	}
+	return ssqlpg.NewFromDB(pgManager.GetDB())
 }
 
 // ProvideUserService provides a user application service instance

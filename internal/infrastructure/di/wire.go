@@ -25,6 +25,8 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
+	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
+	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 	"go.uber.org/zap"
 )
 
@@ -131,10 +133,39 @@ func ProvideLogger() *zap.Logger {
 // ProvideUserRepository provides a user repository instance
 func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logger) userDomainRepo.UserRepository {
 	// Check if we're in test environment and return nil to use mock
-	if isTestEnvironmentWire() {
+	if isTestEnvironmentWire() || pgManager == nil {
 		return nil
 	}
-	return userRepo.NewUserRepoImpl(pgManager.GetDB(), logger)
+	// Prefer wiring through the service SQL executor to avoid duplicating adapters
+	exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
+	return userRepo.NewUserRepoWithExecutor(exec, logger)
+}
+
+// ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB
+// Note: This only wires the constructor; repositories will be migrated to depend on this in later PRs.
+func ProvideSQLExecutor(pgManager postgres.PostgresManager) ssql.Executor {
+	if isTestEnvironmentWire() || pgManager == nil {
+		return nil
+	}
+	exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
+	return exec
+}
+
+// ProvideSQLTransactor provides a transactor for beginning transactions
+func ProvideSQLTransactor(pgManager postgres.PostgresManager) ssql.Transactor {
+	if isTestEnvironmentWire() || pgManager == nil {
+		return nil
+	}
+	_, tx := ProvideSQLExecutorAndTransactor(pgManager)
+	return tx
+}
+
+// ProvideSQLExecutorAndTransactor provides both an executor and transactor.
+func ProvideSQLExecutorAndTransactor(pgManager postgres.PostgresManager) (ssql.Executor, ssql.Transactor) {
+	if isTestEnvironmentWire() || pgManager == nil {
+		return nil, nil
+	}
+	return ssqlpg.NewFromDB(pgManager.GetDB())
 }
 
 // ProvideUserService provides a user application service instance

@@ -1,8 +1,11 @@
 package postgres
 
 import (
+	"context"
+	stdsql "database/sql"
 	"errors"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
@@ -28,6 +31,15 @@ var (
 
 	// ErrInvalidInput is returned when invalid input is provided to a repository method
 	ErrInvalidInput = errors.New("invalid input")
+)
+
+// PostgreSQL error codes (lib/pq) as named constants for readability
+// See: https://www.postgresql.org/docs/current/errcodes-appendix.html
+const (
+	pqCodeUniqueViolation     = pq.ErrorCode("23505")
+	pqCodeForeignKeyViolation = pq.ErrorCode("23503")
+	pqCodeNotNullViolation    = pq.ErrorCode("23502")
+	pqCodeCheckViolation      = pq.ErrorCode("23514")
 )
 
 // Repository provides shared PostgreSQL functionality for all repository implementations
@@ -124,4 +136,71 @@ func (r *Repository) GetExecutor() ssql.Executor {
 //   - *zap.Logger: The structured logger configured for this repository
 func (r *Repository) GetLogger() *zap.Logger {
 	return r.logger
+}
+
+// QueryRow executes a query that is expected to return at most one row and logs it at debug level.
+// It wraps the underlying Executor's QueryRowContext.
+// Note: To avoid leaking sensitive data, argument values are not logged by default.
+func (r *Repository) QueryRow(ctx context.Context, query string, args ...any) *stdsql.Row { // nolint:ireturn
+	if ce := r.logger.Check(zap.DebugLevel, "sql.query"); ce != nil {
+		ce.Write(zap.String("query", query))
+	}
+	return r.exec.QueryRowContext(ctx, query, args...)
+}
+
+// Query executes a query that returns multiple rows and logs it at debug level.
+// Note: To avoid leaking sensitive data, argument values are not logged by default.
+func (r *Repository) Query(ctx context.Context, query string, args ...any) (*stdsql.Rows, error) {
+	if ce := r.logger.Check(zap.DebugLevel, "sql.query"); ce != nil {
+		ce.Write(zap.String("query", query))
+	}
+	rows, err := r.exec.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, MapPGError(err)
+	}
+	return rows, nil
+}
+
+// Exec executes a statement without returning any rows and logs it at debug level.
+// Note: To avoid leaking sensitive data, argument values are not logged by default.
+func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsql.Result, error) {
+	if ce := r.logger.Check(zap.DebugLevel, "sql.exec"); ce != nil {
+		ce.Write(zap.String("query", query))
+	}
+	res, err := r.exec.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, MapPGError(err)
+	}
+	return res, nil
+}
+
+// ScanOne scans a single row into the provided destination values and maps common errors.
+func (r *Repository) ScanOne(row *stdsql.Row, dest ...any) error {
+	if err := row.Scan(dest...); err != nil {
+		return MapPGError(err)
+	}
+	return nil
+}
+
+// MapPGError maps driver-specific errors to standardized repository errors.
+// - sql.ErrNoRows -> ErrNotFound
+// - pq errors: unique_violation -> ErrDuplicateEntry, others -> ErrConstraintViolation (limited set)
+func MapPGError(err error) error { // nolint:cyclop
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, stdsql.ErrNoRows) {
+		return ErrNotFound
+	}
+
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case pqCodeUniqueViolation:
+			return ErrDuplicateEntry
+		case pqCodeForeignKeyViolation, pqCodeNotNullViolation, pqCodeCheckViolation:
+			return ErrConstraintViolation
+		}
+	}
+	return err
 }

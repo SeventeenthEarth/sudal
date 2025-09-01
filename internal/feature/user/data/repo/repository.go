@@ -2,7 +2,7 @@ package repo
 
 import (
 	"context"
-	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -62,35 +62,26 @@ func (r *userRepoImpl) Create(ctx context.Context, user *entity.User) (*entity.U
 		return nil, entity.ErrInvalidAuthProvider
 	}
 
-	// Check if user already exists with the same FirebaseUID
-	exists, err := r.Exists(ctx, user.FirebaseUID)
-	if err != nil {
-		r.GetLogger().Error("Failed to check user existence",
-			zap.String("firebase_uid", user.FirebaseUID),
-			zap.Error(err))
-		return nil, err
-	}
-	if exists {
-		return nil, entity.ErrUserAlreadyExists
-	}
-
 	// Insert new user record
 	query := `
 		INSERT INTO sudal.users (id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at`
 
-	row := r.GetExecutor().QueryRowContext(ctx, query,
+	row := r.QueryRow(ctx, query,
 		user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL,
 		user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt)
 
 	createdUser := &entity.User{}
-	err = row.Scan(
+	err := r.ScanOne(row,
 		&createdUser.ID, &createdUser.FirebaseUID, &createdUser.DisplayName,
 		&createdUser.AvatarURL, &createdUser.CandyBalance, &createdUser.AuthProvider,
 		&createdUser.CreatedAt, &createdUser.UpdatedAt)
 
 	if err != nil {
+		if errors.Is(err, postgres.ErrDuplicateEntry) {
+			return nil, entity.ErrUserAlreadyExists
+		}
 		r.GetLogger().Error("Failed to create user",
 			zap.String("firebase_uid", user.FirebaseUID),
 			zap.Error(err))
@@ -119,16 +110,16 @@ func (r *userRepoImpl) GetByID(ctx context.Context, userID uuid.UUID) (*entity.U
 		FROM sudal.users
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	row := r.GetExecutor().QueryRowContext(ctx, query, userID)
+	row := r.QueryRow(ctx, query, userID)
 
 	user := &entity.User{}
-	err := row.Scan(
+	err := r.ScanOne(row,
 		&user.ID, &user.FirebaseUID, &user.DisplayName,
 		&user.AvatarURL, &user.CandyBalance, &user.AuthProvider,
 		&user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, postgres.ErrNotFound) {
 			return nil, entity.ErrUserNotFound
 		}
 		r.GetLogger().Error("Failed to get user by ID",
@@ -155,16 +146,16 @@ func (r *userRepoImpl) GetByFirebaseUID(ctx context.Context, firebaseUID string)
 		FROM sudal.users
 		WHERE firebase_uid = $1 AND deleted_at IS NULL`
 
-	row := r.GetExecutor().QueryRowContext(ctx, query, firebaseUID)
+	row := r.QueryRow(ctx, query, firebaseUID)
 
 	user := &entity.User{}
-	err := row.Scan(
+	err := r.ScanOne(row,
 		&user.ID, &user.FirebaseUID, &user.DisplayName,
 		&user.AvatarURL, &user.CandyBalance, &user.AuthProvider,
 		&user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, postgres.ErrNotFound) {
 			return nil, entity.ErrUserNotFound
 		}
 		r.GetLogger().Error("Failed to get user by Firebase UID",
@@ -233,16 +224,16 @@ func (r *userRepoImpl) Update(ctx context.Context, user *entity.User) (*entity.U
 		RETURNING id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at`,
 		strings.Join(setParts, ", "), argIndex)
 
-	row := r.GetExecutor().QueryRowContext(ctx, query, args...)
+	row := r.QueryRow(ctx, query, args...)
 
 	updatedUser := &entity.User{}
-	err := row.Scan(
+	err := r.ScanOne(row,
 		&updatedUser.ID, &updatedUser.FirebaseUID, &updatedUser.DisplayName,
 		&updatedUser.AvatarURL, &updatedUser.CandyBalance, &updatedUser.AuthProvider,
 		&updatedUser.CreatedAt, &updatedUser.UpdatedAt)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, postgres.ErrNotFound) {
 			return nil, entity.ErrUserNotFound
 		}
 		r.GetLogger().Error("Failed to update user",
@@ -289,7 +280,7 @@ func (r *userRepoImpl) Delete(ctx context.Context, userID uuid.UUID) error {
 		SET deleted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND deleted_at IS NULL`
 
-	result, err := r.GetExecutor().ExecContext(ctx, query, userID)
+	result, err := r.Exec(ctx, query, userID)
 	if err != nil {
 		r.GetLogger().Error("Failed to soft delete user",
 			zap.String("user_id", userID.String()),
@@ -333,10 +324,10 @@ func (r *userRepoImpl) Exists(ctx context.Context, firebaseUID string) (bool, er
 	// Execute COUNT query (exclude soft-deleted users)
 	query := `SELECT COUNT(1) FROM sudal.users WHERE firebase_uid = $1 AND deleted_at IS NULL`
 
-	row := r.GetExecutor().QueryRowContext(ctx, query, firebaseUID)
+	row := r.QueryRow(ctx, query, firebaseUID)
 
 	var count int
-	err := row.Scan(&count)
+	err := r.ScanOne(row, &count)
 	if err != nil {
 		r.GetLogger().Error("Failed to check user existence",
 			zap.String("firebase_uid", firebaseUID),
@@ -372,7 +363,7 @@ func (r *userRepoImpl) List(ctx context.Context, offset, limit int) ([]*entity.U
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2`
 
-	rows, err := r.GetExecutor().QueryContext(ctx, query, limit, offset)
+	rows, err := r.Query(ctx, query, limit, offset)
 	if err != nil {
 		r.GetLogger().Error("Failed to list users",
 			zap.Int("offset", offset),
@@ -418,10 +409,10 @@ func (r *userRepoImpl) Count(ctx context.Context) (int64, error) {
 	// Execute COUNT query (exclude soft-deleted users)
 	query := `SELECT COUNT(*) FROM sudal.users WHERE deleted_at IS NULL`
 
-	row := r.GetExecutor().QueryRowContext(ctx, query)
+	row := r.QueryRow(ctx, query)
 
 	var count int64
-	err := row.Scan(&count)
+	err := r.ScanOne(row, &count)
 	if err != nil {
 		r.GetLogger().Error("Failed to count users",
 			zap.Error(err))

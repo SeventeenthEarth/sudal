@@ -62,18 +62,6 @@ func (r *userRepoImpl) Create(ctx context.Context, user *entity.User) (*entity.U
 		return nil, entity.ErrInvalidAuthProvider
 	}
 
-	// Check if user already exists with the same FirebaseUID
-	exists, err := r.Exists(ctx, user.FirebaseUID)
-	if err != nil {
-		r.GetLogger().Error("Failed to check user existence",
-			zap.String("firebase_uid", user.FirebaseUID),
-			zap.Error(err))
-		return nil, err
-	}
-	if exists {
-		return nil, entity.ErrUserAlreadyExists
-	}
-
 	// Insert new user record
 	query := `
 		INSERT INTO sudal.users (id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at)
@@ -85,7 +73,7 @@ func (r *userRepoImpl) Create(ctx context.Context, user *entity.User) (*entity.U
 		user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt)
 
 	createdUser := &entity.User{}
-	err = r.ScanOne(row,
+	err := r.ScanOne(row,
 		&createdUser.ID, &createdUser.FirebaseUID, &createdUser.DisplayName,
 		&createdUser.AvatarURL, &createdUser.CandyBalance, &createdUser.AuthProvider,
 		&createdUser.CreatedAt, &createdUser.UpdatedAt)

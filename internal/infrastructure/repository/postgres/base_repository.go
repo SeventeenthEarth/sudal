@@ -115,9 +115,9 @@ func NewRepositoryWithExecutor(exec ssql.Executor, logger *zap.Logger) *Reposito
 //	}
 //
 //	return tx.Commit()
-func (r *Repository) WithTx(tx *sql.Tx) *Repository {
+func (r *Repository) WithTx(tx ssql.Tx) *Repository {
 	return &Repository{
-		exec:   ssqlpg.NewTx(tx),
+		exec:   tx,
 		logger: r.logger.With(zap.String("scope", "transaction")),
 	}
 }

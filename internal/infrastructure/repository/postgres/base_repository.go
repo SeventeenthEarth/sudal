@@ -163,7 +163,7 @@ func (r *Repository) Query(ctx context.Context, query string, args ...any) (*std
 
 // Exec executes a statement without returning any rows and logs it at debug level.
 // Note: To avoid leaking sensitive data, argument values are not logged by default.
-func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsql.Result, error) { // nolint:ireturn
+func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsql.Result, error) {
 	if ce := r.logger.Check(zap.DebugLevel, "sql.exec"); ce != nil {
 		ce.Write(zap.String("query", query))
 	}

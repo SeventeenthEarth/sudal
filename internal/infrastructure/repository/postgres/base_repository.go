@@ -30,16 +30,16 @@ var (
 	ErrTransactionFailed = errors.New("transaction failed")
 
 	// ErrInvalidInput is returned when invalid input is provided to a repository method
-    ErrInvalidInput = errors.New("invalid input")
+	ErrInvalidInput = errors.New("invalid input")
 )
 
 // PostgreSQL error codes (lib/pq) as named constants for readability
 // See: https://www.postgresql.org/docs/current/errcodes-appendix.html
 const (
-    pqCodeUniqueViolation      = pq.ErrorCode("23505")
-    pqCodeForeignKeyViolation  = pq.ErrorCode("23503")
-    pqCodeNotNullViolation     = pq.ErrorCode("23502")
-    pqCodeCheckViolation       = pq.ErrorCode("23514")
+	pqCodeUniqueViolation     = pq.ErrorCode("23505")
+	pqCodeForeignKeyViolation = pq.ErrorCode("23503")
+	pqCodeNotNullViolation    = pq.ErrorCode("23502")
+	pqCodeCheckViolation      = pq.ErrorCode("23514")
 )
 
 // Repository provides shared PostgreSQL functionality for all repository implementations
@@ -193,14 +193,14 @@ func mapPGError(err error) error { // nolint:cyclop
 		return ErrNotFound
 	}
 
-    var pqErr *pq.Error
-    if errors.As(err, &pqErr) {
-        switch pqErr.Code {
-        case pqCodeUniqueViolation:
-            return ErrDuplicateEntry
-        case pqCodeForeignKeyViolation, pqCodeNotNullViolation, pqCodeCheckViolation:
-            return ErrConstraintViolation
-        }
-    }
-    return err
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case pqCodeUniqueViolation:
+			return ErrDuplicateEntry
+		case pqCodeForeignKeyViolation, pqCodeNotNullViolation, pqCodeCheckViolation:
+			return ErrConstraintViolation
+		}
+	}
+	return err
 }

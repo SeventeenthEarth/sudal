@@ -1,20 +1,20 @@
 package repo
 
 import (
-    "context"
-    "database/sql"
-    "testing"
-    "time"
+	"context"
+	"database/sql"
+	"testing"
+	"time"
 
-    "github.com/DATA-DOG/go-sqlmock"
-    "github.com/google/uuid"
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
-    "go.uber.org/zap"
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 
-    "github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
-    ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
-    "github.com/lib/pq"
+	"github.com/lib/pq"
+	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
+	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // setupTestRepo creates a test repository with mocked database
@@ -22,9 +22,9 @@ func setupTestRepo(t *testing.T) (*userRepoImpl, sqlmock.Sqlmock, func()) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
-    logger := zap.NewNop() // Use no-op logger for tests
-    exec, _ := ssqlpg.NewFromDB(db)
-    repo := NewUserRepo(exec, logger).(*userRepoImpl)
+	logger := zap.NewNop() // Use no-op logger for tests
+	exec, _ := ssqlpg.NewFromDB(db)
+	repo := NewUserRepo(exec, logger).(*userRepoImpl)
 
 	cleanup := func() {
 		db.Close() // nolint:errcheck
@@ -58,11 +58,11 @@ func TestUserRepoImpl_Create_Success(t *testing.T) {
 
 	user := createTestUser()
 
-    // Mock the INSERT query
-    mock.ExpectQuery(`INSERT INTO sudal\.users \(id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at\)`).
-        WithArgs(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt).
-        WillReturnRows(sqlmock.NewRows([]string{"id", "firebase_uid", "display_name", "avatar_url", "candy_balance", "auth_provider", "created_at", "updated_at"}).
-            AddRow(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt))
+	// Mock the INSERT query
+	mock.ExpectQuery(`INSERT INTO sudal\.users \(id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at\)`).
+		WithArgs(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "firebase_uid", "display_name", "avatar_url", "candy_balance", "auth_provider", "created_at", "updated_at"}).
+			AddRow(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt))
 
 	// Act
 	result, err := repo.Create(context.Background(), user)
@@ -85,10 +85,10 @@ func TestUserRepoImpl_Create_UserAlreadyExists(t *testing.T) {
 
 	user := createTestUser()
 
-    // Mock the INSERT query to simulate duplicate key error
-    mock.ExpectQuery(`INSERT INTO sudal\.users \(id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at\)`).
-        WithArgs(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt).
-        WillReturnError(&pq.Error{Code: pq.ErrorCode("23505")})
+	// Mock the INSERT query to simulate duplicate key error
+	mock.ExpectQuery(`INSERT INTO sudal\.users \(id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at\)`).
+		WithArgs(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt).
+		WillReturnError(&pq.Error{Code: pq.ErrorCode("23505")})
 
 	// Act
 	result, err := repo.Create(context.Background(), user)
@@ -333,10 +333,10 @@ func TestUserRepoImpl_Create_DatabaseError(t *testing.T) {
 	user := createTestUser()
 	expectedError := sql.ErrConnDone
 
-    // Mock the INSERT query to return a database error
-    mock.ExpectQuery(`INSERT INTO sudal\.users \(id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at\)`).
-        WithArgs(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt).
-        WillReturnError(expectedError)
+	// Mock the INSERT query to return a database error
+	mock.ExpectQuery(`INSERT INTO sudal\.users \(id, firebase_uid, display_name, avatar_url, candy_balance, auth_provider, created_at, updated_at\)`).
+		WithArgs(user.ID, user.FirebaseUID, user.DisplayName, user.AvatarURL, user.CandyBalance, user.AuthProvider, user.CreatedAt, user.UpdatedAt).
+		WillReturnError(expectedError)
 
 	// Act
 	result, err := repo.Create(context.Background(), user)

@@ -47,6 +47,8 @@ type userRepoImpl struct {
 //
 //	userRepo := repo.NewUserRepoImpl(dbConnection, logger)
 //	user, err := userRepo.GetByID(ctx, userID)
+//
+// Deprecated: Prefer NewUserRepoWithExecutor for DI clarity and easier testing.
 func NewUserRepoImpl(db *sql.DB, logger *zap.Logger) repo.UserRepository {
 	exec, _ := ssqlpg.NewFromDB(db)
 	return NewUserRepoWithExecutor(exec, logger)
@@ -54,7 +56,7 @@ func NewUserRepoImpl(db *sql.DB, logger *zap.Logger) repo.UserRepository {
 
 // NewUserRepoWithExecutor creates a repository using the minimal SQL executor interface.
 func NewUserRepoWithExecutor(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
-	return &userRepoImpl{Repository: postgres.NewRepositoryWithExecutor(exec, logger)}
+	return &userRepoImpl{Repository: postgres.NewRepository(exec, logger)}
 }
 
 // Create creates a new user in the system

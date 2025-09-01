@@ -1,13 +1,11 @@
 package postgres
 
 import (
-	"database/sql"
 	"errors"
 
 	"go.uber.org/zap"
 
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
-	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // Standardized PostgreSQL repository errors
@@ -53,12 +51,12 @@ type Repository struct {
 	logger *zap.Logger
 }
 
-// NewRepository creates a new base repository instance with the provided database connection and logger
+// NewRepository creates a new base repository instance with the provided Executor and logger.
 // This constructor initializes the shared repository component that can be embedded
 // in feature-specific repository implementations.
 //
 // Parameters:
-//   - db: The database connection pool (*sql.DB) for executing queries
+//   - exec: Minimal SQL execution surface (usually backed by *sql.DB or *sql.Tx)
 //   - logger: Structured logger for recording repository operations and errors
 //
 // Returns:
@@ -66,18 +64,9 @@ type Repository struct {
 //
 // Example Usage:
 //
-//	baseRepo := postgres.NewRepository(dbConnection, logger)
+//	baseRepo := postgres.NewRepository(exec, logger)
 //	userRepo := &userRepoImpl{Repository: baseRepo}
-func NewRepository(db *sql.DB, logger *zap.Logger) *Repository {
-	exec, _ := ssqlpg.NewFromDB(db)
-	return &Repository{
-		exec:   exec,
-		logger: logger.With(zap.String("component", "postgres_repository")),
-	}
-}
-
-// NewRepositoryWithExecutor creates a base repository from an Executor directly.
-func NewRepositoryWithExecutor(exec ssql.Executor, logger *zap.Logger) *Repository {
+func NewRepository(exec ssql.Executor, logger *zap.Logger) *Repository {
 	return &Repository{
 		exec:   exec,
 		logger: logger.With(zap.String("component", "postgres_repository")),
@@ -120,19 +109,6 @@ func (r *Repository) WithTx(tx ssql.Tx) *Repository {
 		exec:   tx,
 		logger: r.logger.With(zap.String("scope", "transaction")),
 	}
-}
-
-// GetDB returns the underlying database connection or transaction
-// This method provides access to the raw database protocol for operations
-// that require direct database access beyond the standard repository patterns.
-//
-// Returns:
-//   - protocol{}: The database connection (*sql.DB) or transaction (*sql.Tx)
-//
-// Note: This method should be used sparingly and only when the standard
-// repository patterns are insufficient for the required operation.
-func (r *Repository) GetDB() interface{} { // Deprecated: prefer GetExecutor
-	return r.exec
 }
 
 // GetExecutor returns the minimal SQL execution surface for repositories

@@ -156,7 +156,7 @@ func (r *Repository) Query(ctx context.Context, query string, args ...any) (*std
 	}
 	rows, err := r.exec.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, mapPGError(err)
+		return nil, MapPGError(err)
 	}
 	return rows, nil
 }
@@ -169,7 +169,7 @@ func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsq
 	}
 	res, err := r.exec.ExecContext(ctx, query, args...)
 	if err != nil {
-		return nil, mapPGError(err)
+		return nil, MapPGError(err)
 	}
 	return res, nil
 }
@@ -177,15 +177,15 @@ func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsq
 // ScanOne scans a single row into the provided destination values and maps common errors.
 func (r *Repository) ScanOne(row *stdsql.Row, dest ...any) error {
 	if err := row.Scan(dest...); err != nil {
-		return mapPGError(err)
+		return MapPGError(err)
 	}
 	return nil
 }
 
-// mapPGError maps driver-specific errors to standardized repository errors.
+// MapPGError maps driver-specific errors to standardized repository errors.
 // - sql.ErrNoRows -> ErrNotFound
 // - pq errors: unique_violation -> ErrDuplicateEntry, others -> ErrConstraintViolation (limited set)
-func mapPGError(err error) error { // nolint:cyclop
+func MapPGError(err error) error { // nolint:cyclop
 	if err == nil {
 		return nil
 	}

@@ -138,7 +138,7 @@ func ProvideUserRepository(exec ssql.Executor, logger *zap.Logger) userDomainRep
 	if isTestEnvironmentWire() || exec == nil {
 		return nil
 	}
-	return userRepo.NewUserRepoWithExecutor(exec, logger)
+	return userRepo.NewUserRepo(exec, logger)
 }
 
 // ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB

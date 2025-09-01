@@ -31,8 +31,8 @@ type userRepoImpl struct {
 	*postgres.Repository
 }
 
-// NewUserRepoWithExecutor creates a repository using the minimal SQL executor interface.
-func NewUserRepoWithExecutor(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
+// NewUserRepo creates a repository using the minimal SQL executor interface.
+func NewUserRepo(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
 	return &userRepoImpl{Repository: postgres.NewRepository(exec, logger)}
 }
 

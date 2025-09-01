@@ -140,17 +140,19 @@ func (r *Repository) GetLogger() *zap.Logger {
 
 // QueryRow executes a query that is expected to return at most one row and logs it at debug level.
 // It wraps the underlying Executor's QueryRowContext.
+// Note: To avoid leaking sensitive data, argument values are not logged by default.
 func (r *Repository) QueryRow(ctx context.Context, query string, args ...any) *stdsql.Row { // nolint:ireturn
 	if ce := r.logger.Check(zap.DebugLevel, "sql.query"); ce != nil {
-		ce.Write(zap.String("query", query), zap.Any("args", args))
+		ce.Write(zap.String("query", query))
 	}
 	return r.exec.QueryRowContext(ctx, query, args...)
 }
 
 // Query executes a query that returns multiple rows and logs it at debug level.
+// Note: To avoid leaking sensitive data, argument values are not logged by default.
 func (r *Repository) Query(ctx context.Context, query string, args ...any) (*stdsql.Rows, error) {
 	if ce := r.logger.Check(zap.DebugLevel, "sql.query"); ce != nil {
-		ce.Write(zap.String("query", query), zap.Any("args", args))
+		ce.Write(zap.String("query", query))
 	}
 	rows, err := r.exec.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -160,9 +162,10 @@ func (r *Repository) Query(ctx context.Context, query string, args ...any) (*std
 }
 
 // Exec executes a statement without returning any rows and logs it at debug level.
+// Note: To avoid leaking sensitive data, argument values are not logged by default.
 func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsql.Result, error) { // nolint:ireturn
 	if ce := r.logger.Check(zap.DebugLevel, "sql.exec"); ce != nil {
-		ce.Write(zap.String("query", query), zap.Any("args", args))
+		ce.Write(zap.String("query", query))
 	}
 	res, err := r.exec.ExecContext(ctx, query, args...)
 	if err != nil {

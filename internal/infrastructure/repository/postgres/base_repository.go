@@ -1,13 +1,13 @@
 package postgres
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 
 	"go.uber.org/zap"
 
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
+	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // Standardized PostgreSQL repository errors
@@ -69,8 +69,17 @@ type Repository struct {
 //	baseRepo := postgres.NewRepository(dbConnection, logger)
 //	userRepo := &userRepoImpl{Repository: baseRepo}
 func NewRepository(db *sql.DB, logger *zap.Logger) *Repository {
+	exec, _ := ssqlpg.NewFromDB(db)
 	return &Repository{
-		exec:   &dbAdapter{db: db},
+		exec:   exec,
+		logger: logger.With(zap.String("component", "postgres_repository")),
+	}
+}
+
+// NewRepositoryWithExecutor creates a base repository from an Executor directly.
+func NewRepositoryWithExecutor(exec ssql.Executor, logger *zap.Logger) *Repository {
+	return &Repository{
+		exec:   exec,
 		logger: logger.With(zap.String("component", "postgres_repository")),
 	}
 }
@@ -108,7 +117,7 @@ func NewRepository(db *sql.DB, logger *zap.Logger) *Repository {
 //	return tx.Commit()
 func (r *Repository) WithTx(tx *sql.Tx) *Repository {
 	return &Repository{
-		exec:   &txAdapter{tx: tx},
+		exec:   ssqlpg.NewTx(tx),
 		logger: r.logger.With(zap.String("scope", "transaction")),
 	}
 }
@@ -139,54 +148,4 @@ func (r *Repository) GetExecutor() ssql.Executor {
 //   - *zap.Logger: The structured logger configured for this repository
 func (r *Repository) GetLogger() *zap.Logger {
 	return r.logger
-}
-
-// dbAdapter is a minimal adapter to expose *sql.DB as ssql.Executor
-type dbAdapter struct {
-	db *sql.DB
-}
-
-func (d *dbAdapter) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return d.db.QueryContext(ctx, query, args...)
-}
-
-func (d *dbAdapter) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return d.db.QueryRowContext(ctx, query, args...)
-}
-
-func (d *dbAdapter) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return d.db.ExecContext(ctx, query, args...)
-}
-
-func (d *dbAdapter) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	return d.db.PrepareContext(ctx, query)
-}
-
-// txAdapter is a minimal adapter to expose *sql.Tx as ssql.Tx
-type txAdapter struct {
-	tx *sql.Tx
-}
-
-func (t *txAdapter) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return t.tx.QueryContext(ctx, query, args...)
-}
-
-func (t *txAdapter) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return t.tx.QueryRowContext(ctx, query, args...)
-}
-
-func (t *txAdapter) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return t.tx.ExecContext(ctx, query, args...)
-}
-
-func (t *txAdapter) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	return t.tx.PrepareContext(ctx, query)
-}
-
-func (t *txAdapter) Commit() error {
-	return t.tx.Commit()
-}
-
-func (t *txAdapter) Rollback() error {
-	return t.tx.Rollback()
 }

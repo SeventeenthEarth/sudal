@@ -136,7 +136,9 @@ func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logge
 	if isTestEnvironmentWire() {
 		return nil
 	}
-	return userRepo.NewUserRepoImpl(pgManager.GetDB(), logger)
+	// Prefer wiring through the service SQL executor to avoid duplicating adapters
+	exec, _ := ssqlpg.NewFromDB(pgManager.GetDB())
+	return userRepo.NewUserRepoWithExecutor(exec, logger)
 }
 
 // ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB

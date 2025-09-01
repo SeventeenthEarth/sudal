@@ -15,6 +15,11 @@ func NewFromDB(db *stdsql.DB) (ssql.Executor, ssql.Transactor) {
 	return exec, exec
 }
 
+// NewTx wraps an existing *sql.Tx as an ssql.Tx.
+func NewTx(tx *stdsql.Tx) ssql.Tx {
+	return &txExecutor{tx: tx}
+}
+
 type dbExecutor struct {
 	db *stdsql.DB
 }

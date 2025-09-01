@@ -12,6 +12,8 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/repository/postgres"
+	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
+	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // userRepoImpl is the PostgreSQL implementation of the UserRepository protocol
@@ -46,9 +48,13 @@ type userRepoImpl struct {
 //	userRepo := repo.NewUserRepoImpl(dbConnection, logger)
 //	user, err := userRepo.GetByID(ctx, userID)
 func NewUserRepoImpl(db *sql.DB, logger *zap.Logger) repo.UserRepository {
-	return &userRepoImpl{
-		Repository: postgres.NewRepository(db, logger),
-	}
+	exec, _ := ssqlpg.NewFromDB(db)
+	return NewUserRepoWithExecutor(exec, logger)
+}
+
+// NewUserRepoWithExecutor creates a repository using the minimal SQL executor interface.
+func NewUserRepoWithExecutor(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
+	return &userRepoImpl{Repository: postgres.NewRepositoryWithExecutor(exec, logger)}
 }
 
 // Create creates a new user in the system

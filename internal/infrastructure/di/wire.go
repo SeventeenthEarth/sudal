@@ -78,6 +78,7 @@ var UserSet = wire.NewSet(
 	ProvideConfig,
 	ProvidePostgresManager,
 	ProvideLogger,
+	ProvideSQLExecutor, // Provide minimal SQL surface for repos
 	ProvideUserRepository,
 	ProvideUserService,
 	ProvideFirebaseHandler,
@@ -88,8 +89,9 @@ var UserSet = wire.NewSet(
 var FirebaseSet = wire.NewSet(
 	ProvideConfig,
 	ProvideLogger,
-	ProvideUserRepository,
 	ProvidePostgresManager,
+	ProvideSQLExecutor,
+	ProvideUserRepository,
 	ProvideFirebaseHandler,
 )
 
@@ -130,15 +132,13 @@ func ProvideLogger() *zap.Logger {
 	return log.GetLogger()
 }
 
-// ProvideUserRepository provides a user repository instance
-func ProvideUserRepository(pgManager postgres.PostgresManager, logger *zap.Logger) userDomainRepo.UserRepository {
-	// Check if we're in test environment and return nil to use mock
-	if isTestEnvironmentWire() || pgManager == nil {
+// ProvideUserRepository provides a user repository instance using the minimal SQL executor
+func ProvideUserRepository(exec ssql.Executor, logger *zap.Logger) userDomainRepo.UserRepository {
+	// In tests, or when executor is not available, return nil to allow mocks
+	if isTestEnvironmentWire() || exec == nil {
 		return nil
 	}
-	// Prefer wiring through the service SQL executor to avoid duplicating adapters
-	exec, _ := ProvideSQLExecutorAndTransactor(pgManager)
-	return userRepo.NewUserRepoWithExecutor(exec, logger)
+	return userRepo.NewUserRepo(exec, logger)
 }
 
 // ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB

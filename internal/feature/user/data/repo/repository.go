@@ -13,7 +13,6 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/repository/postgres"
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
-	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // userRepoImpl is the PostgreSQL implementation of the UserRepository protocol
@@ -32,29 +31,18 @@ type userRepoImpl struct {
 	*postgres.Repository
 }
 
-// NewUserRepoImpl creates a new PostgreSQL-based user repository implementation
-// This constructor initializes the repository with the shared PostgreSQL infrastructure
-// and returns an instance that satisfies the user.UserRepository protocol.
+// NewUserRepo creates a new PostgreSQL-based user repository implementation.
+// This constructor initializes the repository with a SQL executor and returns an
+// instance that satisfies the user.UserRepository protocol.
 //
 // Parameters:
-//   - db: The database connection pool (*sql.DB) for executing queries
-//   - logger: Structured logger for recording repository operations and errors
+//   - exec: The SQL executor for database operations.
+//   - logger: Structured logger for recording repository operations and errors.
 //
 // Returns:
-//   - repo.UserRepository: A repository instance that implements the user domain protocol
-//
-// Example Usage:
-//
-//	userRepo := repo.NewUserRepoImpl(dbConnection, logger)
-//	user, err := userRepo.GetByID(ctx, userID)
-func NewUserRepoImpl(db *sql.DB, logger *zap.Logger) repo.UserRepository {
-	exec, _ := ssqlpg.NewFromDB(db)
-	return NewUserRepoWithExecutor(exec, logger)
-}
-
-// NewUserRepoWithExecutor creates a repository using the minimal SQL executor interface.
-func NewUserRepoWithExecutor(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
-	return &userRepoImpl{Repository: postgres.NewRepositoryWithExecutor(exec, logger)}
+//   - repo.UserRepository: A repository instance that implements the user domain protocol.
+func NewUserRepo(exec ssql.Executor, logger *zap.Logger) repo.UserRepository {
+	return &userRepoImpl{Repository: postgres.NewRepository(exec, logger)}
 }
 
 // Create creates a new user in the system

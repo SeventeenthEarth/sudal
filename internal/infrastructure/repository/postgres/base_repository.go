@@ -1,8 +1,11 @@
 package postgres
 
 import (
+	"context"
+	stdsql "database/sql"
 	"errors"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
@@ -124,4 +127,75 @@ func (r *Repository) GetExecutor() ssql.Executor {
 //   - *zap.Logger: The structured logger configured for this repository
 func (r *Repository) GetLogger() *zap.Logger {
 	return r.logger
+}
+
+// QueryRow executes a query that is expected to return at most one row and logs it at debug level.
+// It wraps the underlying Executor's QueryRowContext.
+func (r *Repository) QueryRow(ctx context.Context, query string, args ...any) *stdsql.Row { // nolint:ireturn
+	if ce := r.logger.Check(zap.DebugLevel, "sql.query"); ce != nil {
+		ce.Write(zap.String("query", query), zap.Any("args", args))
+	}
+	return r.exec.QueryRowContext(ctx, query, args...)
+}
+
+// Query executes a query that returns multiple rows and logs it at debug level.
+func (r *Repository) Query(ctx context.Context, query string, args ...any) (*stdsql.Rows, error) {
+	if ce := r.logger.Check(zap.DebugLevel, "sql.query"); ce != nil {
+		ce.Write(zap.String("query", query), zap.Any("args", args))
+	}
+	rows, err := r.exec.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, mapPGError(err)
+	}
+	return rows, nil
+}
+
+// Exec executes a statement without returning any rows and logs it at debug level.
+func (r *Repository) Exec(ctx context.Context, query string, args ...any) (stdsql.Result, error) { // nolint:ireturn
+	if ce := r.logger.Check(zap.DebugLevel, "sql.exec"); ce != nil {
+		ce.Write(zap.String("query", query), zap.Any("args", args))
+	}
+	res, err := r.exec.ExecContext(ctx, query, args...)
+	if err != nil {
+		return nil, mapPGError(err)
+	}
+	return res, nil
+}
+
+// ScanOne scans a single row into the provided destination values and maps common errors.
+func (r *Repository) ScanOne(row *stdsql.Row, dest ...any) error {
+	if row == nil {
+		return ErrInvalidInput
+	}
+	if err := row.Scan(dest...); err != nil {
+		return mapPGError(err)
+	}
+	return nil
+}
+
+// mapPGError maps driver-specific errors to standardized repository errors.
+// - sql.ErrNoRows -> ErrNotFound
+// - pq errors: unique_violation -> ErrDuplicateEntry, others -> ErrConstraintViolation (limited set)
+func mapPGError(err error) error { // nolint:cyclop
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, stdsql.ErrNoRows) {
+		return ErrNotFound
+	}
+
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch string(pqErr.Code) {
+		case "23505": // unique_violation
+			return ErrDuplicateEntry
+		case "23503": // foreign_key_violation
+			return ErrConstraintViolation
+		case "23502": // not_null_violation
+			return ErrConstraintViolation
+		case "23514": // check_violation
+			return ErrConstraintViolation
+		}
+	}
+	return err
 }

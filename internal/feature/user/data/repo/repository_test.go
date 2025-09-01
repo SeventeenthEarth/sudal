@@ -21,7 +21,7 @@ func setupTestRepo(t *testing.T) (*userRepoImpl, sqlmock.Sqlmock, func()) {
 	require.NoError(t, err)
 
 	logger := zap.NewNop() // Use no-op logger for tests
-	repo := NewUserRepoImpl(db, logger).(*userRepoImpl)
+	repo := NewUserRepoWithExecutor(db, logger).(*userRepoImpl)
 
 	cleanup := func() {
 		db.Close() // nolint:errcheck

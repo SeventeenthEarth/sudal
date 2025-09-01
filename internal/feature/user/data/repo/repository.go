@@ -13,7 +13,6 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/repository/postgres"
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
-	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // userRepoImpl is the PostgreSQL implementation of the UserRepository protocol
@@ -30,28 +29,6 @@ type userRepoImpl struct {
 	// This provides access to database connection, transaction management,
 	// and common repository functionality
 	*postgres.Repository
-}
-
-// NewUserRepoImpl creates a new PostgreSQL-based user repository implementation
-// This constructor initializes the repository with the shared PostgreSQL infrastructure
-// and returns an instance that satisfies the user.UserRepository protocol.
-//
-// Parameters:
-//   - db: The database connection pool (*sql.DB) for executing queries
-//   - logger: Structured logger for recording repository operations and errors
-//
-// Returns:
-//   - repo.UserRepository: A repository instance that implements the user domain protocol
-//
-// Example Usage:
-//
-//	userRepo := repo.NewUserRepoImpl(dbConnection, logger)
-//	user, err := userRepo.GetByID(ctx, userID)
-//
-// Deprecated: Prefer NewUserRepoWithExecutor for DI clarity and easier testing.
-func NewUserRepoImpl(db *sql.DB, logger *zap.Logger) repo.UserRepository {
-	exec, _ := ssqlpg.NewFromDB(db)
-	return NewUserRepoWithExecutor(exec, logger)
 }
 
 // NewUserRepoWithExecutor creates a repository using the minimal SQL executor interface.

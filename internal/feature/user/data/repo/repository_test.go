@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
-	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 )
 
 // setupTestRepo creates a test repository with mocked database
@@ -22,8 +21,7 @@ func setupTestRepo(t *testing.T) (*userRepoImpl, sqlmock.Sqlmock, func()) {
 	require.NoError(t, err)
 
 	logger := zap.NewNop() // Use no-op logger for tests
-	exec, _ := ssqlpg.NewFromDB(db)
-	repo := NewUserRepo(exec, logger).(*userRepoImpl)
+	repo := NewUserRepo(db, logger).(*userRepoImpl)
 
 	cleanup := func() {
 		db.Close() // nolint:errcheck

@@ -1,3 +1,6 @@
+// NOTE: This integration test targets the test-only REST handler.
+// Production REST routes are exposed via the OpenAPI router under "/api/*".
+// Here we register the handler on a local mux and call it directly.
 package integration
 
 import (

@@ -1,3 +1,6 @@
+// NOTE: This suite validates the database health REST response using the
+// test-only REST handler. In production, REST endpoints are served via
+// the OpenAPI router at "/api/*"; these tests use a local mux for focus.
 package integration_test
 
 import (

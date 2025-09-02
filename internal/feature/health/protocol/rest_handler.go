@@ -1,3 +1,13 @@
+// NOTE: Test-only REST handler
+//
+// This file provides lightweight net/http handlers for health endpoints that
+// are primarily used by unit/integration tests and local experimentation.
+// Production REST traffic is served by the OpenAPI-generated router under
+// the "/api/*" path prefix. See `api/openapi.yaml` and
+// `internal/infrastructure/openapi` for the production implementation.
+//
+// Keep this handler minimal and behaviorally equivalent to the OpenAPI routes
+// so tests can validate logic without the full OpenAPI stack.
 package protocol
 
 import (

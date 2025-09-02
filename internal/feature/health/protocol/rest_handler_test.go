@@ -1,3 +1,7 @@
+// NOTE: These tests exercise the test-only REST handler for convenience.
+// In production, REST endpoints are served via the OpenAPI router under
+// the "/api/*" prefix. These tests construct a small http.ServeMux and
+// invoke handlers directly to validate behavior without the OpenAPI stack.
 package protocol_test
 
 import (

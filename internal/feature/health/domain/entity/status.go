@@ -1,5 +1,14 @@
 package entity
 
+// Canonical health status string constants
+const (
+	StatusUnknown   = "unknown"
+	StatusHealthy   = "healthy"
+	StatusUnhealthy = "unhealthy"
+	StatusDegraded  = "degraded"
+	StatusOk        = "ok"
+)
+
 // HealthStatus represents the health status of the service
 type HealthStatus struct {
 	Status string `json:"status"`
@@ -14,25 +23,25 @@ func NewHealthStatus(status string) *HealthStatus {
 
 // UnknownStatus returns a HealthStatus indicating the service status is unknown
 func UnknownStatus() *HealthStatus {
-	return NewHealthStatus("unknown")
+	return NewHealthStatus(StatusUnknown)
 }
 
 // HealthyStatus returns a HealthStatus indicating the service is healthy
 func HealthyStatus() *HealthStatus {
-	return NewHealthStatus("healthy")
+	return NewHealthStatus(StatusHealthy)
 }
 
 // UnhealthyStatus returns a HealthStatus indicating the service is unhealthy
 func UnhealthyStatus() *HealthStatus {
-	return NewHealthStatus("unhealthy")
+	return NewHealthStatus(StatusUnhealthy)
 }
 
 // DegradedStatus returns a HealthStatus indicating the service is degraded
 func DegradedStatus() *HealthStatus {
-	return NewHealthStatus("degraded")
+	return NewHealthStatus(StatusDegraded)
 }
 
 // OkStatus returns a HealthStatus indicating the service is ok
 func OkStatus() *HealthStatus {
-	return NewHealthStatus("ok")
+	return NewHealthStatus(StatusOk)
 }

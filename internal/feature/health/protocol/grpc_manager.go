@@ -37,16 +37,8 @@ func (h *HealthManager) Check(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// Map the domain status to the proto status
-	var protoStatus healthv1.ServingStatus
-	switch status.Status {
-	case "healthy":
-		protoStatus = healthv1.ServingStatus_SERVING_STATUS_SERVING
-	case "unhealthy":
-		protoStatus = healthv1.ServingStatus_SERVING_STATUS_NOT_SERVING
-	default:
-		protoStatus = healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED
-	}
+	// Map the domain status to the proto status via converter
+	protoStatus := ToProtoServingStatus(status)
 
 	// Create and return the response
 	response := &healthv1.CheckResponse{

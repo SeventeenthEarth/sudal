@@ -6,9 +6,10 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	userapp "github.com/seventeenthearth/sudal/internal/feature/user/application"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
 	"github.com/seventeenthearth/sudal/internal/service/authutil"
+	"github.com/seventeenthearth/sudal/internal/service/firebaseauth"
 	"go.uber.org/zap"
 )
 
@@ -28,12 +29,13 @@ const (
 // 4. Injects the authenticated user into the request context
 //
 // Parameters:
-//   - firebaseHandler: Firebase handler for token verification
+//   - tokenVerifier: Token verifier service for Firebase ID tokens
+//   - userService: Application service to get/create users
 //   - logger: Structured logger for recording authentication events
 //
 // Returns:
 //   - connect.UnaryInterceptorFunc: Connect-go interceptor function
-func AuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *zap.Logger) connect.UnaryInterceptorFunc {
+func AuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier, userService userapp.UserService, logger *zap.Logger) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			// Extract Authorization header
@@ -53,11 +55,21 @@ func AuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *za
 				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authorization header format"))
 			}
 
-			// Verify token and get user
-			user, err := firebaseHandler.VerifyIDToken(ctx, token)
+			// Verify token
+			uid, provider, err := tokenVerifier.Verify(ctx, token)
 			if err != nil {
 				logger.Warn("Token verification failed",
 					zap.String("procedure", req.Spec().Procedure),
+					zap.Error(err))
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+			}
+
+			// Ensure user exists via application service
+			user, err := userService.EnsureUserByFirebaseUID(ctx, uid, provider)
+			if err != nil {
+				logger.Error("Failed to ensure user existence",
+					zap.String("procedure", req.Spec().Procedure),
+					zap.String("firebase_uid", uid),
 					zap.Error(err))
 				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
 			}
@@ -80,13 +92,14 @@ func AuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *za
 // only to specified procedures, while allowing others to pass through without authentication
 //
 // Parameters:
-//   - firebaseHandler: Firebase handler for token verification
+//   - tokenVerifier: Token verifier service for Firebase ID tokens
+//   - userService: Application service to get/create users
 //   - logger: Structured logger for recording authentication events
 //   - protectedProcedures: List of procedure names that require authentication
 //
 // Returns:
 //   - connect.UnaryInterceptorFunc: Connect-go interceptor function
-func SelectiveAuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, logger *zap.Logger, protectedProcedures []string) connect.UnaryInterceptorFunc {
+func SelectiveAuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier, userService userapp.UserService, logger *zap.Logger, protectedProcedures []string) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			procedure := req.Spec().Procedure
@@ -128,11 +141,21 @@ func SelectiveAuthenticationInterceptor(firebaseHandler firebase.AuthVerifier, l
 				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid authorization header format"))
 			}
 
-			// Verify token and get user
-			user, err := firebaseHandler.VerifyIDToken(ctx, token)
+			// Verify token
+			uid, provider, err := tokenVerifier.Verify(ctx, token)
 			if err != nil {
 				logger.Warn("Token verification failed",
 					zap.String("procedure", procedure),
+					zap.Error(err))
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+			}
+
+			// Ensure user exists via application service
+			user, err := userService.EnsureUserByFirebaseUID(ctx, uid, provider)
+			if err != nil {
+				logger.Error("Failed to ensure user existence",
+					zap.String("procedure", procedure),
+					zap.String("firebase_uid", uid),
 					zap.Error(err))
 				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
 			}
@@ -173,12 +196,13 @@ func GetAuthenticatedUser(ctx context.Context) (*entity.User, error) {
 // It follows the same authentication flow as the Connect-go interceptor
 //
 // Parameters:
-//   - firebaseHandler: Firebase handler for token verification
+//   - tokenVerifier: Token verifier service for Firebase ID tokens
+//   - userService: Application service to get/create users
 //   - logger: Structured logger for recording authentication events
 //
 // Returns:
 //   - func(http.Handler) http.Handler: HTTP middleware function
-func AuthenticationMiddleware(firebaseHandler firebase.AuthVerifier, logger *zap.Logger) func(http.Handler) http.Handler {
+func AuthenticationMiddleware(tokenVerifier firebaseauth.TokenVerifier, userService userapp.UserService, logger *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract Authorization header
@@ -202,12 +226,24 @@ func AuthenticationMiddleware(firebaseHandler firebase.AuthVerifier, logger *zap
 				return
 			}
 
-			// Verify token and get user
-			user, err := firebaseHandler.VerifyIDToken(r.Context(), token)
+			// Verify token
+			uid, provider, err := tokenVerifier.Verify(r.Context(), token)
 			if err != nil {
 				logger.Warn("Token verification failed",
 					zap.String("path", r.URL.Path),
 					zap.String("method", r.Method),
+					zap.Error(err))
+				writeUnauthenticatedError(w, fmt.Sprintf("authentication failed: %v", err))
+				return
+			}
+
+			// Ensure user exists via application service
+			user, err := userService.EnsureUserByFirebaseUID(r.Context(), uid, provider)
+			if err != nil {
+				logger.Error("Failed to ensure user existence",
+					zap.String("path", r.URL.Path),
+					zap.String("method", r.Method),
+					zap.String("firebase_uid", uid),
 					zap.Error(err))
 				writeUnauthenticatedError(w, fmt.Sprintf("authentication failed: %v", err))
 				return

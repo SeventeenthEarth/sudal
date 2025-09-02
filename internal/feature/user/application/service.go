@@ -17,6 +17,10 @@ type UserService interface {
 	// Returns the created user or an error if registration fails
 	RegisterUser(ctx context.Context, firebaseUID, displayName, authProvider string) (*entity.User, error)
 
+	// EnsureUserByFirebaseUID ensures a user exists for the given Firebase UID
+	// If not exists, it creates a new one with the given auth provider
+	EnsureUserByFirebaseUID(ctx context.Context, firebaseUID, authProvider string) (*entity.User, error)
+
 	// GetUserProfile retrieves a user's profile by their ID
 	// Returns the user profile or an error if not found
 	GetUserProfile(ctx context.Context, userID uuid.UUID) (*entity.User, error)
@@ -31,6 +35,7 @@ type UserService interface {
 // It acts as a facade for the individual use cases
 type userServiceImpl struct {
 	registerUserUseCase      RegisterUserUseCase
+	ensureUserUseCase        EnsureUserUseCase
 	getUserProfileUseCase    GetUserProfileUseCase
 	updateUserProfileUseCase UpdateUserProfileUseCase
 }
@@ -39,6 +44,7 @@ type userServiceImpl struct {
 func NewService(repository repo.UserRepository) UserService {
 	return &userServiceImpl{
 		registerUserUseCase:      NewRegisterUserUseCase(repository),
+		ensureUserUseCase:        NewEnsureUserUseCase(repository),
 		getUserProfileUseCase:    NewGetUserProfileUseCase(repository),
 		updateUserProfileUseCase: NewUpdateUserProfileUseCase(repository),
 	}
@@ -47,6 +53,11 @@ func NewService(repository repo.UserRepository) UserService {
 // RegisterUser creates a new user account after Firebase authentication
 func (s *userServiceImpl) RegisterUser(ctx context.Context, firebaseUID, displayName, authProvider string) (*entity.User, error) {
 	return s.registerUserUseCase.Execute(ctx, firebaseUID, displayName, authProvider)
+}
+
+// EnsureUserByFirebaseUID returns an existing user or creates a new one
+func (s *userServiceImpl) EnsureUserByFirebaseUID(ctx context.Context, firebaseUID, authProvider string) (*entity.User, error) {
+	return s.ensureUserUseCase.Execute(ctx, firebaseUID, authProvider)
 }
 
 // GetUserProfile retrieves a user's profile by their ID

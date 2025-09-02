@@ -4,8 +4,9 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
+	userapp "github.com/seventeenthearth/sudal/internal/feature/user/application"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
+	"github.com/seventeenthearth/sudal/internal/service/firebaseauth"
 	"go.uber.org/zap"
 )
 
@@ -67,15 +68,17 @@ func (ic *InterceptorChain) ToConnectOptions() []connect.HandlerOption {
 
 // MiddlewareChainBuilder helps build different types of middleware chains
 type MiddlewareChainBuilder struct {
-	firebaseHandler firebase.AuthVerifier
-	logger          *zap.Logger
+	tokenVerifier firebaseauth.TokenVerifier
+	userService   userapp.UserService
+	logger        *zap.Logger
 }
 
 // NewMiddlewareChainBuilder creates a new middleware chain builder
-func NewMiddlewareChainBuilder(firebaseHandler firebase.AuthVerifier, logger *zap.Logger) *MiddlewareChainBuilder {
+func NewMiddlewareChainBuilder(tokenVerifier firebaseauth.TokenVerifier, userService userapp.UserService, logger *zap.Logger) *MiddlewareChainBuilder {
 	return &MiddlewareChainBuilder{
-		firebaseHandler: firebaseHandler,
-		logger:          logger,
+		tokenVerifier: tokenVerifier,
+		userService:   userService,
+		logger:        logger,
 	}
 }
 
@@ -89,14 +92,14 @@ func (mcb *MiddlewareChainBuilder) PublicHTTPChain() *MiddlewareChain {
 // ProtectedHTTPChain creates a middleware chain for protected HTTP endpoints
 func (mcb *MiddlewareChainBuilder) ProtectedHTTPChain() *MiddlewareChain {
 	// If no auth verifier is provided, skip auth middleware (useful for tests)
-	if mcb.firebaseHandler == nil {
+	if mcb.tokenVerifier == nil || mcb.userService == nil {
 		return NewMiddlewareChain(
 			middleware.RequestLogger,
 		)
 	}
 	return NewMiddlewareChain(
 		middleware.RequestLogger,
-		middleware.AuthenticationMiddleware(mcb.firebaseHandler, mcb.logger),
+		middleware.AuthenticationMiddleware(mcb.tokenVerifier, mcb.userService, mcb.logger),
 	)
 }
 
@@ -115,19 +118,19 @@ func (mcb *MiddlewareChainBuilder) PublicGRPCChain() *InterceptorChain {
 
 // ProtectedGRPCChain creates an interceptor chain for protected gRPC endpoints
 func (mcb *MiddlewareChainBuilder) ProtectedGRPCChain() *InterceptorChain {
-	if mcb.firebaseHandler == nil {
+	if mcb.tokenVerifier == nil || mcb.userService == nil {
 		return NewInterceptorChain()
 	}
-	authInterceptor := ConnectInterceptor(middleware.AuthenticationInterceptor(mcb.firebaseHandler, mcb.logger))
+	authInterceptor := ConnectInterceptor(middleware.AuthenticationInterceptor(mcb.tokenVerifier, mcb.userService, mcb.logger))
 	return NewInterceptorChain(authInterceptor)
 }
 
 // SelectiveGRPCChain creates an interceptor chain for selective gRPC authentication
 func (mcb *MiddlewareChainBuilder) SelectiveGRPCChain(protectedProcedures []string) *InterceptorChain {
-	if mcb.firebaseHandler == nil {
+	if mcb.tokenVerifier == nil || mcb.userService == nil {
 		return NewInterceptorChain()
 	}
-	authInterceptor := ConnectInterceptor(middleware.SelectiveAuthenticationInterceptor(mcb.firebaseHandler, mcb.logger, protectedProcedures))
+	authInterceptor := ConnectInterceptor(middleware.SelectiveAuthenticationInterceptor(mcb.tokenVerifier, mcb.userService, mcb.logger, protectedProcedures))
 	return NewInterceptorChain(authInterceptor)
 }
 

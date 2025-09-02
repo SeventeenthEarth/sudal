@@ -21,8 +21,6 @@ func NormalizeStatusStr(status string) string {
 	case entity.StatusDegraded:
 		// Treat "degraded" as unhealthy for normalization
 		return entity.StatusUnhealthy
-	case entity.StatusUnknown:
-		return entity.StatusUnknown
 	default:
 		return entity.StatusUnknown
 	}
@@ -39,12 +37,12 @@ func NormalizeStatus(s *entity.HealthStatus) string {
 // ToProtoServingStatus converts a domain HealthStatus to the proto ServingStatus enum.
 // Nil input or unknown values map to UNKNOWN_UNSPECIFIED.
 func ToProtoServingStatus(s *entity.HealthStatus) healthv1.ServingStatus {
-    switch NormalizeStatus(s) {
-    case entity.StatusHealthy:
-        return healthv1.ServingStatus_SERVING_STATUS_SERVING
-    case entity.StatusUnhealthy:
-        return healthv1.ServingStatus_SERVING_STATUS_NOT_SERVING
-    default:
-        return healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED
-    }
+	switch NormalizeStatus(s) {
+	case entity.StatusHealthy:
+		return healthv1.ServingStatus_SERVING_STATUS_SERVING
+	case entity.StatusUnhealthy:
+		return healthv1.ServingStatus_SERVING_STATUS_NOT_SERVING
+	default:
+		return healthv1.ServingStatus_SERVING_STATUS_UNKNOWN_UNSPECIFIED
+	}
 }

@@ -15,6 +15,14 @@ func NormalizeStatusStr(status string) string {
 		return entity.StatusHealthy
 	case entity.StatusUnhealthy:
 		return entity.StatusUnhealthy
+	case entity.StatusOk:
+		// Treat "ok" as healthy for normalization
+		return entity.StatusHealthy
+	case entity.StatusDegraded:
+		// Treat "degraded" as unhealthy for normalization
+		return entity.StatusUnhealthy
+	case entity.StatusUnknown:
+		return entity.StatusUnknown
 	default:
 		return entity.StatusUnknown
 	}

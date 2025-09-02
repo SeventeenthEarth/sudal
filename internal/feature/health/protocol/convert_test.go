@@ -9,34 +9,48 @@ import (
 
 func TestNormalizeStatusStr(t *testing.T) {
 	tests := []struct {
+		name string
 		in   string
 		want string
 	}{
-		{entity.StatusHealthy, entity.StatusHealthy},
-		{"HEALTHY", entity.StatusHealthy},
-		{entity.StatusUnhealthy, entity.StatusUnhealthy},
-		{"UNHEALTHY", entity.StatusUnhealthy},
-		{entity.StatusUnknown, entity.StatusUnknown},
-		{"", entity.StatusUnknown},
-		{"custom", entity.StatusUnknown},
+		{"healthy lower", entity.StatusHealthy, entity.StatusHealthy},
+		{"healthy upper", "HEALTHY", entity.StatusHealthy},
+		{"unhealthy lower", entity.StatusUnhealthy, entity.StatusUnhealthy},
+		{"unhealthy upper", "UNHEALTHY", entity.StatusUnhealthy},
+		{"ok -> healthy", entity.StatusOk, entity.StatusHealthy},
+		{"degraded -> unhealthy", entity.StatusDegraded, entity.StatusUnhealthy},
+		{"unknown explicit", entity.StatusUnknown, entity.StatusUnknown},
+		{"empty -> unknown", "", entity.StatusUnknown},
+		{"custom -> unknown", "custom", entity.StatusUnknown},
 	}
 
 	for _, tt := range tests {
-		if got := NormalizeStatusStr(tt.in); got != tt.want {
-			t.Fatalf("NormalizeStatusStr(%q) = %q; want %q", tt.in, got, tt.want)
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NormalizeStatusStr(tt.in); got != tt.want {
+				t.Fatalf("NormalizeStatusStr(%q) = %q; want %q", tt.in, got, tt.want)
+			}
+		})
 	}
 }
 
 func TestNormalizeStatus(t *testing.T) {
-	if got := NormalizeStatus(nil); got != entity.StatusUnknown {
-		t.Fatalf("NormalizeStatus(nil) = %q; want %q", got, entity.StatusUnknown)
+	cases := []struct {
+		name string
+		in   *entity.HealthStatus
+		want string
+	}{
+		{"nil -> unknown", nil, entity.StatusUnknown},
+		{"healthy -> healthy", entity.HealthyStatus(), entity.StatusHealthy},
+		{"unhealthy -> unhealthy", entity.UnhealthyStatus(), entity.StatusUnhealthy},
+		{"ok -> healthy", entity.NewHealthStatus(entity.StatusOk), entity.StatusHealthy},
+		{"degraded -> unhealthy", entity.NewHealthStatus(entity.StatusDegraded), entity.StatusUnhealthy},
 	}
-	if got := NormalizeStatus(entity.HealthyStatus()); got != entity.StatusHealthy {
-		t.Fatalf("NormalizeStatus(healthy) = %q; want %q", got, entity.StatusHealthy)
-	}
-	if got := NormalizeStatus(entity.UnhealthyStatus()); got != entity.StatusUnhealthy {
-		t.Fatalf("NormalizeStatus(unhealthy) = %q; want %q", got, entity.StatusUnhealthy)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := NormalizeStatus(c.in); got != c.want {
+				t.Fatalf("NormalizeStatus(%v) = %q; want %q", c.in, got, c.want)
+			}
+		})
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
+	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthprotocol "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"go.uber.org/zap"
@@ -53,7 +54,7 @@ func (h *OpenAPIHandler) Health(ctx context.Context) (HealthRes, error) {
 	// Map the domain status to the OpenAPI status using shared normalization
 	var apiStatus HealthResponseStatus
 	switch healthprotocol.NormalizeStatus(status) {
-	case "healthy":
+	case entity.StatusHealthy:
 		apiStatus = HealthResponseStatusHealthy
 	default:
 		apiStatus = HealthResponseStatusUnhealthy
@@ -96,7 +97,7 @@ func (h *OpenAPIHandler) DatabaseHealth(ctx context.Context) (DatabaseHealthRes,
 	var apiStatus DatabaseHealthResponseStatus
 	var dbConnectionStatus DatabaseHealthResponseDatabase
 	switch healthprotocol.NormalizeStatusStr(dbStatus.Status) {
-	case "healthy":
+	case entity.StatusHealthy:
 		apiStatus = DatabaseHealthResponseStatusHealthy
 		dbConnectionStatus = DatabaseHealthResponseDatabaseConnected
 	default:

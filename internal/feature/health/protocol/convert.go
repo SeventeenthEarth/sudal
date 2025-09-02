@@ -11,19 +11,19 @@ import (
 // It is case-insensitive and defaults to "unknown" for unrecognized values.
 func NormalizeStatusStr(status string) string {
 	switch strings.ToLower(status) {
-	case "healthy":
-		return "healthy"
-	case "unhealthy":
-		return "unhealthy"
+	case entity.StatusHealthy:
+		return entity.StatusHealthy
+	case entity.StatusUnhealthy:
+		return entity.StatusUnhealthy
 	default:
-		return "unknown"
+		return entity.StatusUnknown
 	}
 }
 
 // NormalizeStatus normalizes an entity.HealthStatus pointer safely, treating nil as "unknown".
 func NormalizeStatus(s *entity.HealthStatus) string {
 	if s == nil {
-		return "unknown"
+		return entity.StatusUnknown
 	}
 	return NormalizeStatusStr(s.Status)
 }

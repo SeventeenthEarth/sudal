@@ -346,6 +346,9 @@ main() {
             setup_buf
             ;;
         "generate"|"lint"|"breaking")
+            # Ensure tools exist when invoking directly
+            verify_buf_installation
+            verify_protoc_plugins
             run_buf_operations "$command"
             ;;
         *)

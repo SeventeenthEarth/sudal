@@ -234,6 +234,7 @@ ifndef MOCKGEN
 	@echo "❌ mockgen not found. Run 'make install-tools' first."
 	@exit 1
 endif
+	@$(MAKE) clean-mocks >/dev/null 2>&1 || true
 	@go generate ./... || echo "⚠️  Warning: Some mock generation may have failed, but continuing..."
 	@echo "✅ Mock generation completed"
 

@@ -55,10 +55,15 @@ func (s *Server) TriggerShutdown() {
 
 // Start initializes and starts the HTTP server using middleware chains
 func (s *Server) Start() error {
-	// Initialize Firebase handler for middleware chains
-	firebaseHandler, err := di.InitializeFirebaseHandler()
+	// Initialize TokenVerifier and UserService for middleware chains
+	tokenVerifier, err := di.InitializeTokenVerifier()
 	if err != nil {
-		return fmt.Errorf("failed to initialize firebase handler: %w", err)
+		return fmt.Errorf("failed to initialize token verifier: %w", err)
+	}
+
+	userService, err := di.InitializeUserService()
+	if err != nil {
+		return fmt.Errorf("failed to initialize user service: %w", err)
 	}
 
 	// Initialize service registry
@@ -68,7 +73,7 @@ func (s *Server) Start() error {
 	}
 
 	// Build middleware chains
-	chainBuilder := NewMiddlewareChainBuilder(firebaseHandler, log.GetLogger())
+	chainBuilder := NewMiddlewareChainBuilder(tokenVerifier, userService, log.GetLogger())
 	serviceConfig := GetDefaultServiceConfiguration()
 	chains := chainBuilder.BuildServiceChains(serviceConfig.ProtectedProcedures)
 

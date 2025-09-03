@@ -4,15 +4,17 @@
 package di
 
 import (
+	"context"
+	"fmt"
 	"os"
 
 	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
 
+	firebaseadm "firebase.google.com/go/v4"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
 
 	"github.com/google/wire"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
@@ -25,9 +27,11 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
+	"github.com/seventeenthearth/sudal/internal/service/firebaseauth"
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
 	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 	"go.uber.org/zap"
+	"google.golang.org/api/option"
 )
 
 // ConfigSet is a Wire provider set for configuration
@@ -81,19 +85,12 @@ var UserSet = wire.NewSet(
 	ProvideSQLExecutor, // Provide minimal SQL surface for repos
 	ProvideUserRepository,
 	ProvideUserService,
-	ProvideFirebaseHandler,
+	ProvideTokenVerifier,
 	userConnect.NewUserHandler,
 )
 
 // FirebaseSet is a Wire provider set for Firebase-related dependencies
-var FirebaseSet = wire.NewSet(
-	ProvideConfig,
-	ProvideLogger,
-	ProvidePostgresManager,
-	ProvideSQLExecutor,
-	ProvideUserRepository,
-	ProvideFirebaseHandler,
-)
+// FirebaseSet removed in Stage C (replaced by TokenVerifier)
 
 // ProvideConfig provides the application configuration
 func ProvideConfig() *config.Config {
@@ -177,21 +174,40 @@ func ProvideUserService(repository userDomainRepo.UserRepository) userApplicatio
 	return userApplication.NewService(repository)
 }
 
-// ProvideFirebaseHandler provides a Firebase handler instance
-func ProvideFirebaseHandler(cfg *config.Config, userRepo userDomainRepo.UserRepository, logger *zap.Logger) (firebase.AuthVerifier, error) {
-	// In test environment, return a stub handler to avoid real SDK init
+// ProvideFirebaseHandler removed in Stage C
+
+// ProvideTokenVerifier provides a Firebase-based TokenVerifier implementation
+func ProvideTokenVerifier(cfg *config.Config, logger *zap.Logger) (firebaseauth.TokenVerifier, error) {
 	if isTestEnvironmentWire() {
-		// For tests, we return nil to allow upper layers to skip auth, or tests can inject mocks explicitly.
 		return nil, nil
 	}
 
-	// Use GOOGLE_APPLICATION_CREDENTIALS environment variable if set, otherwise use config
+	// Resolve credentials path
 	credentialsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if credentialsFile == "" {
 		credentialsFile = cfg.FirebaseCredentialsJSON
 	}
+	if credentialsFile == "" {
+		err := fmt.Errorf("firebase credentials file not provided via GOOGLE_APPLICATION_CREDENTIALS or config")
+		logger.Error("Failed to initialize TokenVerifier", zap.Error(err))
+		return nil, err
+	}
 
-	return firebase.NewFirebaseHandler(credentialsFile, userRepo, logger)
+	// Initialize Firebase app and auth client
+	app, err := firebaseadm.NewApp(context.Background(), nil, option.WithCredentialsFile(credentialsFile))
+	if err != nil {
+		logger.Error("Failed to initialize Firebase app for TokenVerifier",
+			zap.String("credentials_file", credentialsFile), zap.Error(err))
+		return nil, err
+	}
+
+	client, err := app.Auth(context.Background())
+	if err != nil {
+		logger.Error("Failed to get Firebase Auth client for TokenVerifier", zap.Error(err))
+		return nil, err
+	}
+
+	return firebaseauth.NewFirebaseTokenVerifier(client, logger), nil
 }
 
 // isTestEnvironmentWire checks if we're running in a test environment for wire
@@ -245,9 +261,34 @@ func InitializeUserConnectHandler() (*userConnect.UserManager, error) {
 	return nil, nil // Wire will fill this in
 }
 
-// InitializeFirebaseHandler initializes and returns a Firebase auth verifier
-func InitializeFirebaseHandler() (firebase.AuthVerifier, error) {
-	wire.Build(FirebaseSet)
+// InitializeFirebaseHandler removed in Stage C
+
+// TokenVerifierSet is a Wire provider set for TokenVerifier only (for middleware chains)
+var TokenVerifierSet = wire.NewSet(
+	ProvideConfig,
+	ProvideLogger,
+	ProvideTokenVerifier,
+)
+
+// InitializeTokenVerifier initializes and returns a TokenVerifier
+func InitializeTokenVerifier() (firebaseauth.TokenVerifier, error) {
+	wire.Build(TokenVerifierSet)
+	return nil, nil // Wire will fill this in
+}
+
+// UserServiceSet is a Wire provider set for building only the user service
+var UserServiceSet = wire.NewSet(
+	ProvideConfig,
+	ProvidePostgresManager,
+	ProvideLogger,
+	ProvideSQLExecutor,
+	ProvideUserRepository,
+	ProvideUserService,
+)
+
+// InitializeUserService initializes and returns a user application service
+func InitializeUserService() (userApplication.UserService, error) {
+	wire.Build(UserServiceSet)
 	return nil, nil // Wire will fill this in
 }
 

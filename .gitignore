@@ -81,3 +81,5 @@ mcp-servers/
 
 # Firebase
 secrets/firebase_admin_key.json
+
+**/.gocache/*

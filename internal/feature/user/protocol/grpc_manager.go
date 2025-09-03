@@ -9,9 +9,9 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/user/application"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/firebase"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/middleware"
 	"github.com/seventeenthearth/sudal/internal/service/authutil"
+	"github.com/seventeenthearth/sudal/internal/service/firebaseauth"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -20,22 +20,22 @@ import (
 // This handler handles user-related operations including registration, profile retrieval, and updates
 type UserManager struct {
 	userv1connect.UnimplementedUserServiceHandler
-	userService     application.UserService
-	firebaseHandler firebase.AuthVerifier
-	logger          *zap.Logger
+	userService   application.UserService
+	tokenVerifier firebaseauth.TokenVerifier
+	logger        *zap.Logger
 }
 
 // NewUserManager creates a new user handler with the provided dependencies
 // It validates that the logger is not nil, but allows nil userService for testing
-func NewUserManager(userService application.UserService, firebaseHandler firebase.AuthVerifier, logger *zap.Logger) *UserManager {
+func NewUserManager(userService application.UserService, tokenVerifier firebaseauth.TokenVerifier, logger *zap.Logger) *UserManager {
 	if logger == nil {
 		panic("Logger cannot be nil")
 	}
 
 	return &UserManager{
-		userService:     userService,
-		firebaseHandler: firebaseHandler,
-		logger:          logger,
+		userService:   userService,
+		tokenVerifier: tokenVerifier,
+		logger:        logger,
 	}
 }
 
@@ -66,33 +66,43 @@ func (h *UserManager) RegisterUser(
 	}
 
 	// Verify Firebase ID token
-	if h.firebaseHandler == nil {
-		h.logger.Warn("Firebase auth verifier is not configured")
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication not available"))
+	if h.tokenVerifier == nil {
+		h.logger.Warn("Token verifier is not configured")
+		// Treat as server misconfiguration
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
-	verifiedUser, err := h.firebaseHandler.VerifyIDToken(ctx, token)
+	uid, provider, err := h.tokenVerifier.Verify(ctx, token)
 	if err != nil {
 		h.logger.Warn("Firebase token verification failed for RegisterUser", zap.Error(err))
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+		// Do not leak verification error details to clients
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed"))
 	}
 
 	// Verify that the Firebase UID in the token matches the request
-	if verifiedUser.FirebaseUID != req.Msg.FirebaseUid {
+	if uid != req.Msg.FirebaseUid {
 		h.logger.Warn("Firebase UID mismatch",
-			zap.String("token_firebase_uid", verifiedUser.FirebaseUID),
+			zap.String("token_firebase_uid", uid),
 			zap.String("request_firebase_uid", req.Msg.FirebaseUid))
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("firebase UID mismatch"))
 	}
 
-	// Convert domain user to proto response
-	response := &userv1.RegisterUserResponse{
-		UserId:  verifiedUser.ID.String(),
-		Success: true,
+	// Ensure user exists in application layer.
+	// Pass initial display name via context to keep business logic in the application layer.
+	if req.Msg.DisplayName != "" {
+		ctx = application.WithInitialDisplayName(ctx, req.Msg.DisplayName)
+	}
+	user, err := h.userService.EnsureUserByFirebaseUID(ctx, uid, provider)
+	if err != nil {
+		h.logger.Error("Failed to ensure user existence",
+			zap.String("firebase_uid", uid), zap.Error(err))
+		// Do not expose internal error details
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
 
+	response := &userv1.RegisterUserResponse{UserId: user.ID.String(), Success: true}
 	h.logger.Info("User registered successfully",
-		zap.String("user_id", verifiedUser.ID.String()),
-		zap.String("firebase_uid", verifiedUser.FirebaseUID))
+		zap.String("user_id", user.ID.String()),
+		zap.String("firebase_uid", uid))
 
 	return connect.NewResponse(response), nil
 }
@@ -107,7 +117,7 @@ func (h *UserManager) GetUserProfile(
 	user, err := middleware.GetAuthenticatedUser(ctx)
 	if err != nil {
 		h.logger.Error("Failed to get authenticated user from context", zap.Error(err))
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("authentication context error: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
 
 	h.logger.Info("GetUserProfile called",
@@ -142,7 +152,7 @@ func (h *UserManager) UpdateUserProfile(
 	user, err := middleware.GetAuthenticatedUser(ctx)
 	if err != nil {
 		h.logger.Error("Failed to get authenticated user from context", zap.Error(err))
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("authentication context error: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
 
 	logFields := []zap.Field{
@@ -184,7 +194,8 @@ func (h *UserManager) UpdateUserProfile(
 		case entity.ErrInvalidDisplayName:
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		default:
-			return nil, connect.NewError(connect.CodeInternal, err)
+			// Do not expose internal error details to clients
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 		}
 	}
 
@@ -220,6 +231,6 @@ func convertUserToProto(user *entity.User) *userv1.UserProfile {
 
 // NewUserHandler creates a new UserManager instance for Wire dependency injection
 // This function is used by Wire to create the UserManager with all required dependencies
-func NewUserHandler(userService application.UserService, firebaseHandler firebase.AuthVerifier, logger *zap.Logger) *UserManager {
-	return NewUserManager(userService, firebaseHandler, logger)
+func NewUserHandler(userService application.UserService, tokenVerifier firebaseauth.TokenVerifier, logger *zap.Logger) *UserManager {
+	return NewUserManager(userService, tokenVerifier, logger)
 }

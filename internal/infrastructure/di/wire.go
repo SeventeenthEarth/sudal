@@ -5,6 +5,7 @@ package di
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
@@ -185,6 +186,11 @@ func ProvideTokenVerifier(cfg *config.Config, logger *zap.Logger) (firebaseauth.
 	credentialsFile := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if credentialsFile == "" {
 		credentialsFile = cfg.FirebaseCredentialsJSON
+	}
+	if credentialsFile == "" {
+		err := fmt.Errorf("firebase credentials file not provided via GOOGLE_APPLICATION_CREDENTIALS or config")
+		logger.Error("Failed to initialize TokenVerifier", zap.Error(err))
+		return nil, err
 	}
 
 	// Initialize Firebase app and auth client

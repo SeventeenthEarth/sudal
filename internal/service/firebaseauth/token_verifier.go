@@ -62,15 +62,11 @@ func (v *firebaseTokenVerifier) Verify(ctx context.Context, idToken string) (str
 
 // extractAuthProvider determines the authentication provider from Firebase token claims.
 func extractAuthProvider(token *auth.Token, logger *zap.Logger) string {
-	if token == nil {
-		return ProviderEmail
-	}
-
-	if firebase, ok := token.Claims["firebase"].(map[string]interface{}); ok {
-		if identities, ok := firebase["identities"].(map[string]interface{}); ok {
-			if _, hasGoogle := identities["google.com"]; hasGoogle {
-				return ProviderGoogle
-			}
+    if firebase, ok := token.Claims["firebase"].(map[string]interface{}); ok {
+        if identities, ok := firebase["identities"].(map[string]interface{}); ok {
+            if _, hasGoogle := identities["google.com"]; hasGoogle {
+                return ProviderGoogle
+            }
 			if _, hasEmail := identities["email"]; hasEmail {
 				return ProviderEmail
 			}

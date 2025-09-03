@@ -36,6 +36,14 @@ type CacheUtilImpl struct {
 	logger *zap.Logger
 }
 
+// checkClient validates that the underlying KV client is available.
+func (c *CacheUtilImpl) checkClient() error {
+	if c.kv == nil {
+		return fmt.Errorf("redis client is not available")
+	}
+	return nil
+}
+
 // NewCacheUtil creates a new cache utility instance
 func NewCacheUtil(kv sredis.KV) CacheUtil {
 	return &CacheUtilImpl{
@@ -50,9 +58,8 @@ func (c *CacheUtilImpl) Set(ctx context.Context, key string, value string, ttl t
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
-
-	if c.kv == nil {
-		return fmt.Errorf("redis client is not available")
+	if err := c.checkClient(); err != nil {
+		return err
 	}
 
 	c.logger.Debug("Setting cache key",
@@ -87,9 +94,8 @@ func (c *CacheUtilImpl) Get(ctx context.Context, key string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("key cannot be empty")
 	}
-
-	if c.kv == nil {
-		return "", fmt.Errorf("redis client is not available")
+	if err := c.checkClient(); err != nil {
+		return "", err
 	}
 
 	c.logger.Debug("Getting cache key",
@@ -125,9 +131,8 @@ func (c *CacheUtilImpl) Delete(ctx context.Context, key string) error {
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
-
-	if c.kv == nil {
-		return fmt.Errorf("redis client is not available")
+	if err := c.checkClient(); err != nil {
+		return err
 	}
 
 	c.logger.Debug("Deleting cache key",
@@ -157,9 +162,8 @@ func (c *CacheUtilImpl) DeleteByPattern(ctx context.Context, pattern string) err
 	if pattern == "" {
 		return fmt.Errorf("pattern cannot be empty")
 	}
-
-	if c.kv == nil {
-		return fmt.Errorf("redis client is not available")
+	if err := c.checkClient(); err != nil {
+		return err
 	}
 
 	c.logger.Debug("Deleting cache keys by pattern",

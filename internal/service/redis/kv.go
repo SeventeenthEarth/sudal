@@ -20,6 +20,8 @@ type KV interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Del(ctx context.Context, keys ...string) (int64, error)
+	// Keys returns all keys matching a pattern.
+	// NOTE: This loads all matching keys into memory. For large keyspaces, use Scan to iterate over keys in batches.
 	Keys(ctx context.Context, pattern string) ([]string, error)
 	// Scan iterates over keys in batches using SCAN and calls fn for each batch
 	Scan(ctx context.Context, pattern string, fn func(keys []string) error) error

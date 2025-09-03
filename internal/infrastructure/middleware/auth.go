@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -280,9 +281,12 @@ func writeUnauthenticatedError(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusUnauthorized)
 
-	// Write standardized error response as specified in the requirements
-	errorResponse := fmt.Sprintf(`{"code":"unauthenticated","message":"%s"}`, message)
-	_, _ = w.Write([]byte(errorResponse))
+	// Write standardized error response using json encoder to avoid injection/escaping issues
+	type errResponse struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	_ = json.NewEncoder(w).Encode(errResponse{Code: "unauthenticated", Message: message})
 }
 
 // writeInternalServerError writes a standardized internal server error response
@@ -295,6 +299,9 @@ func writeInternalServerError(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusInternalServerError)
 
-	errorResponse := fmt.Sprintf(`{"code":"internal","message":"%s"}`, message)
-	_, _ = w.Write([]byte(errorResponse))
+	type errResponse struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	_ = json.NewEncoder(w).Encode(errResponse{Code: "internal", Message: message})
 }

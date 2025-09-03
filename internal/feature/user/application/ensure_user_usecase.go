@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
 	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
@@ -38,7 +39,7 @@ func (uc *ensureUserUseCase) Execute(ctx context.Context, firebaseUID, authProvi
 	}
 
 	// If the error is anything other than "not found", it's an unexpected error.
-	if err != entity.ErrUserNotFound {
+	if !errors.Is(err, entity.ErrUserNotFound) {
 		return nil, err
 	}
 
@@ -48,5 +49,21 @@ func (uc *ensureUserUseCase) Execute(ctx context.Context, firebaseUID, authProvi
 		// Let repository/domain validate constraints (will return ErrInvalidDisplayName if invalid)
 		newUser.UpdateDisplayName(initName)
 	}
-	return uc.repo.Create(ctx, newUser)
+	created, cerr := uc.repo.Create(ctx, newUser)
+	if cerr == nil {
+		return created, nil
+	}
+	// Handle potential race: another concurrent request created the user
+	if errors.Is(cerr, entity.ErrUserAlreadyExists) {
+		existing, gerr := uc.repo.GetByFirebaseUID(ctx, firebaseUID)
+		if gerr != nil {
+			return nil, gerr
+		}
+		if hasInitName && existing.DisplayName == nil {
+			existing.UpdateDisplayName(initName)
+			return uc.repo.Update(ctx, existing)
+		}
+		return existing, nil
+	}
+	return nil, cerr
 }

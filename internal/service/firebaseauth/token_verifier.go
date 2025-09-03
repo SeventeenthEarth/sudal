@@ -10,6 +10,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// Provider name constants to avoid string literals across the codebase.
+const (
+	// ProviderGoogle represents the Google auth provider.
+	ProviderGoogle = "google"
+	// ProviderEmail represents the email/password auth provider.
+	ProviderEmail = "email"
+)
+
 // TokenVerifier defines a minimal interface to verify an ID token
 // and extract only authentication claims needed by upper layers.
 // It must not depend on any internal repositories or domain services.
@@ -55,25 +63,25 @@ func (v *firebaseTokenVerifier) Verify(ctx context.Context, idToken string) (str
 // extractAuthProvider determines the authentication provider from Firebase token claims.
 func extractAuthProvider(token *auth.Token, logger *zap.Logger) string {
 	if token == nil {
-		return "email"
+		return ProviderEmail
 	}
 
 	if firebase, ok := token.Claims["firebase"].(map[string]interface{}); ok {
 		if identities, ok := firebase["identities"].(map[string]interface{}); ok {
 			if _, hasGoogle := identities["google.com"]; hasGoogle {
-				return "google"
+				return ProviderGoogle
 			}
 			if _, hasEmail := identities["email"]; hasEmail {
-				return "email"
+				return ProviderEmail
 			}
 		}
 
 		if p, ok := firebase["sign_in_provider"].(string); ok {
 			switch p {
 			case "google.com":
-				return "google"
+				return ProviderGoogle
 			case "password":
-				return "email"
+				return ProviderEmail
 			default:
 				return p
 			}
@@ -83,5 +91,5 @@ func extractAuthProvider(token *auth.Token, logger *zap.Logger) string {
 	if logger != nil {
 		logger.Warn("Could not determine auth provider from token, defaulting to email")
 	}
-	return "email"
+	return ProviderEmail
 }

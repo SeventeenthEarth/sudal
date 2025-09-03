@@ -28,8 +28,8 @@ func (uc *ensureUserUseCase) Execute(ctx context.Context, firebaseUID, authProvi
 	if err == nil {
 		return user, nil
 	}
-
-	if err != nil && err != entity.ErrUserNotFound {
+	// If the error is anything other than "not found", it's an unexpected error.
+	if err != entity.ErrUserNotFound {
 		return nil, err
 	}
 

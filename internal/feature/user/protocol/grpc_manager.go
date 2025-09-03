@@ -95,10 +95,12 @@ func (h *UserManager) RegisterUser(
 	// Optionally set display name if provided and not set yet
 	if req.Msg.DisplayName != "" && user.DisplayName == nil {
 		name := req.Msg.DisplayName
-		if _, err := h.userService.UpdateUserProfile(ctx, user.ID, &name, nil); err != nil {
+		if updatedUser, err := h.userService.UpdateUserProfile(ctx, user.ID, &name, nil); err != nil {
 			h.logger.Warn("Failed to set initial display name during registration",
 				zap.String("user_id", user.ID.String()), zap.Error(err))
-			// Continue without failing registration
+			// Continue without failing registration, user object remains as is.
+		} else {
+			user = updatedUser // Update user to the latest version
 		}
 	}
 

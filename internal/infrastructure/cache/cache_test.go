@@ -1,4 +1,4 @@
-package cacheutil
+package cache
 
 import (
 	"github.com/onsi/ginkgo/v2"
@@ -12,7 +12,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 	ginkgo.Describe("NewCacheUtil", func() {
 		ginkgo.Context("when creating a new cache utility", func() {
-			ginkgo.It("should create a cache utility with nil redis manager", func() {
+			ginkgo.It("should create a cache utility with nil redis client (KV)", func() {
 				// When
 				cacheUtil = NewCacheUtil(nil)
 
@@ -21,7 +21,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 				// Type assert to access internal fields
 				if impl, ok := cacheUtil.(*CacheUtilImpl); ok {
-					gomega.Expect(impl.redisManager).To(gomega.BeNil())
+					gomega.Expect(impl.kv).To(gomega.BeNil())
 					gomega.Expect(impl.logger).NotTo(gomega.BeNil())
 				} else {
 					ginkgo.Fail("Expected CacheUtilImpl implementation")
@@ -45,7 +45,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("key cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
 				err := cacheUtil.Set("test-key", "test-value", 0)
 
@@ -71,7 +71,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("key cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
 				_, err := cacheUtil.Get("test-key")
 
@@ -97,7 +97,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("key cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
 				err := cacheUtil.Delete("test-key")
 
@@ -123,7 +123,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("pattern cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
 				err := cacheUtil.DeleteByPattern("test-*")
 

@@ -1,19 +1,18 @@
-package cacheutil
+package cache
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	redis2 "github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	sredis "github.com/seventeenthearth/sudal/internal/service/redis"
 	"go.uber.org/zap"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
-//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_cache_util.go -package=mocks -mock_names=CacheUtil=MockCacheUtil github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil CacheUtil
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_cache_util.go -package=mocks -mock_names=CacheUtil=MockCacheUtil github.com/seventeenthearth/sudal/internal/infrastructure/cache CacheUtil
 
 // CacheUtil defines the protocol for cache operations
 // This protocol abstracts cache operations for better testability
@@ -33,15 +32,15 @@ type CacheUtil interface {
 
 // CacheUtilImpl provides simple key-value caching operations using Redis
 type CacheUtilImpl struct {
-	redisManager redis2.RedisManager
-	logger       *zap.Logger
+	kv     sredis.KV
+	logger *zap.Logger
 }
 
 // NewCacheUtil creates a new cache utility instance
-func NewCacheUtil(redisManager redis2.RedisManager) CacheUtil {
+func NewCacheUtil(kv sredis.KV) CacheUtil {
 	return &CacheUtilImpl{
-		redisManager: redisManager,
-		logger:       log.GetLogger().With(zap.String("component", "cache_util")),
+		kv:     kv,
+		logger: log.GetLogger().With(zap.String("component", "cache_util")),
 	}
 }
 
@@ -53,11 +52,7 @@ func (c *CacheUtilImpl) Set(key string, value string, ttl time.Duration) error {
 	}
 
 	ctx := context.Background()
-	if c.redisManager == nil {
-		return fmt.Errorf("redis client is not available")
-	}
-	client := c.redisManager.GetClient()
-	if client == nil {
+	if c.kv == nil {
 		return fmt.Errorf("redis client is not available")
 	}
 
@@ -68,9 +63,9 @@ func (c *CacheUtilImpl) Set(key string, value string, ttl time.Duration) error {
 
 	var err error
 	if ttl > 0 {
-		err = client.Set(ctx, key, value, ttl).Err()
+		err = c.kv.Set(ctx, key, value, ttl)
 	} else {
-		err = client.Set(ctx, key, value, 0).Err()
+		err = c.kv.Set(ctx, key, value, 0)
 	}
 
 	if err != nil {
@@ -97,11 +92,7 @@ func (c *CacheUtilImpl) Get(key string) (string, error) {
 	}
 
 	ctx := context.Background()
-	if c.redisManager == nil {
-		return "", fmt.Errorf("redis client is not available")
-	}
-	client := c.redisManager.GetClient()
-	if client == nil {
+	if c.kv == nil {
 		return "", fmt.Errorf("redis client is not available")
 	}
 
@@ -109,9 +100,9 @@ func (c *CacheUtilImpl) Get(key string) (string, error) {
 		zap.String("key", key),
 	)
 
-	value, err := client.Get(ctx, key).Result()
+	value, err := c.kv.Get(ctx, key)
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
+		if errors.Is(err, sredis.ErrNotFound) {
 			c.logger.Debug("Cache miss for key",
 				zap.String("key", key),
 			)
@@ -140,11 +131,7 @@ func (c *CacheUtilImpl) Delete(key string) error {
 	}
 
 	ctx := context.Background()
-	if c.redisManager == nil {
-		return fmt.Errorf("redis client is not available")
-	}
-	client := c.redisManager.GetClient()
-	if client == nil {
+	if c.kv == nil {
 		return fmt.Errorf("redis client is not available")
 	}
 
@@ -152,7 +139,7 @@ func (c *CacheUtilImpl) Delete(key string) error {
 		zap.String("key", key),
 	)
 
-	deletedCount, err := client.Del(ctx, key).Result()
+	deletedCount, err := c.kv.Del(ctx, key)
 	if err != nil {
 		c.logger.Error("Failed to delete cache key",
 			zap.String("key", key),
@@ -177,11 +164,7 @@ func (c *CacheUtilImpl) DeleteByPattern(pattern string) error {
 	}
 
 	ctx := context.Background()
-	if c.redisManager == nil {
-		return fmt.Errorf("redis client is not available")
-	}
-	client := c.redisManager.GetClient()
-	if client == nil {
+	if c.kv == nil {
 		return fmt.Errorf("redis client is not available")
 	}
 
@@ -190,7 +173,7 @@ func (c *CacheUtilImpl) DeleteByPattern(pattern string) error {
 	)
 
 	// Get all keys matching the pattern
-	keys, err := client.Keys(ctx, pattern).Result()
+	keys, err := c.kv.Keys(ctx, pattern)
 	if err != nil {
 		c.logger.Error("Failed to get keys by pattern",
 			zap.String("pattern", pattern),
@@ -207,7 +190,7 @@ func (c *CacheUtilImpl) DeleteByPattern(pattern string) error {
 	}
 
 	// Delete all matching keys
-	deletedCount, err := client.Del(ctx, keys...).Result()
+	deletedCount, err := c.kv.Del(ctx, keys...)
 	if err != nil {
 		c.logger.Error("Failed to delete keys by pattern",
 			zap.String("pattern", pattern),

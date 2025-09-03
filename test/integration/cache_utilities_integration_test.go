@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
+	cachepkg "github.com/seventeenthearth/sudal/internal/infrastructure/cache"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	testMocks "github.com/seventeenthearth/sudal/internal/mocks"
 )
@@ -114,14 +114,14 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":nonexistent"
 
 				// Configure mock to return cache miss
-				mockCache.EXPECT().Get(key).Return("", cacheutil.ErrCacheMiss)
+				mockCache.EXPECT().Get(key).Return("", cachepkg.ErrCacheMiss)
 
 				// When: Getting the non-existent cache key
 				value, err := mockCache.Get(key)
 
 				// Then: Operation should return ErrCacheMiss
 				Expect(err).To(HaveOccurred())
-				Expect(errors.Is(err, cacheutil.ErrCacheMiss)).To(BeTrue())
+				Expect(errors.Is(err, cachepkg.ErrCacheMiss)).To(BeTrue())
 				Expect(value).To(BeEmpty())
 			})
 

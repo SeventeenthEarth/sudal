@@ -8,6 +8,8 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 )
 
+const defaultScanCount = 1000
+
 // ErrNotFound indicates a missing key in Redis.
 var ErrNotFound = errors.New("redis: key not found")
 
@@ -19,6 +21,8 @@ type KV interface {
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Del(ctx context.Context, keys ...string) (int64, error)
 	Keys(ctx context.Context, pattern string) ([]string, error)
+	// Scan iterates over keys in batches using SCAN and calls fn for each batch
+	Scan(ctx context.Context, pattern string, fn func(keys []string) error) error
 }
 
 // clientKV is a thin adapter around go-redis Client implementing KV.
@@ -58,12 +62,11 @@ func (c *clientKV) Del(ctx context.Context, keys ...string) (int64, error) {
 }
 
 func (c *clientKV) Keys(ctx context.Context, pattern string) ([]string, error) {
-	const scanCount = 1000
 	var cursor uint64
 	var out []string
 	// Use SCAN to avoid blocking Redis for large keyspaces
 	for {
-		keys, next, err := c.client.Scan(ctx, cursor, pattern, scanCount).Result()
+		keys, next, err := c.client.Scan(ctx, cursor, pattern, defaultScanCount).Result()
 		if err != nil {
 			return nil, err
 		}
@@ -77,4 +80,27 @@ func (c *clientKV) Keys(ctx context.Context, pattern string) ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+func (c *clientKV) Scan(ctx context.Context, pattern string, fn func(keys []string) error) error {
+	var cursor uint64
+	for {
+		keys, next, err := c.client.Scan(ctx, cursor, pattern, defaultScanCount).Result()
+		if err != nil {
+			return err
+		}
+		if len(keys) > 0 {
+			if err := fn(keys); err != nil {
+				return err
+			}
+		}
+		cursor = next
+		if cursor == 0 {
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

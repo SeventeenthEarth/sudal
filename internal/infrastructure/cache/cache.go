@@ -60,12 +60,10 @@ func (c *CacheUtilImpl) Set(ctx context.Context, key string, value string, ttl t
 		zap.Duration("ttl", ttl),
 	)
 
-	var err error
-	if ttl > 0 {
-		err = c.kv.Set(ctx, key, value, ttl)
-	} else {
-		err = c.kv.Set(ctx, key, value, 0)
+	if ttl < 0 {
+		ttl = 0
 	}
+	err := c.kv.Set(ctx, key, value, ttl)
 
 	if err != nil {
 		c.logger.Error("Failed to set cache key",
@@ -168,50 +166,47 @@ func (c *CacheUtilImpl) DeleteByPattern(ctx context.Context, pattern string) err
 		zap.String("pattern", pattern),
 	)
 
-	// Get all keys matching the pattern
-	keys, err := c.kv.Keys(ctx, pattern)
-	if err != nil {
-		c.logger.Error("Failed to get keys by pattern",
-			zap.String("pattern", pattern),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to get keys by pattern '%s': %w", pattern, err)
+	// Stream keys and delete in batches to limit memory/command size
+	const batchSize = 1000
+	var totalFound int
+	var totalDeleted int64
+	if err := c.kv.Scan(ctx, pattern, func(keys []string) error {
+		totalFound += len(keys)
+		for i := 0; i < len(keys); i += batchSize {
+			end := i + batchSize
+			if end > len(keys) {
+				end = len(keys)
+			}
+			deletedCount, err := c.kv.Del(ctx, keys[i:end]...)
+			if err != nil {
+				c.logger.Error("Failed to delete keys by pattern (batch)",
+					zap.String("pattern", pattern),
+					zap.Int("batch_start", i),
+					zap.Int("batch_end", end),
+					zap.Error(err),
+				)
+				return fmt.Errorf("failed to delete keys by pattern '%s': %w", pattern, err)
+			}
+			totalDeleted += deletedCount
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
-	if len(keys) == 0 {
+	if totalFound == 0 {
 		c.logger.Debug("No keys found matching pattern",
 			zap.String("pattern", pattern),
 		)
 		return nil
 	}
 
-	// Delete all matching keys in batches to avoid sending overly large commands
-	const batchSize = 1000
-	var totalDeleted int64
-	for i := 0; i < len(keys); i += batchSize {
-		end := i + batchSize
-		if end > len(keys) {
-			end = len(keys)
-		}
-		deletedCount, err := c.kv.Del(ctx, keys[i:end]...)
-		if err != nil {
-			c.logger.Error("Failed to delete keys by pattern (batch)",
-				zap.String("pattern", pattern),
-				zap.Int("batch_start", i),
-				zap.Int("batch_end", end),
-				zap.Error(err),
-			)
-			return fmt.Errorf("failed to delete keys by pattern '%s': %w", pattern, err)
-		}
-		totalDeleted += deletedCount
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-	}
-
 	c.logger.Debug("Successfully deleted cache keys by pattern",
 		zap.String("pattern", pattern),
-		zap.Int("keys_found", len(keys)),
+		zap.Int("keys_found", totalFound),
 		zap.Int64("deleted_count", totalDeleted),
 	)
 

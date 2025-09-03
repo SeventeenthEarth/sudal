@@ -61,7 +61,8 @@ func AuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier, userSer
 				logger.Warn("Token verification failed",
 					zap.String("procedure", req.Spec().Procedure),
 					zap.Error(err))
-				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+				// Do not leak internal error details to clients
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed"))
 			}
 
 			// Ensure user exists via application service
@@ -71,8 +72,8 @@ func AuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier, userSer
 					zap.String("procedure", req.Spec().Procedure),
 					zap.String("firebase_uid", uid),
 					zap.Error(err))
-				// Token already verified; treat failures here as server errors
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user service error: %w", err))
+				// Token already verified; treat failures here as server errors without leaking details
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 			}
 
 			// Add user to context
@@ -148,7 +149,8 @@ func SelectiveAuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier
 				logger.Warn("Token verification failed",
 					zap.String("procedure", procedure),
 					zap.Error(err))
-				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+				// Do not leak internal error details to clients
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed"))
 			}
 
 			// Ensure user exists via application service
@@ -158,8 +160,8 @@ func SelectiveAuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier
 					zap.String("procedure", procedure),
 					zap.String("firebase_uid", uid),
 					zap.Error(err))
-				// Token already verified; treat failures here as server errors
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user service error: %w", err))
+				// Token already verified; treat failures here as server errors without leaking details
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 			}
 
 			// Add user to context
@@ -235,7 +237,8 @@ func AuthenticationMiddleware(tokenVerifier firebaseauth.TokenVerifier, userServ
 					zap.String("path", r.URL.Path),
 					zap.String("method", r.Method),
 					zap.Error(err))
-				writeUnauthenticatedError(w, fmt.Sprintf("authentication failed: %v", err))
+				// Do not expose verification error details to clients
+				writeUnauthenticatedError(w, "authentication failed")
 				return
 			}
 
@@ -247,8 +250,8 @@ func AuthenticationMiddleware(tokenVerifier firebaseauth.TokenVerifier, userServ
 					zap.String("method", r.Method),
 					zap.String("firebase_uid", uid),
 					zap.Error(err))
-				// Token already verified; treat failures here as server errors
-				writeInternalServerError(w, fmt.Sprintf("user service error: %v", err))
+				// Token already verified; treat failures here as server errors without leaking details
+				writeInternalServerError(w, "internal server error")
 				return
 			}
 

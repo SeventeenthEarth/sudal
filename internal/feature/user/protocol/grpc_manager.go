@@ -68,12 +68,14 @@ func (h *UserManager) RegisterUser(
 	// Verify Firebase ID token
 	if h.tokenVerifier == nil {
 		h.logger.Warn("Token verifier is not configured")
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication not available"))
+		// Treat as server misconfiguration
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
 	uid, provider, err := h.tokenVerifier.Verify(ctx, token)
 	if err != nil {
 		h.logger.Warn("Firebase token verification failed for RegisterUser", zap.Error(err))
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+		// Do not leak verification error details to clients
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed"))
 	}
 
 	// Verify that the Firebase UID in the token matches the request
@@ -84,18 +86,18 @@ func (h *UserManager) RegisterUser(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("firebase UID mismatch"))
 	}
 
-    // Ensure user exists in application layer.
-    // Pass initial display name via context to keep business logic in the application layer.
-    if req.Msg.DisplayName != "" {
-        ctx = application.WithInitialDisplayName(ctx, req.Msg.DisplayName)
-    }
-    user, err := h.userService.EnsureUserByFirebaseUID(ctx, uid, provider)
+	// Ensure user exists in application layer.
+	// Pass initial display name via context to keep business logic in the application layer.
+	if req.Msg.DisplayName != "" {
+		ctx = application.WithInitialDisplayName(ctx, req.Msg.DisplayName)
+	}
+	user, err := h.userService.EnsureUserByFirebaseUID(ctx, uid, provider)
 	if err != nil {
 		h.logger.Error("Failed to ensure user existence",
 			zap.String("firebase_uid", uid), zap.Error(err))
-		return nil, connect.NewError(connect.CodeInternal, err)
+		// Do not expose internal error details
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
-
 
 	response := &userv1.RegisterUserResponse{UserId: user.ID.String(), Success: true}
 	h.logger.Info("User registered successfully",
@@ -115,7 +117,7 @@ func (h *UserManager) GetUserProfile(
 	user, err := middleware.GetAuthenticatedUser(ctx)
 	if err != nil {
 		h.logger.Error("Failed to get authenticated user from context", zap.Error(err))
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("authentication context error: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
 
 	h.logger.Info("GetUserProfile called",
@@ -150,7 +152,7 @@ func (h *UserManager) UpdateUserProfile(
 	user, err := middleware.GetAuthenticatedUser(ctx)
 	if err != nil {
 		h.logger.Error("Failed to get authenticated user from context", zap.Error(err))
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("authentication context error: %w", err))
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 	}
 
 	logFields := []zap.Field{
@@ -192,7 +194,8 @@ func (h *UserManager) UpdateUserProfile(
 		case entity.ErrInvalidDisplayName:
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		default:
-			return nil, connect.NewError(connect.CodeInternal, err)
+			// Do not expose internal error details to clients
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 		}
 	}
 

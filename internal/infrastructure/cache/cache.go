@@ -18,16 +18,16 @@ import (
 // This protocol abstracts cache operations for better testability
 type CacheUtil interface {
 	// Set stores a key-value pair with an optional TTL
-	Set(key string, value string, ttl time.Duration) error
+	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 
 	// Get retrieves the value for a given key
-	Get(key string) (string, error)
+	Get(ctx context.Context, key string) (string, error)
 
 	// Delete removes a key-value pair from the cache
-	Delete(key string) error
+	Delete(ctx context.Context, key string) error
 
 	// DeleteByPattern deletes all keys matching a pattern
-	DeleteByPattern(pattern string) error
+	DeleteByPattern(ctx context.Context, pattern string) error
 }
 
 // CacheUtilImpl provides simple key-value caching operations using Redis
@@ -46,12 +46,11 @@ func NewCacheUtil(kv sredis.KV) CacheUtil {
 
 // Set stores a key-value pair with an optional TTL
 // If ttl is zero or negative, the key will persist indefinitely
-func (c *CacheUtilImpl) Set(key string, value string, ttl time.Duration) error {
+func (c *CacheUtilImpl) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
 
-	ctx := context.Background()
 	if c.kv == nil {
 		return fmt.Errorf("redis client is not available")
 	}
@@ -86,12 +85,11 @@ func (c *CacheUtilImpl) Set(key string, value string, ttl time.Duration) error {
 
 // Get retrieves the value for a given key
 // Returns ErrCacheMiss if the key is not found or has expired
-func (c *CacheUtilImpl) Get(key string) (string, error) {
+func (c *CacheUtilImpl) Get(ctx context.Context, key string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("key cannot be empty")
 	}
 
-	ctx := context.Background()
 	if c.kv == nil {
 		return "", fmt.Errorf("redis client is not available")
 	}
@@ -125,12 +123,11 @@ func (c *CacheUtilImpl) Get(key string) (string, error) {
 }
 
 // Delete removes a key-value pair from the cache
-func (c *CacheUtilImpl) Delete(key string) error {
+func (c *CacheUtilImpl) Delete(ctx context.Context, key string) error {
 	if key == "" {
 		return fmt.Errorf("key cannot be empty")
 	}
 
-	ctx := context.Background()
 	if c.kv == nil {
 		return fmt.Errorf("redis client is not available")
 	}
@@ -158,12 +155,11 @@ func (c *CacheUtilImpl) Delete(key string) error {
 
 // DeleteByPattern deletes all keys matching a pattern
 // This is useful for test cleanup
-func (c *CacheUtilImpl) DeleteByPattern(pattern string) error {
+func (c *CacheUtilImpl) DeleteByPattern(ctx context.Context, pattern string) error {
 	if pattern == "" {
 		return fmt.Errorf("pattern cannot be empty")
 	}
 
-	ctx := context.Background()
 	if c.kv == nil {
 		return fmt.Errorf("redis client is not available")
 	}
@@ -189,21 +185,34 @@ func (c *CacheUtilImpl) DeleteByPattern(pattern string) error {
 		return nil
 	}
 
-	// Delete all matching keys
-	deletedCount, err := c.kv.Del(ctx, keys...)
-	if err != nil {
-		c.logger.Error("Failed to delete keys by pattern",
-			zap.String("pattern", pattern),
-			zap.Strings("keys", keys),
-			zap.Error(err),
-		)
-		return fmt.Errorf("failed to delete keys by pattern '%s': %w", pattern, err)
+	// Delete all matching keys in batches to avoid sending overly large commands
+	const batchSize = 1000
+	var totalDeleted int64
+	for i := 0; i < len(keys); i += batchSize {
+		end := i + batchSize
+		if end > len(keys) {
+			end = len(keys)
+		}
+		deletedCount, err := c.kv.Del(ctx, keys[i:end]...)
+		if err != nil {
+			c.logger.Error("Failed to delete keys by pattern (batch)",
+				zap.String("pattern", pattern),
+				zap.Int("batch_start", i),
+				zap.Int("batch_end", end),
+				zap.Error(err),
+			)
+			return fmt.Errorf("failed to delete keys by pattern '%s': %w", pattern, err)
+		}
+		totalDeleted += deletedCount
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 	}
 
 	c.logger.Debug("Successfully deleted cache keys by pattern",
 		zap.String("pattern", pattern),
 		zap.Int("keys_found", len(keys)),
-		zap.Int64("deleted_count", deletedCount),
+		zap.Int64("deleted_count", totalDeleted),
 	)
 
 	return nil

@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -50,10 +51,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "test_value"
 
 				// Configure mock to succeed
-				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(nil)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, time.Duration(0)).Return(nil)
 
 				// When: Setting a cache key without TTL
-				err := mockCache.Set(key, value, 0)
+				err := mockCache.Set(context.Background(), key, value, 0)
 
 				// Then: Operation should succeed
 				Expect(err).NotTo(HaveOccurred())
@@ -66,10 +67,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				ttl := 5 * time.Second
 
 				// Configure mock to succeed
-				mockCache.EXPECT().Set(key, value, ttl).Return(nil)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, ttl).Return(nil)
 
 				// When: Setting a cache key with TTL
-				err := mockCache.Set(key, value, ttl)
+				err := mockCache.Set(context.Background(), key, value, ttl)
 
 				// Then: Operation should succeed
 				Expect(err).NotTo(HaveOccurred())
@@ -81,10 +82,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "test_value"
 
 				// Configure mock to fail
-				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(fmt.Errorf("cache operation failed"))
+				mockCache.EXPECT().Set(gomock.Any(), key, value, time.Duration(0)).Return(fmt.Errorf("cache operation failed"))
 
 				// When: Setting a cache key
-				err := mockCache.Set(key, value, 0)
+				err := mockCache.Set(context.Background(), key, value, 0)
 
 				// Then: Operation should fail
 				Expect(err).To(HaveOccurred())
@@ -99,10 +100,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				expectedValue := "existing_value"
 
 				// Configure mock to return the value
-				mockCache.EXPECT().Get(key).Return(expectedValue, nil)
+				mockCache.EXPECT().Get(gomock.Any(), key).Return(expectedValue, nil)
 
 				// When: Getting the cache key
-				value, err := mockCache.Get(key)
+				value, err := mockCache.Get(context.Background(), key)
 
 				// Then: Operation should succeed and return the value
 				Expect(err).NotTo(HaveOccurred())
@@ -114,10 +115,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":nonexistent"
 
 				// Configure mock to return cache miss
-				mockCache.EXPECT().Get(key).Return("", cachepkg.ErrCacheMiss)
+				mockCache.EXPECT().Get(gomock.Any(), key).Return("", cachepkg.ErrCacheMiss)
 
 				// When: Getting the non-existent cache key
-				value, err := mockCache.Get(key)
+				value, err := mockCache.Get(context.Background(), key)
 
 				// Then: Operation should return ErrCacheMiss
 				Expect(err).To(HaveOccurred())
@@ -129,10 +130,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: A cache utility is available
 
 				// Configure mock to return error for empty key
-				mockCache.EXPECT().Get("").Return("", fmt.Errorf("key cannot be empty"))
+				mockCache.EXPECT().Get(gomock.Any(), "").Return("", fmt.Errorf("key cannot be empty"))
 
 				// When: Getting a cache key with empty key
-				value, err := mockCache.Get("")
+				value, err := mockCache.Get(context.Background(), "")
 
 				// Then: Operation should fail with appropriate error
 				Expect(err).To(HaveOccurred())
@@ -145,10 +146,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":unavailable_get"
 
 				// Configure mock to return client unavailable error
-				mockCache.EXPECT().Get(key).Return("", fmt.Errorf("redis client is not available"))
+				mockCache.EXPECT().Get(gomock.Any(), key).Return("", fmt.Errorf("redis client is not available"))
 
 				// When: Getting a cache key
-				value, err := mockCache.Get(key)
+				value, err := mockCache.Get(context.Background(), key)
 
 				// Then: Operation should fail
 				Expect(err).To(HaveOccurred())
@@ -163,10 +164,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":delete_existing"
 
 				// Configure mock to succeed
-				mockCache.EXPECT().Delete(key).Return(nil)
+				mockCache.EXPECT().Delete(gomock.Any(), key).Return(nil)
 
 				// When: Deleting the cache key
-				err := mockCache.Delete(key)
+				err := mockCache.Delete(context.Background(), key)
 
 				// Then: Operation should succeed
 				Expect(err).NotTo(HaveOccurred())
@@ -177,10 +178,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":delete_nonexistent"
 
 				// Configure mock to succeed (Redis DELETE succeeds even for non-existent keys)
-				mockCache.EXPECT().Delete(key).Return(nil)
+				mockCache.EXPECT().Delete(gomock.Any(), key).Return(nil)
 
 				// When: Deleting the non-existent cache key
-				err := mockCache.Delete(key)
+				err := mockCache.Delete(context.Background(), key)
 
 				// Then: Operation should succeed
 				Expect(err).NotTo(HaveOccurred())
@@ -190,10 +191,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: A cache utility is available
 
 				// Configure mock to return error for empty key
-				mockCache.EXPECT().Delete("").Return(fmt.Errorf("key cannot be empty"))
+				mockCache.EXPECT().Delete(gomock.Any(), "").Return(fmt.Errorf("key cannot be empty"))
 
 				// When: Deleting a cache key with empty key
-				err := mockCache.Delete("")
+				err := mockCache.Delete(context.Background(), "")
 
 				// Then: Operation should fail with appropriate error
 				Expect(err).To(HaveOccurred())
@@ -205,10 +206,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				key := testKeyBase + ":unavailable_delete"
 
 				// Configure mock to return client unavailable error
-				mockCache.EXPECT().Delete(key).Return(fmt.Errorf("redis client is not available"))
+				mockCache.EXPECT().Delete(gomock.Any(), key).Return(fmt.Errorf("redis client is not available"))
 
 				// When: Deleting a cache key
-				err := mockCache.Delete(key)
+				err := mockCache.Delete(context.Background(), key)
 
 				// Then: Operation should fail
 				Expect(err).To(HaveOccurred())
@@ -226,17 +227,17 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				ttl := 1 * time.Second
 
 				// Configure mock to succeed for Set operation
-				mockCache.EXPECT().Set(key, value, ttl).Return(nil)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, ttl).Return(nil)
 
 				// When: Setting a key with TTL
-				err := mockCache.Set(key, value, ttl)
+				err := mockCache.Set(context.Background(), key, value, ttl)
 
 				// Then: Operation should succeed
 				Expect(err).NotTo(HaveOccurred())
 
 				// And: Key should be retrievable immediately
-				mockCache.EXPECT().Get(key).Return(value, nil)
-				retrievedValue, err := mockCache.Get(key)
+				mockCache.EXPECT().Get(gomock.Any(), key).Return(value, nil)
+				retrievedValue, err := mockCache.Get(context.Background(), key)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(retrievedValue).To(Equal(value))
 			})
@@ -247,10 +248,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "persistent_value"
 
 				// Configure mock to succeed
-				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(nil)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, time.Duration(0)).Return(nil)
 
 				// When: Setting a key with zero TTL
-				err := mockCache.Set(key, value, 0)
+				err := mockCache.Set(context.Background(), key, value, 0)
 
 				// Then: Operation should succeed (key persists indefinitely)
 				Expect(err).NotTo(HaveOccurred())
@@ -262,10 +263,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				value := "negative_ttl_value"
 
 				// Configure mock to succeed
-				mockCache.EXPECT().Set(key, value, -1*time.Second).Return(nil)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, -1*time.Second).Return(nil)
 
 				// When: Setting a key with negative TTL
-				err := mockCache.Set(key, value, -1*time.Second)
+				err := mockCache.Set(context.Background(), key, value, -1*time.Second)
 
 				// Then: Operation should succeed (key persists indefinitely)
 				Expect(err).NotTo(HaveOccurred())
@@ -280,10 +281,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				pattern := testKeyBase + ":pattern:*"
 
 				// Configure mock to succeed
-				mockCache.EXPECT().DeleteByPattern(pattern).Return(nil)
+				mockCache.EXPECT().DeleteByPattern(gomock.Any(), pattern).Return(nil)
 
 				// When: Deleting keys by pattern
-				err := mockCache.DeleteByPattern(pattern)
+				err := mockCache.DeleteByPattern(context.Background(), pattern)
 
 				// Then: Operation should succeed
 				Expect(err).NotTo(HaveOccurred())
@@ -293,10 +294,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Given: A cache utility is available
 
 				// Configure mock to return error for empty pattern
-				mockCache.EXPECT().DeleteByPattern("").Return(fmt.Errorf("pattern cannot be empty"))
+				mockCache.EXPECT().DeleteByPattern(gomock.Any(), "").Return(fmt.Errorf("pattern cannot be empty"))
 
 				// When: Deleting keys with empty pattern
-				err := mockCache.DeleteByPattern("")
+				err := mockCache.DeleteByPattern(context.Background(), "")
 
 				// Then: Operation should fail with appropriate error
 				Expect(err).To(HaveOccurred())
@@ -308,10 +309,10 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				pattern := testKeyBase + ":unavailable:*"
 
 				// Configure mock to return client unavailable error
-				mockCache.EXPECT().DeleteByPattern(pattern).Return(fmt.Errorf("redis client is not available"))
+				mockCache.EXPECT().DeleteByPattern(gomock.Any(), pattern).Return(fmt.Errorf("redis client is not available"))
 
 				// When: Deleting keys by pattern
-				err := mockCache.DeleteByPattern(pattern)
+				err := mockCache.DeleteByPattern(context.Background(), pattern)
 
 				// Then: Operation should fail
 				Expect(err).To(HaveOccurred())
@@ -332,7 +333,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				for i := 0; i < numGoroutines; i++ {
 					key := fmt.Sprintf("%s:concurrent:set:%d", testKeyBase, i)
 					value := fmt.Sprintf("value_%d", i)
-					mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(nil)
+					mockCache.EXPECT().Set(gomock.Any(), key, value, time.Duration(0)).Return(nil)
 				}
 
 				// When: Performing concurrent Set operations
@@ -342,7 +343,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 						defer wg.Done()
 						key := fmt.Sprintf("%s:concurrent:set:%d", testKeyBase, index)
 						value := fmt.Sprintf("value_%d", index)
-						errors[index] = mockCache.Set(key, value, 0)
+						errors[index] = mockCache.Set(context.Background(), key, value, 0)
 					}(i)
 				}
 
@@ -365,7 +366,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				for i := 0; i < numGoroutines; i++ {
 					key := fmt.Sprintf("%s:concurrent:get:%d", testKeyBase, i)
 					expectedValue := fmt.Sprintf("value_%d", i)
-					mockCache.EXPECT().Get(key).Return(expectedValue, nil)
+					mockCache.EXPECT().Get(gomock.Any(), key).Return(expectedValue, nil)
 				}
 
 				// When: Performing concurrent Get operations
@@ -374,7 +375,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 					go func(index int) {
 						defer wg.Done()
 						key := fmt.Sprintf("%s:concurrent:get:%d", testKeyBase, index)
-						results[index], errors[index] = mockCache.Get(key)
+						results[index], errors[index] = mockCache.Get(context.Background(), key)
 					}(i)
 				}
 
@@ -397,7 +398,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 				// Configure mock to succeed for all Delete operations
 				for i := 0; i < numGoroutines; i++ {
 					key := fmt.Sprintf("%s:concurrent:delete:%d", testKeyBase, i)
-					mockCache.EXPECT().Delete(key).Return(nil)
+					mockCache.EXPECT().Delete(gomock.Any(), key).Return(nil)
 				}
 
 				// When: Performing concurrent Delete operations
@@ -406,7 +407,7 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 					go func(index int) {
 						defer wg.Done()
 						key := fmt.Sprintf("%s:concurrent:delete:%d", testKeyBase, index)
-						errors[index] = mockCache.Delete(key)
+						errors[index] = mockCache.Delete(context.Background(), key)
 					}(i)
 				}
 
@@ -429,14 +430,14 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 
 				// Configure mock to simulate connection error
 				connectionErr := fmt.Errorf("connection refused")
-				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(connectionErr)
-				mockCache.EXPECT().Get(key).Return("", connectionErr)
-				mockCache.EXPECT().Delete(key).Return(connectionErr)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, time.Duration(0)).Return(connectionErr)
+				mockCache.EXPECT().Get(gomock.Any(), key).Return("", connectionErr)
+				mockCache.EXPECT().Delete(gomock.Any(), key).Return(connectionErr)
 
 				// When: Attempting cache operations
-				setErr := mockCache.Set(key, value, 0)
-				_, getErr := mockCache.Get(key)
-				deleteErr := mockCache.Delete(key)
+				setErr := mockCache.Set(context.Background(), key, value, 0)
+				_, getErr := mockCache.Get(context.Background(), key)
+				deleteErr := mockCache.Delete(context.Background(), key)
 
 				// Then: All operations should fail gracefully
 				Expect(setErr).To(HaveOccurred())
@@ -451,12 +452,12 @@ var _ = Describe("Cache Utilities Integration Tests", func() {
 
 				// Configure mock to simulate timeout
 				timeoutErr := fmt.Errorf("operation timed out")
-				mockCache.EXPECT().Set(key, value, time.Duration(0)).Return(timeoutErr)
-				mockCache.EXPECT().Get(key).Return("", timeoutErr)
+				mockCache.EXPECT().Set(gomock.Any(), key, value, time.Duration(0)).Return(timeoutErr)
+				mockCache.EXPECT().Get(gomock.Any(), key).Return("", timeoutErr)
 
 				// When: Attempting cache operations
-				setErr := mockCache.Set(key, value, 0)
-				_, getErr := mockCache.Get(key)
+				setErr := mockCache.Set(context.Background(), key, value, 0)
+				_, getErr := mockCache.Get(context.Background(), key)
 
 				// Then: Operations should fail with timeout error
 				Expect(setErr).To(HaveOccurred())

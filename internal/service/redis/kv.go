@@ -58,5 +58,22 @@ func (c *clientKV) Del(ctx context.Context, keys ...string) (int64, error) {
 }
 
 func (c *clientKV) Keys(ctx context.Context, pattern string) ([]string, error) {
-	return c.client.Keys(ctx, pattern).Result()
+	var cursor uint64
+	var out []string
+	// Use SCAN to avoid blocking Redis for large keyspaces
+	for {
+		keys, next, err := c.client.Scan(ctx, cursor, pattern, 1000).Result()
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, keys...)
+		cursor = next
+		if cursor == 0 {
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }

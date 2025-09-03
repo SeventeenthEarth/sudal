@@ -71,7 +71,8 @@ func AuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier, userSer
 					zap.String("procedure", req.Spec().Procedure),
 					zap.String("firebase_uid", uid),
 					zap.Error(err))
-				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+				// Token already verified; treat failures here as server errors
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user service error: %w", err))
 			}
 
 			// Add user to context
@@ -157,7 +158,8 @@ func SelectiveAuthenticationInterceptor(tokenVerifier firebaseauth.TokenVerifier
 					zap.String("procedure", procedure),
 					zap.String("firebase_uid", uid),
 					zap.Error(err))
-				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("authentication failed: %w", err))
+				// Token already verified; treat failures here as server errors
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("user service error: %w", err))
 			}
 
 			// Add user to context
@@ -245,7 +247,8 @@ func AuthenticationMiddleware(tokenVerifier firebaseauth.TokenVerifier, userServ
 					zap.String("method", r.Method),
 					zap.String("firebase_uid", uid),
 					zap.Error(err))
-				writeUnauthenticatedError(w, fmt.Sprintf("authentication failed: %v", err))
+				// Token already verified; treat failures here as server errors
+				writeInternalServerError(w, fmt.Sprintf("user service error: %v", err))
 				return
 			}
 
@@ -276,5 +279,19 @@ func writeUnauthenticatedError(w http.ResponseWriter, message string) {
 
 	// Write standardized error response as specified in the requirements
 	errorResponse := fmt.Sprintf(`{"code":"unauthenticated","message":"%s"}`, message)
+	_, _ = w.Write([]byte(errorResponse))
+}
+
+// writeInternalServerError writes a standardized internal server error response
+// Used when downstream services fail after successful authentication
+//
+// Parameters:
+//   - w: HTTP response writer
+//   - message: Error message to include in response
+func writeInternalServerError(w http.ResponseWriter, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusInternalServerError)
+
+	errorResponse := fmt.Sprintf(`{"code":"internal","message":"%s"}`, message)
 	_, _ = w.Write([]byte(errorResponse))
 }

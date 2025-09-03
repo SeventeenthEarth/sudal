@@ -167,31 +167,20 @@ func (c *CacheUtilImpl) DeleteByPattern(ctx context.Context, pattern string) err
 	)
 
 	// Stream keys and delete in batches to limit memory/command size
-	const batchSize = 1000
 	var totalFound int
 	var totalDeleted int64
 	if err := c.kv.Scan(ctx, pattern, func(keys []string) error {
 		totalFound += len(keys)
-		for i := 0; i < len(keys); i += batchSize {
-			end := i + batchSize
-			if end > len(keys) {
-				end = len(keys)
-			}
-			deletedCount, err := c.kv.Del(ctx, keys[i:end]...)
-			if err != nil {
-				c.logger.Error("Failed to delete keys by pattern (batch)",
-					zap.String("pattern", pattern),
-					zap.Int("batch_start", i),
-					zap.Int("batch_end", end),
-					zap.Error(err),
-				)
-				return fmt.Errorf("failed to delete keys by pattern '%s': %w", pattern, err)
-			}
-			totalDeleted += deletedCount
-			if err := ctx.Err(); err != nil {
-				return err
-			}
+		deletedCount, err := c.kv.Del(ctx, keys...)
+		if err != nil {
+			c.logger.Error("Failed to delete keys by pattern (batch)",
+				zap.String("pattern", pattern),
+				zap.Int("batch_size", len(keys)),
+				zap.Error(err),
+			)
+			return fmt.Errorf("failed to delete keys by pattern '%s': %w", pattern, err)
 		}
+		totalDeleted += deletedCount
 		return nil
 	}); err != nil {
 		return err

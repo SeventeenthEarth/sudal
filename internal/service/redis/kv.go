@@ -20,9 +20,9 @@ type KV interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Del(ctx context.Context, keys ...string) (int64, error)
-	// Keys returns all keys matching a pattern.
-	// NOTE: This loads all matching keys into memory. For large keyspaces, use Scan to iterate over keys in batches.
-	Keys(ctx context.Context, pattern string) ([]string, error)
+	// ScanAllKeys returns all keys matching a pattern by scanning the keyspace.
+	// NOTE: This loads all matching keys into memory. For large keyspaces, prefer Scan to process keys in batches.
+	ScanAllKeys(ctx context.Context, pattern string) ([]string, error)
 	// Scan iterates over keys in batches using SCAN and calls fn for each batch
 	Scan(ctx context.Context, pattern string, fn func(keys []string) error) error
 }
@@ -63,7 +63,7 @@ func (c *clientKV) Del(ctx context.Context, keys ...string) (int64, error) {
 	return c.client.Del(ctx, keys...).Result()
 }
 
-func (c *clientKV) Keys(ctx context.Context, pattern string) ([]string, error) {
+func (c *clientKV) ScanAllKeys(ctx context.Context, pattern string) ([]string, error) {
 	var cursor uint64
 	var out []string
 	// Use SCAN to avoid blocking Redis for large keyspaces

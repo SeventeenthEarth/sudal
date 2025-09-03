@@ -23,11 +23,12 @@ import (
 	userApplication "github.com/seventeenthearth/sudal/internal/feature/user/application"
 	userRepo "github.com/seventeenthearth/sudal/internal/feature/user/data/repo"
 	userDomainRepo "github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/cacheutil"
+	cachepkg "github.com/seventeenthearth/sudal/internal/infrastructure/cache"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
 	"github.com/seventeenthearth/sudal/internal/service/firebaseauth"
+	sredis "github.com/seventeenthearth/sudal/internal/service/redis"
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
 	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
 	"go.uber.org/zap"
@@ -74,6 +75,7 @@ var RedisSet = wire.NewSet(
 var CacheSet = wire.NewSet(
 	ProvideConfig,
 	ProvideRedisManager,
+	ProvideRedisKV,
 	ProvideCacheUtil,
 )
 
@@ -116,12 +118,24 @@ func ProvideRedisManager(cfg *config.Config) (redis.RedisManager, error) {
 }
 
 // ProvideCacheUtil provides a cache utility instance
-func ProvideCacheUtil(redisManager redis.RedisManager) cacheutil.CacheUtil {
+func ProvideCacheUtil(kv sredis.KV) cachepkg.CacheUtil {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil
 	}
-	return cacheutil.NewCacheUtil(redisManager)
+	return cachepkg.NewCacheUtil(kv)
+}
+
+// ProvideRedisKV adapts RedisManager's client into the service KV interface
+func ProvideRedisKV(manager redis.RedisManager) sredis.KV {
+	if isTestEnvironmentWire() || manager == nil {
+		return nil
+	}
+	client := manager.GetClient()
+	if client == nil {
+		return nil
+	}
+	return sredis.NewKVFromClient(client)
 }
 
 // ProvideLogger provides a logger instance
@@ -250,7 +264,7 @@ func InitializeRedisManager() (redis.RedisManager, error) {
 }
 
 // InitializeCacheUtil initializes and returns a cache utility
-func InitializeCacheUtil() (cacheutil.CacheUtil, error) {
+func InitializeCacheUtil() (cachepkg.CacheUtil, error) {
 	wire.Build(CacheSet)
 	return nil, nil // Wire will fill this in
 }

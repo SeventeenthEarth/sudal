@@ -1,6 +1,7 @@
-package cacheutil
+package cache
 
 import (
+	"context"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
@@ -12,7 +13,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 	ginkgo.Describe("NewCacheUtil", func() {
 		ginkgo.Context("when creating a new cache utility", func() {
-			ginkgo.It("should create a cache utility with nil redis manager", func() {
+			ginkgo.It("should create a cache utility with nil redis client (KV)", func() {
 				// When
 				cacheUtil = NewCacheUtil(nil)
 
@@ -21,7 +22,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 				// Type assert to access internal fields
 				if impl, ok := cacheUtil.(*CacheUtilImpl); ok {
-					gomega.Expect(impl.redisManager).To(gomega.BeNil())
+					gomega.Expect(impl.kv).To(gomega.BeNil())
 					gomega.Expect(impl.logger).NotTo(gomega.BeNil())
 				} else {
 					ginkgo.Fail("Expected CacheUtilImpl implementation")
@@ -38,16 +39,16 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 		ginkgo.Context("when setting a cache key", func() {
 			ginkgo.It("should return error for empty key", func() {
 				// When
-				err := cacheUtil.Set("", "value", 0)
+				err := cacheUtil.Set(context.Background(), "", "value", 0)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("key cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
-				err := cacheUtil.Set("test-key", "test-value", 0)
+				err := cacheUtil.Set(context.Background(), "test-key", "test-value", 0)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -64,16 +65,16 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 		ginkgo.Context("when getting a cache key", func() {
 			ginkgo.It("should return error for empty key", func() {
 				// When
-				_, err := cacheUtil.Get("")
+				_, err := cacheUtil.Get(context.Background(), "")
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("key cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
-				_, err := cacheUtil.Get("test-key")
+				_, err := cacheUtil.Get(context.Background(), "test-key")
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -90,16 +91,16 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 		ginkgo.Context("when deleting a cache key", func() {
 			ginkgo.It("should return error for empty key", func() {
 				// When
-				err := cacheUtil.Delete("")
+				err := cacheUtil.Delete(context.Background(), "")
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("key cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
-				err := cacheUtil.Delete("test-key")
+				err := cacheUtil.Delete(context.Background(), "test-key")
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -116,16 +117,16 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 		ginkgo.Context("when deleting cache keys by pattern", func() {
 			ginkgo.It("should return error for empty pattern", func() {
 				// When
-				err := cacheUtil.DeleteByPattern("")
+				err := cacheUtil.DeleteByPattern(context.Background(), "")
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
 				gomega.Expect(err.Error()).To(gomega.ContainSubstring("pattern cannot be empty"))
 			})
 
-			ginkgo.It("should return error when redis manager is nil", func() {
+			ginkgo.It("should return error when redis client is not available", func() {
 				// When
-				err := cacheUtil.DeleteByPattern("test-*")
+				err := cacheUtil.DeleteByPattern(context.Background(), "test-*")
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())

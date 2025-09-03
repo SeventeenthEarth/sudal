@@ -84,25 +84,18 @@ func (h *UserManager) RegisterUser(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("firebase UID mismatch"))
 	}
 
-	// Ensure user exists in application layer
-	user, err := h.userService.EnsureUserByFirebaseUID(ctx, uid, provider)
+    // Ensure user exists in application layer.
+    // Pass initial display name via context to keep business logic in the application layer.
+    if req.Msg.DisplayName != "" {
+        ctx = application.WithInitialDisplayName(ctx, req.Msg.DisplayName)
+    }
+    user, err := h.userService.EnsureUserByFirebaseUID(ctx, uid, provider)
 	if err != nil {
 		h.logger.Error("Failed to ensure user existence",
 			zap.String("firebase_uid", uid), zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	// Optionally set display name if provided and not set yet
-	if req.Msg.DisplayName != "" && user.DisplayName == nil {
-		name := req.Msg.DisplayName
-		if updatedUser, err := h.userService.UpdateUserProfile(ctx, user.ID, &name, nil); err != nil {
-			h.logger.Warn("Failed to set initial display name during registration",
-				zap.String("user_id", user.ID.String()), zap.Error(err))
-			// Continue without failing registration, user object remains as is.
-		} else {
-			user = updatedUser // Update user to the latest version
-		}
-	}
 
 	response := &userv1.RegisterUserResponse{UserId: user.ID.String(), Success: true}
 	h.logger.Info("User registered successfully",

@@ -1,10 +1,10 @@
 package application
 
 import (
-	"context"
+    "context"
 
-	"github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
-	"github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
+    "github.com/seventeenthearth/sudal/internal/feature/user/domain/entity"
+    "github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
 )
 
 // EnsureUserUseCase defines the protocol to ensure a user exists for a Firebase UID.
@@ -23,17 +23,30 @@ func NewEnsureUserUseCase(repository repo.UserRepository) EnsureUserUseCase {
 }
 
 func (uc *ensureUserUseCase) Execute(ctx context.Context, firebaseUID, authProvider string) (*entity.User, error) {
-	// Try to find existing user
-	user, err := uc.repo.GetByFirebaseUID(ctx, firebaseUID)
-	if err == nil {
-		return user, nil
-	}
-	// If the error is anything other than "not found", it's an unexpected error.
-	if err != entity.ErrUserNotFound {
-		return nil, err
-	}
+    // Check if an initial display name was provided via context
+    initName, hasInitName := initialDisplayNameFromContext(ctx)
 
-	// Create a new user if not found
-	newUser := entity.NewUser(firebaseUID, authProvider)
-	return uc.repo.Create(ctx, newUser)
+    // Try to find existing user
+    user, err := uc.repo.GetByFirebaseUID(ctx, firebaseUID)
+    if err == nil {
+        // If user exists and has no display name yet, and an initial name is provided, update it
+        if hasInitName && user.DisplayName == nil {
+            user.UpdateDisplayName(initName)
+            return uc.repo.Update(ctx, user)
+        }
+        return user, nil
+    }
+
+    // If the error is anything other than "not found", it's an unexpected error.
+    if err != entity.ErrUserNotFound {
+        return nil, err
+    }
+
+    // Create a new user if not found
+    newUser := entity.NewUser(firebaseUID, authProvider)
+    if hasInitName {
+        // Let repository/domain validate constraints (will return ErrInvalidDisplayName if invalid)
+        newUser.UpdateDisplayName(initName)
+    }
+    return uc.repo.Create(ctx, newUser)
 }

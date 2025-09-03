@@ -12,7 +12,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 )
 
-//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_cache_util.go -package=mocks -mock_names=CacheUtil=MockCacheUtil github.com/seventeenthearth/sudal/internal/infrastructure/cache CacheUtil
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_infra_cache.go -package=mocks -mock_names=CacheUtil=MockCacheUtil github.com/seventeenthearth/sudal/internal/infrastructure/cache CacheUtil
 
 // CacheUtil defines the protocol for cache operations
 // This protocol abstracts cache operations for better testability
@@ -40,7 +40,7 @@ type CacheUtilImpl struct {
 func NewCacheUtil(kv sredis.KV) CacheUtil {
 	return &CacheUtilImpl{
 		kv:     kv,
-		logger: log.GetLogger().With(zap.String("component", "cache_util")),
+		logger: log.GetLogger().With(zap.String("component", "cache")),
 	}
 }
 

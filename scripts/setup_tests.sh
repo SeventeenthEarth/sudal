@@ -25,12 +25,30 @@ if ! command -v mockgen &> /dev/null; then
     go install go.uber.org/mock/mockgen@latest || handle_error "Failed to install mockgen"
 fi
 
-# Delete existing suite_test.go files
-find . -name "*_suite_test.go" -type f -delete
+# Delete existing suite_test.go files (prune VCS and tooling dirs)
+find . \
+  -path "./.git" -prune -o \
+  -path "./vendor" -prune -o \
+  -path "./bin" -prune -o \
+  -path "./tmp" -prune -o \
+  -path "./venv" -prune -o \
+  -path "./.gocache" -prune -o \
+  -path "./.idea" -prune -o \
+  -path "./.vscode" -prune -o \
+  -name "*_suite_test.go" -type f -delete
 echo "Removed existing suite_test.go files"
 
-# Find test directories (directories containing Go files)
-TEST_DIRS=$(find . -name "*.go" -not -path "*/\.*" -not -path "*/vendor/*" -not -path "*/bin/*" -not -path "*/tmp/*" | xargs dirname | sort | uniq)
+# Find test directories (directories containing Go files), prune hidden/VCS/tooling dirs
+TEST_DIRS=$(find . \
+  -path "./.git" -prune -o \
+  -path "./vendor" -prune -o \
+  -path "./bin" -prune -o \
+  -path "./tmp" -prune -o \
+  -path "./venv" -prune -o \
+  -path "./.gocache" -prune -o \
+  -path "./.idea" -prune -o \
+  -path "./.vscode" -prune -o \
+  -name "*.go" -print | xargs dirname | sort -u)
 
 # Create Ginkgo test suite for each directory
 for dir in $TEST_DIRS; do

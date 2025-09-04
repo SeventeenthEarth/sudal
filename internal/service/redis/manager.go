@@ -197,7 +197,7 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 				rm.logger.Info("Redis operation succeeded after retry",
 					zap.String("operation", operation),
 					zap.Int("attempt", attempt+1),
-					zap.Int("max_retries", maxRetries+1),
+					zap.Int("max_attempts", maxRetries+1),
 				)
 			}
 			return nil
@@ -220,7 +220,7 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 			rm.logger.Error("Redis operation failed after all retries",
 				zap.String("operation", operation),
 				zap.Int("total_attempts", attempt+1),
-				zap.Int("max_retries", maxRetries+1),
+				zap.Int("max_attempts", maxRetries+1),
 				slogger.FormatError(lastErr),
 			)
 			break
@@ -237,7 +237,7 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 		rm.logger.Warn("Redis operation failed, retrying",
 			zap.String("operation", operation),
 			zap.Int("attempt", attempt+1),
-			zap.Int("max_retries", maxRetries+1),
+			zap.Int("max_attempts", maxRetries+1),
 			zap.Duration("backoff", backoff),
 			slogger.FormatError(err),
 		)
@@ -269,6 +269,12 @@ func (rm *RedisManagerImpl) isRetryableError(err error) bool {
 		// Network timeout errors are retryable
 		if netErr.Timeout() {
 			rm.logger.Debug("Detected network timeout error", slogger.FormatError(err))
+			return true
+		}
+		// Some network errors expose a Temporary() indicator; treat as retryable
+		type temporary interface{ Temporary() bool }
+		if te, ok := err.(temporary); ok && te.Temporary() {
+			rm.logger.Debug("Detected temporary network error", slogger.FormatError(err))
 			return true
 		}
 	}

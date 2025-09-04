@@ -13,6 +13,8 @@ import (
 var (
 	// Global logger instance
 	globalLogger *zap.Logger
+	// Atomic level for dynamic log level updates
+	atomicLevel  zap.AtomicLevel
 	once         sync.Once
 	defaultLevel LogLevel = InfoLevel
 )
@@ -60,10 +62,13 @@ func zapLevel(level LogLevel) zapcore.Level {
 	}
 }
 
-// Init sets the desired log level and ensures the global logger is initialized once.
+// Init sets the desired log level. Safe to call multiple times; updates at runtime.
 func Init(level LogLevel) {
+	// Remember desired level for initial setup and introspection
 	defaultLevel = level
 	ensureInitialized()
+	// Update atomic level to apply changes dynamically
+	atomicLevel.SetLevel(zapLevel(level))
 }
 
 // ensureInitialized initializes the global logger exactly once in a race-safe way.
@@ -86,7 +91,9 @@ func ensureInitialized() {
 		}
 
 		jsonEncoder := zapcore.NewJSONEncoder(encoderConfig)
-		core := zapcore.NewCore(jsonEncoder, zapcore.AddSync(os.Stdout), zapLevel(defaultLevel))
+		// Initialize atomic level with the default, allowing runtime updates
+		atomicLevel = zap.NewAtomicLevelAt(zapLevel(defaultLevel))
+		core := zapcore.NewCore(jsonEncoder, zapcore.AddSync(os.Stdout), atomicLevel)
 
 		logger := zap.New(
 			core,

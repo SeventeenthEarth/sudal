@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package health.v1;
 
-option go_package = "github.com/seventeenthearth/sudal/gen/health/v1;healthv1";
+option go_package = "github.com/seventeenthearth/sudal/gen/go/health/v1;healthv1";
 
 // HealthService provides health checking functionality
 service HealthService {

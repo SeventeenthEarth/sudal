@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"

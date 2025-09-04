@@ -1,22 +1,22 @@
-package database
+package health
 
 import (
 	"context"
 	"fmt"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	slogger "github.com/seventeenthearth/sudal/internal/service/logger"
+	spostgres "github.com/seventeenthearth/sudal/internal/service/postgres"
+	sredis "github.com/seventeenthearth/sudal/internal/service/redis"
 )
 
 // VerifyDatabaseConnectivity is a standalone utility function to verify database connectivity
 // This can be called during application startup or on-demand for health checks
-func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
-	logger := log.GetLogger().With(zap.String("component", "database_verification"))
+func VerifyDatabaseConnectivity(ctx context.Context, cfg *sconfig.Config) error {
+	logger := slogger.GetLogger().With(zap.String("component", "database_verification"))
 
 	logger.Info("Starting database connectivity verification",
 		zap.String("host", cfg.DB.Host),
@@ -26,17 +26,17 @@ func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Create a temporary PostgreSQL manager for verification
-	pgManager, err := postgres.NewPostgresManager(cfg)
+	pgManager, err := spostgres.NewPostgresManager(cfg)
 	if err != nil {
 		logger.Error("Failed to create PostgreSQL manager for verification",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return fmt.Errorf("database connectivity verification failed: %w", err)
 	}
 	defer func() {
 		if closeErr := pgManager.Close(); closeErr != nil {
 			logger.Warn("Failed to close PostgreSQL manager after verification",
-				log.FormatError(closeErr),
+				slogger.FormatError(closeErr),
 			)
 		}
 	}()
@@ -48,7 +48,7 @@ func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
 	healthStatus, err := pgManager.HealthCheck(verificationCtx)
 	if err != nil {
 		logger.Error("Database connectivity verification failed",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return fmt.Errorf("database connectivity verification failed: %w", err)
 	}
@@ -64,7 +64,7 @@ func VerifyDatabaseConnectivity(ctx context.Context, cfg *config.Config) error {
 
 // GetConnectionPoolStats returns the current connection pool statistics
 // This is useful for monitoring and debugging connection pool behavior
-func GetConnectionPoolStats(pgManager postgres.PostgresManager) *postgres.ConnectionStats {
+func GetConnectionPoolStats(pgManager spostgres.PostgresManager) *spostgres.ConnectionStats {
 	if pgManager == nil {
 		return nil
 	}
@@ -83,7 +83,7 @@ func GetConnectionPoolStats(pgManager postgres.PostgresManager) *postgres.Connec
 
 // LogConnectionPoolStats logs the current connection pool statistics
 // This can be called periodically to monitor pool health
-func LogConnectionPoolStats(pgManager postgres.PostgresManager) {
+func LogConnectionPoolStats(pgManager spostgres.PostgresManager) {
 	if pgManager == nil {
 		return
 	}
@@ -93,7 +93,7 @@ func LogConnectionPoolStats(pgManager postgres.PostgresManager) {
 		return
 	}
 
-	logger := log.GetLogger().With(zap.String("component", "postgres_manager"))
+	logger := slogger.GetLogger().With(zap.String("component", "postgres_manager"))
 	logger.Info("Connection pool statistics",
 		zap.Int("max_open_connections", stats.MaxOpenConnections),
 		zap.Int("open_connections", stats.OpenConnections),
@@ -108,8 +108,8 @@ func LogConnectionPoolStats(pgManager postgres.PostgresManager) {
 
 // VerifyRedisConnectivity is a standalone utility function to verify Redis connectivity
 // This can be called during application startup or on-demand for health checks
-func VerifyRedisConnectivity(ctx context.Context, cfg *config.Config) error {
-	logger := log.GetLogger().With(zap.String("component", "redis_verification"))
+func VerifyRedisConnectivity(ctx context.Context, cfg *sconfig.Config) error {
+	logger := slogger.GetLogger().With(zap.String("component", "redis_verification"))
 
 	logger.Info("Starting Redis connectivity verification",
 		zap.String("addr", cfg.Redis.Addr),
@@ -120,17 +120,17 @@ func VerifyRedisConnectivity(ctx context.Context, cfg *config.Config) error {
 	)
 
 	// Create a temporary Redis manager for verification
-	redisManager, err := redis.NewRedisManager(cfg)
+	redisManager, err := sredis.NewRedisManager(cfg)
 	if err != nil {
 		logger.Error("Failed to create Redis manager for verification",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return fmt.Errorf("redis connectivity verification failed: %w", err)
 	}
 	defer func() {
 		if closeErr := redisManager.Close(); closeErr != nil {
 			logger.Warn("Failed to close Redis manager after verification",
-				log.FormatError(closeErr),
+				slogger.FormatError(closeErr),
 			)
 		}
 	}()
@@ -141,7 +141,7 @@ func VerifyRedisConnectivity(ctx context.Context, cfg *config.Config) error {
 
 	if err := redisManager.Ping(verificationCtx); err != nil {
 		logger.Error("Redis connectivity verification failed",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return fmt.Errorf("redis connectivity verification failed: %w", err)
 	}

@@ -6,9 +6,9 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	postgresdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
+	postgresdb "github.com/seventeenthearth/sudal/internal/service/postgres"
 )
 
 var _ = ginkgo.Describe("PostgresManager", func() {
@@ -21,8 +21,8 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 		ginkgo.Context("when creating a new PostgresManager with valid configuration", func() {
 			ginkgo.It("should create a PostgresManager successfully with DSN", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 						MaxOpenConns:           25,
 						MaxIdleConns:           5,
@@ -44,8 +44,8 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 
 			ginkgo.It("should create a PostgresManager successfully with individual components", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						Host:                   "localhost",
 						Port:                   "5432",
 						User:                   "test",
@@ -74,8 +74,8 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 		ginkgo.Context("when creating a new PostgresManager with invalid configuration", func() {
 			ginkgo.It("should return an error when DSN is empty", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN: "",
 					},
 				}
@@ -94,8 +94,8 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 		ginkgo.Context("when testing connection pool configuration", func() {
 			ginkgo.It("should apply connection pool settings correctly", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 						MaxOpenConns:           50,
 						MaxIdleConns:           10,
@@ -117,8 +117,8 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 		ginkgo.Context("when testing SSL configuration", func() {
 			ginkgo.It("should handle SSL mode configuration", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						Host:                   "localhost",
 						Port:                   "5432",
 						User:                   "test",
@@ -152,8 +152,8 @@ var _ = ginkgo.Describe("PostgresManager", func() {
 		ginkgo.Context("when testing connection timeout", func() {
 			ginkgo.It("should respect connection timeout settings", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN:                   "postgres://test:test@nonexistent:5432/testdb?sslmode=disable",
 						ConnectTimeoutSeconds: 1, // Very short timeout
 					},

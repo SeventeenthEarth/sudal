@@ -377,24 +377,38 @@ func processDatabaseConfig(config *Config) {
 		}
 	}
 
-	// If DSN is not set but individual components are, construct the DSN
-	if config.DB.DSN == "" && config.DB.Host != "" {
+	// Construct DSN if not explicitly provided
+	if config.DB.DSN == "" {
 		if config.DB.Host != "" && config.DB.User != "" && config.DB.Password != "" && config.DB.Name != "" {
-			dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-				config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port, config.DB.Name, config.DB.SSLMode)
+			// Construct DSN from components
+			// Format: postgres://user:password@host:port/dbname?sslmode=disable
+			dsn := fmt.Sprintf(
+				"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+				config.DB.User,
+				config.DB.Password,
+				config.DB.Host,
+				config.DB.Port,
+				config.DB.Name,
+				config.DB.SSLMode,
+			)
 
-			// Add SSL certificate parameters if provided
-			if config.DB.SSLCert != "" {
-				dsn += "&sslcert=" + config.DB.SSLCert
-			}
-			if config.DB.SSLKey != "" {
-				dsn += "&sslkey=" + config.DB.SSLKey
-			}
-			if config.DB.SSLRootCert != "" {
-				dsn += "&sslrootcert=" + config.DB.SSLRootCert
-			}
+			// Append SSL parameters if provided
+			if config.DB.SSLMode != "disable" {
+				if config.DB.SSLCert != "" {
+					dsn += "&sslcert=" + config.DB.SSLCert
+				}
+				if config.DB.SSLKey != "" {
+					dsn += "&sslkey=" + config.DB.SSLKey
+				}
+				if config.DB.SSLRootCert != "" {
+					dsn += "&sslrootcert=" + config.DB.SSLRootCert
+				}
 
-			config.DB.DSN = dsn
+				config.DB.DSN = dsn
+			} else {
+				// SSL disabled - just set the DSN
+				config.DB.DSN = dsn
+			}
 		}
 	}
 }

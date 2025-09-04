@@ -1,4 +1,4 @@
-package database_test
+package health_test
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	"github.com/seventeenthearth/sudal/internal/service/health"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 )
 
 var _ = ginkgo.Describe("Database Utils", func() {
@@ -22,8 +22,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 		ginkgo.Context("when verifying database connectivity with valid configuration", func() {
 			ginkgo.It("should attempt to verify connectivity and fail gracefully with no database", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 						Host:                   "localhost",
 						Port:                   "5432",
@@ -42,7 +42,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 				ctx := context.Background()
 
 				// When
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 
 				// Then - Should fail because there's no real database
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -51,8 +51,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 
 			ginkgo.It("should handle context timeout properly", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN:                   "postgres://test:test@nonexistent:5432/testdb?sslmode=disable",
 						ConnectTimeoutSeconds: 1,
 					},
@@ -64,7 +64,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 
 				// When
 				start := time.Now()
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 				duration := time.Since(start)
 
 				// Then
@@ -77,8 +77,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 		ginkgo.Context("when verifying database connectivity with invalid configuration", func() {
 			ginkgo.It("should return an error when DSN is empty", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN: "",
 					},
 				}
@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 				ctx := context.Background()
 
 				// When
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -99,7 +99,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 		ginkgo.Context("when getting connection pool stats", func() {
 			ginkgo.It("should return nil when PostgresManager is nil", func() {
 				// When
-				stats := database.GetConnectionPoolStats(nil)
+				stats := health.GetConnectionPoolStats(nil)
 
 				// Then
 				gomega.Expect(stats).To(gomega.BeNil())
@@ -108,7 +108,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 			ginkgo.It("should handle PostgresManager with nil database", func() {
 				// This test would require access to internal fields or a test constructor
 				// For now, we'll test the public behavior
-				stats := database.GetConnectionPoolStats(nil)
+				stats := health.GetConnectionPoolStats(nil)
 				gomega.Expect(stats).To(gomega.BeNil())
 			})
 		})
@@ -119,7 +119,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 			ginkgo.It("should handle nil PostgresManager gracefully", func() {
 				// When/Then - Should not panic
 				gomega.Expect(func() {
-					database.LogConnectionPoolStats(nil)
+					health.LogConnectionPoolStats(nil)
 				}).NotTo(gomega.Panic())
 			})
 		})
@@ -129,8 +129,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 		ginkgo.Context("when testing different pool configurations", func() {
 			ginkgo.It("should handle default values correctly", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN: "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 						// Using default values for pool configuration
 					},
@@ -139,7 +139,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 				ctx := context.Background()
 
 				// When
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 
 				// Then - Should fail due to no database, but configuration should be processed
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -148,8 +148,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 
 			ginkgo.It("should handle custom pool configuration", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 						MaxOpenConns:           100,
 						MaxIdleConns:           20,
@@ -162,7 +162,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 				ctx := context.Background()
 
 				// When
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 
 				// Then - Should fail due to no database, but configuration should be processed
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -175,8 +175,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 		ginkgo.Context("when testing SSL configuration", func() {
 			ginkgo.It("should handle SSL mode require", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						Host:     "localhost",
 						Port:     "5432",
 						User:     "test",
@@ -191,7 +191,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 				ctx := context.Background()
 
 				// When
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())
@@ -200,8 +200,8 @@ var _ = ginkgo.Describe("Database Utils", func() {
 
 			ginkgo.It("should handle SSL certificates configuration", func() {
 				// Given
-				cfg := &config.Config{
-					DB: config.DBConfig{
+				cfg := &sconfig.Config{
+					DB: sconfig.DBConfig{
 						Host:        "localhost",
 						Port:        "5432",
 						User:        "test",
@@ -219,7 +219,7 @@ var _ = ginkgo.Describe("Database Utils", func() {
 				ctx := context.Background()
 
 				// When
-				err := database.VerifyDatabaseConnectivity(ctx, cfg)
+				err := health.VerifyDatabaseConnectivity(ctx, cfg)
 
 				// Then
 				gomega.Expect(err).To(gomega.HaveOccurred())

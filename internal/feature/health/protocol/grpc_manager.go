@@ -7,7 +7,7 @@ import (
 
 	healthv1 "github.com/seventeenthearth/sudal/gen/go/health/v1"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 	"go.uber.org/zap"
 )
 

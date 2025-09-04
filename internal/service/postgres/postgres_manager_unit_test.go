@@ -12,9 +12,9 @@ import (
 	"github.com/onsi/gomega"
 	"go.uber.org/zap"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	postgresdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
+	postgresdb "github.com/seventeenthearth/sudal/internal/service/postgres"
 )
 
 var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
@@ -23,7 +23,7 @@ var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
 		mock       sqlmock.Sqlmock
 		manager    *postgresdb.PostgresManagerImpl
 		ctx        context.Context
-		testConfig *config.Config
+		testConfig *sconfig.Config
 	)
 
 	ginkgo.BeforeEach(func() {
@@ -38,8 +38,8 @@ var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
 		ctx = context.Background()
 
 		// Create test config
-		testConfig = &config.Config{
-			DB: config.DBConfig{
+		testConfig = &sconfig.Config{
+			DB: sconfig.DBConfig{
 				DSN:                    "postgres://test:test@localhost:5432/testdb?sslmode=disable",
 				MaxOpenConns:           25,
 				MaxIdleConns:           5,
@@ -229,7 +229,7 @@ var _ = ginkgo.Describe("PostgresManagerImpl Unit Tests", func() {
 })
 
 // Helper function to create a PostgresManagerImpl with injected dependencies
-func createTestPostgresManager(db *sql.DB, cfg *config.Config) *postgresdb.PostgresManagerImpl {
+func createTestPostgresManager(db *sql.DB, cfg *sconfig.Config) *postgresdb.PostgresManagerImpl {
 	logger := log.GetLogger().With(zap.String("component", "postgres_manager"))
 
 	// Create a PostgresManagerImpl instance and manually set its fields using reflection

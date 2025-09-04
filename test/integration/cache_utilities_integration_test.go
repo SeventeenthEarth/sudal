@@ -11,9 +11,9 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	cachepkg "github.com/seventeenthearth/sudal/internal/infrastructure/cache"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	testMocks "github.com/seventeenthearth/sudal/internal/mocks"
+	cachepkg "github.com/seventeenthearth/sudal/internal/service/cache"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 )
 
 var _ = Describe("Cache Utilities Integration Tests", func() {

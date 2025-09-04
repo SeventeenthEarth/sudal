@@ -13,8 +13,6 @@ import (
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
 
 	firebaseadm "firebase.google.com/go/v4"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 
 	"github.com/google/wire"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
@@ -23,11 +21,12 @@ import (
 	userApplication "github.com/seventeenthearth/sudal/internal/feature/user/application"
 	userRepo "github.com/seventeenthearth/sudal/internal/feature/user/data/repo"
 	userDomainRepo "github.com/seventeenthearth/sudal/internal/feature/user/domain/repo"
-	cachepkg "github.com/seventeenthearth/sudal/internal/infrastructure/cache"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/openapi"
+	scache "github.com/seventeenthearth/sudal/internal/service/cache"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
 	"github.com/seventeenthearth/sudal/internal/service/firebaseauth"
+	slogger "github.com/seventeenthearth/sudal/internal/service/logger"
+	spostgres "github.com/seventeenthearth/sudal/internal/service/postgres"
 	sredis "github.com/seventeenthearth/sudal/internal/service/redis"
 	ssql "github.com/seventeenthearth/sudal/internal/service/sql"
 	ssqlpg "github.com/seventeenthearth/sudal/internal/service/sql/postgres"
@@ -95,39 +94,39 @@ var UserSet = wire.NewSet(
 // FirebaseSet removed in Stage C (replaced by TokenVerifier)
 
 // ProvideConfig provides the application configuration
-func ProvideConfig() *config.Config {
-	return config.GetConfig()
+func ProvideConfig() *sconfig.Config {
+	return sconfig.GetConfig()
 }
 
 // ProvidePostgresManager provides a PostgreSQL connection manager
-func ProvidePostgresManager(cfg *config.Config) (postgres.PostgresManager, error) {
+func ProvidePostgresManager(cfg *sconfig.Config) (spostgres.PostgresManager, error) {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil, nil
 	}
-	return postgres.NewPostgresManager(cfg)
+	return spostgres.NewPostgresManager(cfg)
 }
 
 // ProvideRedisManager provides a Redis connection manager
-func ProvideRedisManager(cfg *config.Config) (redis.RedisManager, error) {
+func ProvideRedisManager(cfg *sconfig.Config) (sredis.RedisManager, error) {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil, nil
 	}
-	return redis.NewRedisManager(cfg)
+	return sredis.NewRedisManager(cfg)
 }
 
 // ProvideCacheUtil provides a cache utility instance
-func ProvideCacheUtil(kv sredis.KV) cachepkg.CacheUtil {
+func ProvideCacheUtil(kv sredis.KV) scache.CacheUtil {
 	// Check if we're in test environment and return nil to use mock
 	if isTestEnvironmentWire() {
 		return nil
 	}
-	return cachepkg.NewCacheUtil(kv)
+	return scache.NewCacheUtil(kv)
 }
 
 // ProvideRedisKV adapts RedisManager's client into the service KV interface
-func ProvideRedisKV(manager redis.RedisManager) sredis.KV {
+func ProvideRedisKV(manager sredis.RedisManager) sredis.KV {
 	if isTestEnvironmentWire() || manager == nil {
 		return nil
 	}
@@ -140,7 +139,7 @@ func ProvideRedisKV(manager redis.RedisManager) sredis.KV {
 
 // ProvideLogger provides a logger instance
 func ProvideLogger() *zap.Logger {
-	return log.GetLogger()
+	return slogger.GetLogger()
 }
 
 // ProvideUserRepository provides a user repository instance using the minimal SQL executor
@@ -154,7 +153,7 @@ func ProvideUserRepository(exec ssql.Executor, logger *zap.Logger) userDomainRep
 
 // ProvideSQLExecutor provides a thin SQL executor backed by *sql.DB
 // Note: This only wires the constructor; repositories will be migrated to depend on this in later PRs.
-func ProvideSQLExecutor(pgManager postgres.PostgresManager) ssql.Executor {
+func ProvideSQLExecutor(pgManager spostgres.PostgresManager) ssql.Executor {
 	if isTestEnvironmentWire() || pgManager == nil {
 		return nil
 	}
@@ -163,7 +162,7 @@ func ProvideSQLExecutor(pgManager postgres.PostgresManager) ssql.Executor {
 }
 
 // ProvideSQLTransactor provides a transactor for beginning transactions
-func ProvideSQLTransactor(pgManager postgres.PostgresManager) ssql.Transactor {
+func ProvideSQLTransactor(pgManager spostgres.PostgresManager) ssql.Transactor {
 	if isTestEnvironmentWire() || pgManager == nil {
 		return nil
 	}
@@ -172,7 +171,7 @@ func ProvideSQLTransactor(pgManager postgres.PostgresManager) ssql.Transactor {
 }
 
 // ProvideSQLExecutorAndTransactor provides both an executor and transactor.
-func ProvideSQLExecutorAndTransactor(pgManager postgres.PostgresManager) (ssql.Executor, ssql.Transactor) {
+func ProvideSQLExecutorAndTransactor(pgManager spostgres.PostgresManager) (ssql.Executor, ssql.Transactor) {
 	if isTestEnvironmentWire() || pgManager == nil {
 		return nil, nil
 	}
@@ -191,7 +190,7 @@ func ProvideUserService(repository userDomainRepo.UserRepository) userApplicatio
 // ProvideFirebaseHandler removed in Stage C
 
 // ProvideTokenVerifier provides a Firebase-based TokenVerifier implementation
-func ProvideTokenVerifier(cfg *config.Config, logger *zap.Logger) (firebaseauth.TokenVerifier, error) {
+func ProvideTokenVerifier(cfg *sconfig.Config, logger *zap.Logger) (firebaseauth.TokenVerifier, error) {
 	if isTestEnvironmentWire() {
 		return nil, nil
 	}
@@ -235,7 +234,7 @@ func isTestEnvironmentWire() bool {
 	}
 
 	// Check if config indicates test environment
-	cfg := config.GetConfig()
+	cfg := sconfig.GetConfig()
 	if cfg != nil {
 		if cfg.AppEnv == "test" {
 			return true
@@ -252,19 +251,19 @@ func InitializeHealthConnectHandler() (*healthConnect.HealthManager, error) {
 }
 
 // InitializePostgresManager initializes and returns a PostgreSQL connection manager
-func InitializePostgresManager() (postgres.PostgresManager, error) {
+func InitializePostgresManager() (spostgres.PostgresManager, error) {
 	wire.Build(DatabaseSet)
 	return nil, nil // Wire will fill this in
 }
 
 // InitializeRedisManager initializes and returns a Redis connection manager
-func InitializeRedisManager() (redis.RedisManager, error) {
+func InitializeRedisManager() (sredis.RedisManager, error) {
 	wire.Build(RedisSet)
 	return nil, nil // Wire will fill this in
 }
 
 // InitializeCacheUtil initializes and returns a cache utility
-func InitializeCacheUtil() (cachepkg.CacheUtil, error) {
+func InitializeCacheUtil() (scache.CacheUtil, error) {
 	wire.Build(CacheSet)
 	return nil, nil // Wire will fill this in
 }

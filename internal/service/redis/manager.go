@@ -1,5 +1,8 @@
 package redis
 
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_redis_manager.go -package=mocks -mock_names=RedisManager=MockRedisManager github.com/seventeenthearth/sudal/internal/service/redis RedisManager
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_redis_client.go -package=mocks github.com/seventeenthearth/sudal/internal/service/redis RedisClient
+
 import (
 	"context"
 	"errors"
@@ -8,34 +11,31 @@ import (
 	"strings"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	slogger "github.com/seventeenthearth/sudal/internal/service/logger"
 )
-
-//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_redis_client.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database/redis RedisClient
-//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_redis_manager.go -package=mocks -mock_names=RedisManager=MockRedisManager github.com/seventeenthearth/sudal/internal/infrastructure/database/redis RedisManager
 
 // RedisClient defines the protocol for Redis client operations
 // This protocol abstracts Redis operations for better testability
 type RedisClient interface {
 	// Ping checks the Redis connection
-	Ping(ctx context.Context) *redis.StatusCmd
+	Ping(ctx context.Context) *goredis.StatusCmd
 
 	// Close closes the Redis connection
 	Close() error
 
 	// PoolStats returns connection pool statistics
-	PoolStats() *redis.PoolStats
+	PoolStats() *goredis.PoolStats
 }
 
 // RedisManager defines the protocol for Redis connection management
 // This protocol abstracts Redis manager operations for better testability
 type RedisManager interface {
 	// GetClient returns the underlying Redis client
-	GetClient() *redis.Client
+	GetClient() *goredis.Client
 
 	// Ping performs a health check on the Redis connection
 	Ping(ctx context.Context) error
@@ -44,7 +44,7 @@ type RedisManager interface {
 	Close() error
 
 	// GetConnectionPoolStats returns Redis connection pool statistics
-	GetConnectionPoolStats() *redis.PoolStats
+	GetConnectionPoolStats() *goredis.PoolStats
 
 	// LogConnectionPoolStats logs the current Redis connection pool statistics
 	LogConnectionPoolStats()
@@ -56,13 +56,13 @@ type RedisManager interface {
 // RedisManagerImpl manages Redis client connections
 type RedisManagerImpl struct {
 	client RedisClient
-	config *config.Config
+	config *sconfig.Config
 	logger *zap.Logger
 }
 
 // NewRedisManager creates a new Redis connection manager with comprehensive configuration
-func NewRedisManager(cfg *config.Config) (RedisManager, error) {
-	logger := log.GetLogger().With(zap.String("component", "redis_manager"))
+func NewRedisManager(cfg *sconfig.Config) (RedisManager, error) {
+	logger := slogger.GetLogger().With(zap.String("component", "redis_manager"))
 
 	if cfg.Redis.Addr == "" {
 		return nil, fmt.Errorf("redis address is required")
@@ -85,7 +85,7 @@ func NewRedisManager(cfg *config.Config) (RedisManager, error) {
 	)
 
 	// Create Redis client options with comprehensive configuration
-	options := &redis.Options{
+	options := &goredis.Options{
 		Addr:     cfg.Redis.Addr,
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
@@ -108,7 +108,7 @@ func NewRedisManager(cfg *config.Config) (RedisManager, error) {
 	}
 
 	// Create Redis client
-	client := redis.NewClient(options)
+	client := goredis.NewClient(options)
 
 	// Test the connection with retry logic
 	manager := &RedisManagerImpl{
@@ -129,8 +129,8 @@ func NewRedisManager(cfg *config.Config) (RedisManager, error) {
 }
 
 // NewRedisManagerWithClient creates a new Redis manager with a provided client (for testing)
-func NewRedisManagerWithClient(client RedisClient, cfg *config.Config) RedisManager {
-	logger := log.GetLogger().With(zap.String("component", "redis_manager"))
+func NewRedisManagerWithClient(client RedisClient, cfg *sconfig.Config) RedisManager {
+	logger := slogger.GetLogger().With(zap.String("component", "redis_manager"))
 
 	return &RedisManagerImpl{
 		client: client,
@@ -141,8 +141,8 @@ func NewRedisManagerWithClient(client RedisClient, cfg *config.Config) RedisMana
 
 // GetClient returns the underlying Redis client
 // This should be used sparingly and only when direct access to *redis.Client is needed
-func (rm *RedisManagerImpl) GetClient() *redis.Client {
-	if client, ok := rm.client.(*redis.Client); ok {
+func (rm *RedisManagerImpl) GetClient() *goredis.Client {
+	if client, ok := rm.client.(*goredis.Client); ok {
 		return client
 	}
 	return nil
@@ -158,7 +158,7 @@ func (rm *RedisManagerImpl) Ping(ctx context.Context) error {
 
 	if err != nil {
 		rm.logger.Error("Redis health check failed after retries",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return fmt.Errorf("redis health check failed: %w", err)
 	}
@@ -197,7 +197,7 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 				rm.logger.Info("Redis operation succeeded after retry",
 					zap.String("operation", operation),
 					zap.Int("attempt", attempt+1),
-					zap.Int("max_retries", maxRetries+1),
+					zap.Int("max_attempts", maxRetries+1),
 				)
 			}
 			return nil
@@ -210,7 +210,7 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 			rm.logger.Error("Redis operation failed with non-retryable error",
 				zap.String("operation", operation),
 				zap.Int("attempt", attempt+1),
-				log.FormatError(err),
+				slogger.FormatError(err),
 			)
 			return fmt.Errorf("redis operation '%s' failed: %w", operation, err)
 		}
@@ -220,8 +220,8 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 			rm.logger.Error("Redis operation failed after all retries",
 				zap.String("operation", operation),
 				zap.Int("total_attempts", attempt+1),
-				zap.Int("max_retries", maxRetries+1),
-				log.FormatError(lastErr),
+				zap.Int("max_attempts", maxRetries+1),
+				slogger.FormatError(lastErr),
 			)
 			break
 		}
@@ -237,9 +237,9 @@ func (rm *RedisManagerImpl) executeWithRetry(ctx context.Context, operation stri
 		rm.logger.Warn("Redis operation failed, retrying",
 			zap.String("operation", operation),
 			zap.Int("attempt", attempt+1),
-			zap.Int("max_retries", maxRetries+1),
+			zap.Int("max_attempts", maxRetries+1),
 			zap.Duration("backoff", backoff),
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 
 		// Wait before retry, but respect context cancellation
@@ -260,7 +260,6 @@ func (rm *RedisManagerImpl) isRetryableError(err error) bool {
 		return false
 	}
 
-	// Import the missing packages at the top if needed
 	errorStr := err.Error()
 	errorStrLower := strings.ToLower(errorStr)
 
@@ -269,7 +268,13 @@ func (rm *RedisManagerImpl) isRetryableError(err error) bool {
 	if errors.As(err, &netErr) {
 		// Network timeout errors are retryable
 		if netErr.Timeout() {
-			rm.logger.Debug("Detected network timeout error", log.FormatError(err))
+			rm.logger.Debug("Detected network timeout error", slogger.FormatError(err))
+			return true
+		}
+		// Some network errors expose a Temporary() indicator; treat as retryable
+		type temporary interface{ Temporary() bool }
+		if te, ok := err.(temporary); ok && te.Temporary() {
+			rm.logger.Debug("Detected temporary network error", slogger.FormatError(err))
 			return true
 		}
 	}
@@ -295,7 +300,7 @@ func (rm *RedisManagerImpl) isRetryableError(err error) bool {
 		if strings.Contains(errorStrLower, pattern) {
 			rm.logger.Debug("Detected retryable Redis error pattern",
 				zap.String("pattern", pattern),
-				log.FormatError(err),
+				slogger.FormatError(err),
 			)
 			return true
 		}
@@ -316,19 +321,19 @@ func (rm *RedisManagerImpl) isRetryableError(err error) bool {
 		if strings.Contains(errorStrLower, pattern) {
 			rm.logger.Debug("Detected non-retryable Redis error pattern",
 				zap.String("pattern", pattern),
-				log.FormatError(err),
+				slogger.FormatError(err),
 			)
 			return false
 		}
 	}
 
 	// Default to retryable for unknown errors (conservative approach)
-	rm.logger.Debug("Unknown error type, treating as retryable", log.FormatError(err))
+	rm.logger.Debug("Unknown error type, treating as retryable", slogger.FormatError(err))
 	return true
 }
 
 // GetConnectionPoolStats returns Redis connection pool statistics
-func (rm *RedisManagerImpl) GetConnectionPoolStats() *redis.PoolStats {
+func (rm *RedisManagerImpl) GetConnectionPoolStats() *goredis.PoolStats {
 	if rm.client == nil {
 		return nil
 	}

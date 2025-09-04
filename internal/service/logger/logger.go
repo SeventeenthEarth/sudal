@@ -107,7 +107,7 @@ func ensureInitialized() {
 }
 
 // GetLogger returns the global logger instance
-// If the logger hasn't been initialized, it initializes with InfoLevel
+// If the logger hasn't been initialized, it initializes with a default log level.
 func GetLogger() *zap.Logger { ensureInitialized(); return globalLogger }
 
 // Debug logs a message at debug level

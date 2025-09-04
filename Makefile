@@ -15,6 +15,10 @@ GOLANGCILINT := $(shell command -v golangci-lint 2> /dev/null)
 GINKGO := $(shell command -v ginkgo 2> /dev/null)
 MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 
+# Pin Ginkgo CLI to the version declared in go.mod to avoid mismatch warnings
+GINKGO_MOD_VERSION := $(shell awk '/github.com\/onsi\/ginkgo\/v2[[:space:]]/{print $$2; exit}' go.mod)
+GINKGO_RUN := go run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_MOD_VERSION)
+
 .PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh push-docs pull-docs test.e2e.cleanup-users
 
 .DEFAULT_GOAL := help
@@ -107,10 +111,11 @@ test: test.prepare test.unit test.int ## Run all tests (unit and integration)
 
 test.unit: ## Run unit tests
 	@echo "🧪 Running unit tests..."
-ifeq ($(GINKGO),)
+ifeq ($(GINKGO_MOD_VERSION),)
+	@echo "⚠️  Could not detect Ginkgo version from go.mod. Falling back to go test."
 	@go test -v -race -coverprofile=coverage.unit.out `go list ./internal/... | grep -v "/mocks"` || { echo "❌ Unit tests failed"; exit 1; }
 else
-	@$(GINKGO) -v -race -cover --coverprofile=coverage.unit.out --trace --fail-on-pending --randomize-all ./internal/... || { echo "❌ Unit tests failed"; exit 1; }
+	@$(GINKGO_RUN) -v -race -cover --coverprofile=coverage.unit.out --trace --fail-on-pending --randomize-all ./internal/... || { echo "❌ Unit tests failed"; exit 1; }
 endif
 	@go tool cover -func=coverage.unit.out
 	@go tool cover -html=coverage.unit.out -o coverage.unit.html
@@ -118,10 +123,11 @@ endif
 
 test.int: ## Run integration tests (excludes infrastructure - mock infrastructure is used)
 	@echo "🧪 Running integration tests..."
-ifeq ($(GINKGO),)
+ifeq ($(GINKGO_MOD_VERSION),)
+	@echo "⚠️  Could not detect Ginkgo version from go.mod. Falling back to go test."
 	@go test -v -race -coverprofile=coverage.int.out -coverpkg=github.com/seventeenthearth/sudal/internal/feature/... ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
 else
-	@$(GINKGO) -v -race -cover -coverpkg=github.com/seventeenthearth/sudal/internal/feature/... --coverprofile=coverage.int.out --trace --fail-on-pending --randomize-all ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
+	@$(GINKGO_RUN) -v -race -cover -coverpkg=github.com/seventeenthearth/sudal/internal/feature/... --coverprofile=coverage.int.out --trace --fail-on-pending --randomize-all ./test/integration || { echo "❌ Integration tests failed"; exit 1; }
 endif
 	@go tool cover -func=coverage.int.out
 	@go tool cover -html=coverage.int.out -o coverage.int.html
@@ -235,6 +241,7 @@ ifndef MOCKGEN
 	@exit 1
 endif
 	@$(MAKE) clean-mocks >/dev/null 2>&1 || true
+	@mkdir -p internal/mocks
 	@go generate ./... || echo "⚠️  Warning: Some mock generation may have failed, but continuing..."
 	@echo "✅ Mock generation completed"
 

@@ -96,10 +96,19 @@ main() {
         "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest" \
         "golangci-lint"
 
-    # Ginkgo - BDD testing framework
-    install_go_tool "Ginkgo" \
-        "github.com/onsi/ginkgo/v2/ginkgo@latest" \
-        "ginkgo"
+    # Ginkgo - BDD testing framework (match version in go.mod to avoid CLI/library mismatch)
+    if [ -f "go.mod" ]; then
+        GINKGO_VERSION=$(awk '/github.com\/onsi\/ginkgo\/v2[[:space:]]/{print $2; exit}' go.mod)
+    fi
+    if [ -n "$GINKGO_VERSION" ]; then
+        install_go_tool "Ginkgo" \
+            "github.com/onsi/ginkgo/v2/ginkgo@${GINKGO_VERSION}" \
+            "ginkgo"
+    else
+        install_go_tool "Ginkgo" \
+            "github.com/onsi/ginkgo/v2/ginkgo@latest" \
+            "ginkgo"
+    fi
 
     # mockgen - Mock generation tool
     install_go_tool "mockgen" \

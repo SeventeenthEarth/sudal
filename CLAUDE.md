@@ -2,6 +2,46 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository Guidelines
+
+This repository is for planning, requirements, and decision documentation. Claude's role is to reason over existing docs (plans, requirements, ADR), provide assessments, and assist with document organization—never to write production code or run tests.
+
+## Document Types & Structure
+
+- Docs live under `docs/` with these folders:
+  - `plan/` — roadmaps, iteration plans
+  - `requirement/` — functional/non-functional specs
+  - `adr/` — Architecture Decision Records
+  - `assets/` — images/diagrams (store editable sources like `.drawio`)
+  - `tasks/` — AI-executable prompts for the developer AI (create only on request)
+- Keep meta-guides (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) at `docs/` root
+- Filenames: descriptive; no date prefix required
+- Use relative links: `![diagram](assets/flow.png)` and cross-links between docs
+
+## Codebase Pointers (for cross-references)
+
+- API contracts:
+  - `api/openapi.yaml`: Authoritative REST spec. Server code is generated into `internal/infrastructure/openapi/*` via `ogen`; Swagger served under `/docs`.
+  - `proto/*`: Authoritative gRPC/Connect contracts. Generated code lives in `gen/go` (protobuf, gRPC, Connect) and `gen/openapi` (OpenAPI v2).
+- Application wiring:
+  - `internal/infrastructure/server/*`: Unified HTTP server, route registry (REST + Connect-go), middleware chains.
+  - `internal/infrastructure/di/wire.go`: Wire provider sets and initializers for services/handlers.
+  - `internal/infrastructure/apispec/paths.go`: Protected procedure list for selective authentication.
+- Services and infra modules (cross-cutting):
+  - `internal/service/config`, `logger`, `postgres`, `sql/postgres`, `redis`, `cache`, `firebaseauth`, `authutil`, `health`.
+- Data and feature domain:
+  - `internal/feature/<name>/{domain,data,application,protocol}` keeps feature code cohesive.
+- Config & migrations:
+  - `.env.template` (local dev), `configs/config.yaml` (optional file input), `db/migrations/*`.
+
+## Workflow
+
+- Idea intake: user provides an idea or change request
+- Reasoning: search/read `plans/`, `requirements/`, and `adr/`; evaluate alignment, feasibility, risks, and alternatives
+- Response: provide a concise assessment with next steps or decision options
+- On request: generate a task prompt in `tasks/` for the developer AI; otherwise do not create files
+- When drafting documents or reasoning, use English; when replying to the user, respond in Korean
+
 ## Essential Commands
 
 ### Development & Build

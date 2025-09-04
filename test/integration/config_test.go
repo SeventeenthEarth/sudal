@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
+	config "github.com/seventeenthearth/sudal/internal/service/config"
 )
 
 var _ = Describe("Configuration System Integration", func() {

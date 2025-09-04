@@ -10,10 +10,10 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	redisdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/mocks"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
+	redisdb "github.com/seventeenthearth/sudal/internal/service/redis"
 )
 
 var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
@@ -22,7 +22,7 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 		mockClient   *mocks.MockRedisClient
 		redisManager redisdb.RedisManager
 		ctx          context.Context
-		cfg          *config.Config
+		cfg          *sconfig.Config
 	)
 
 	ginkgo.BeforeEach(func() {
@@ -32,8 +32,8 @@ var _ = ginkgo.Describe("RedisManager Unit Tests", func() {
 		mockClient = mocks.NewMockRedisClient(ctrl)
 		ctx = context.Background()
 
-		cfg = &config.Config{
-			Redis: config.RedisConfig{
+		cfg = &sconfig.Config{
+			Redis: sconfig.RedisConfig{
 				Addr:            "localhost:6379",
 				Password:        "",
 				DB:              0,

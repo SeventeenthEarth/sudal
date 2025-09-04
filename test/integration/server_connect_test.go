@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 
@@ -25,8 +25,8 @@ var _ = Describe("Server Connect Integration", func() {
 		log.Init(log.InfoLevel)
 
 		// Set up configuration (port is implicit via helper BaseURL)
-		cfg := &config.Config{LogLevel: "info", AppEnv: "test"}
-		config.SetConfig(cfg)
+		cfg := &sconfig.Config{LogLevel: "info", AppEnv: "test"}
+		sconfig.SetConfig(cfg)
 
 		// Note: We're not using the actual server implementation for this test
 		// Instead, we're using a simple HTTP handler to simulate the server
@@ -58,7 +58,7 @@ var _ = Describe("Server Connect Integration", func() {
 		}
 
 		// Reset config
-		config.SetConfig(nil)
+		sconfig.SetConfig(nil)
 	})
 
 	Describe("Health Service", func() {

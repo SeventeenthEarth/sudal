@@ -1,4 +1,4 @@
-package log
+package logger
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ var (
 	// Global logger instance
 	globalLogger *zap.Logger
 	once         sync.Once
+	defaultLevel LogLevel = InfoLevel
 )
 
 // LogLevel represents the severity level of a log message
@@ -59,8 +60,14 @@ func zapLevel(level LogLevel) zapcore.Level {
 	}
 }
 
-// Init initializes the global logger with the specified log level
+// Init sets the desired log level and ensures the global logger is initialized once.
 func Init(level LogLevel) {
+	defaultLevel = level
+	ensureInitialized()
+}
+
+// ensureInitialized initializes the global logger exactly once in a race-safe way.
+func ensureInitialized() {
 	once.Do(func() {
 		// Create encoder configuration
 		encoderConfig := zapcore.EncoderConfig{
@@ -78,38 +85,23 @@ func Init(level LogLevel) {
 			EncodeCaller:   zapcore.ShortCallerEncoder,
 		}
 
-		// Create JSON encoder
 		jsonEncoder := zapcore.NewJSONEncoder(encoderConfig)
+		core := zapcore.NewCore(jsonEncoder, zapcore.AddSync(os.Stdout), zapLevel(defaultLevel))
 
-		// Create core with stdout output
-		core := zapcore.NewCore(
-			jsonEncoder,
-			zapcore.AddSync(os.Stdout),
-			zapLevel(level),
-		)
-
-		// Build logger fully before publishing the global pointer to avoid races
 		logger := zap.New(
 			core,
 			zap.AddCaller(),
-			zap.AddCallerSkip(1), // Skip the logger wrapper
+			zap.AddCallerSkip(1),
 			zap.AddStacktrace(zapcore.ErrorLevel),
 		)
-		// Optionally log initialization using the local logger
-		logger.Info("Logger initialized", zap.String("level", string(level)))
-		// Publish the initialized logger at the very end of once.Do
+		logger.Info("Logger initialized", zap.String("level", string(defaultLevel)))
 		globalLogger = logger
 	})
 }
 
 // GetLogger returns the global logger instance
 // If the logger hasn't been initialized, it initializes with InfoLevel
-func GetLogger() *zap.Logger {
-	if globalLogger == nil {
-		Init(InfoLevel)
-	}
-	return globalLogger
-}
+func GetLogger() *zap.Logger { ensureInitialized(); return globalLogger }
 
 // Debug logs a message at debug level
 func Debug(msg string, fields ...zap.Field) {
@@ -131,12 +123,12 @@ func Error(msg string, fields ...zap.Field) {
 	GetLogger().Error(msg, fields...)
 }
 
-// Fatal logs a message at fatal level and then calls os.Exit(1)
+// Fatal logs a message at fatal level and exits the application
 func Fatal(msg string, fields ...zap.Field) {
 	GetLogger().Fatal(msg, fields...)
 }
 
-// With creates a child logger with the given fields
+// With creates a child logger with additional fields
 func With(fields ...zap.Field) *zap.Logger {
 	return GetLogger().With(fields...)
 }

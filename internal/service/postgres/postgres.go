@@ -1,5 +1,7 @@
 package postgres
 
+//go:generate go run go.uber.org/mock/mockgen -destination=../../mocks/mock_postgres_manager.go -package=mocks -mock_names=PostgresManager=MockPostgresManager github.com/seventeenthearth/sudal/internal/service/postgres PostgresManager
+
 import (
 	"context"
 	"database/sql"
@@ -9,11 +11,9 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"go.uber.org/zap"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	slogger "github.com/seventeenthearth/sudal/internal/service/logger"
 )
-
-//go:generate go run go.uber.org/mock/mockgen -destination=../../../mocks/mock_postgres_manager.go -package=mocks github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres PostgresManager
 
 // PostgresManager defines the protocol for PostgreSQL database connection management
 type PostgresManager interface {
@@ -30,13 +30,13 @@ type PostgresManager interface {
 // PostgresManagerImpl manages PostgreSQL database connections and connection pooling
 type PostgresManagerImpl struct {
 	db     *sql.DB
-	config *config.Config
+	config *sconfig.Config
 	logger *zap.Logger
 }
 
 // NewPostgresManager creates a new PostgreSQL connection manager with connection pooling
-func NewPostgresManager(cfg *config.Config) (PostgresManager, error) {
-	logger := log.GetLogger().With(zap.String("component", "postgres_manager"))
+func NewPostgresManager(cfg *sconfig.Config) (PostgresManager, error) {
+	logger := slogger.GetLogger().With(zap.String("component", "postgres_manager"))
 
 	if cfg.DB.DSN == "" {
 		return nil, fmt.Errorf("database DSN is required")
@@ -61,7 +61,7 @@ func NewPostgresManager(cfg *config.Config) (PostgresManager, error) {
 	db, err := sql.Open("postgres", cfg.DB.DSN)
 	if err != nil {
 		logger.Error("Failed to open database connection",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return nil, fmt.Errorf("failed to open database connection: %w", err)
 	}
@@ -75,7 +75,7 @@ func NewPostgresManager(cfg *config.Config) (PostgresManager, error) {
 	// Test the connection
 	if err := db.PingContext(ctx); err != nil {
 		logger.Error("Failed to ping database",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		db.Close() // nolint:errcheck
 		return nil, fmt.Errorf("failed to ping database: %w", err)
@@ -102,7 +102,7 @@ func (pm *PostgresManagerImpl) Ping(ctx context.Context) error {
 
 	if err := pm.db.PingContext(ctx); err != nil {
 		pm.logger.Error("Database health check failed",
-			log.FormatError(err),
+			slogger.FormatError(err),
 		)
 		return fmt.Errorf("database health check failed: %w", err)
 	}
@@ -162,7 +162,7 @@ func (pm *PostgresManagerImpl) Close() error {
 	if pm.db != nil {
 		if err := pm.db.Close(); err != nil {
 			pm.logger.Error("Failed to close database connection pool",
-				log.FormatError(err),
+				slogger.FormatError(err),
 			)
 			return fmt.Errorf("failed to close database connection pool: %w", err)
 		}

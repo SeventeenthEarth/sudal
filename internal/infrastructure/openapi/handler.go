@@ -6,7 +6,7 @@ import (
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 	healthprotocol "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 	"go.uber.org/zap"
 )
 

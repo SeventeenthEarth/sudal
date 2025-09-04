@@ -1,16 +1,16 @@
-package database_test
+package health_test
 
 import (
 	"errors"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
+	spostgres "github.com/seventeenthearth/sudal/internal/service/postgres"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
 	"github.com/seventeenthearth/sudal/internal/mocks"
+	"github.com/seventeenthearth/sudal/internal/service/health"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 )
 
 var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
@@ -34,7 +34,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when getting connection pool statistics", func() {
 			ginkgo.It("should return connection stats when manager is healthy", func() {
 				// Given
-				expectedStats := &postgres.ConnectionStats{
+				expectedStats := &spostgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    5,
 					InUse:              2,
@@ -44,7 +44,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   expectedStats,
@@ -52,7 +52,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil)
 
 				// When
-				stats := database.GetConnectionPoolStats(mockManager)
+				stats := health.GetConnectionPoolStats(mockManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.Equal(expectedStats))
@@ -62,10 +62,10 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should return nil when manager is nil", func() {
 				// Given
-				var nilManager postgres.PostgresManager = nil
+				var nilManager spostgres.PostgresManager = nil
 
 				// When
-				stats := database.GetConnectionPoolStats(nilManager)
+				stats := health.GetConnectionPoolStats(nilManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.BeNil())
@@ -77,7 +77,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(nil, expectedError)
 
 				// When
-				stats := database.GetConnectionPoolStats(mockManager)
+				stats := health.GetConnectionPoolStats(mockManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.BeNil())
@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should return nil when health status has no stats", func() {
 				// Given
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   nil, // No stats available
@@ -93,7 +93,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil)
 
 				// When
-				stats := database.GetConnectionPoolStats(mockManager)
+				stats := health.GetConnectionPoolStats(mockManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.BeNil())
@@ -103,7 +103,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when testing different connection pool scenarios", func() {
 			ginkgo.It("should handle high connection usage", func() {
 				// Given
-				expectedStats := &postgres.ConnectionStats{
+				expectedStats := &spostgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    24,
 					InUse:              20,
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      5,
 					MaxLifetimeClosed:  2,
 				}
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection pool under high load",
 					Stats:   expectedStats,
@@ -121,7 +121,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil)
 
 				// When
-				stats := database.GetConnectionPoolStats(mockManager)
+				stats := health.GetConnectionPoolStats(mockManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.Equal(expectedStats))
@@ -131,7 +131,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should handle pool exhaustion scenario", func() {
 				// Given
-				expectedStats := &postgres.ConnectionStats{
+				expectedStats := &spostgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    25,
 					InUse:              25,
@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "unhealthy",
 					Message: "Database connection pool exhausted",
 					Stats:   expectedStats,
@@ -149,7 +149,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil)
 
 				// When
-				stats := database.GetConnectionPoolStats(mockManager)
+				stats := health.GetConnectionPoolStats(mockManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.Equal(expectedStats))
@@ -164,7 +164,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when logging connection pool statistics", func() {
 			ginkgo.It("should log stats when manager is healthy", func() {
 				// Given
-				expectedStats := &postgres.ConnectionStats{
+				expectedStats := &spostgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    5,
 					InUse:              2,
@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      0,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   expectedStats,
@@ -182,7 +182,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil)
 
 				// When - This should not panic and should log the stats
-				database.LogConnectionPoolStats(mockManager)
+				health.LogConnectionPoolStats(mockManager)
 
 				// Then - No assertion needed as this is a logging function
 				// The test passes if no panic occurs
@@ -190,10 +190,10 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 
 			ginkgo.It("should handle nil manager gracefully", func() {
 				// Given
-				var nilManager postgres.PostgresManager = nil
+				var nilManager spostgres.PostgresManager = nil
 
 				// When - This should not panic
-				database.LogConnectionPoolStats(nilManager)
+				health.LogConnectionPoolStats(nilManager)
 
 				// Then - No assertion needed as this should handle nil gracefully
 			})
@@ -204,14 +204,14 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(nil, expectedError)
 
 				// When - This should not panic
-				database.LogConnectionPoolStats(mockManager)
+				health.LogConnectionPoolStats(mockManager)
 
 				// Then - No assertion needed as this should handle errors gracefully
 			})
 
 			ginkgo.It("should handle nil stats gracefully", func() {
 				// Given
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   nil, // No stats available
@@ -219,7 +219,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil)
 
 				// When - This should not panic
-				database.LogConnectionPoolStats(mockManager)
+				health.LogConnectionPoolStats(mockManager)
 
 				// Then - No assertion needed as this should handle nil stats gracefully
 			})
@@ -230,7 +230,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 		ginkgo.Context("when using utils functions together", func() {
 			ginkgo.It("should get stats and then log them", func() {
 				// Given
-				expectedStats := &postgres.ConnectionStats{
+				expectedStats := &spostgres.ConnectionStats{
 					MaxOpenConnections: 25,
 					OpenConnections:    10,
 					InUse:              5,
@@ -240,7 +240,7 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 					MaxIdleClosed:      1,
 					MaxLifetimeClosed:  0,
 				}
-				expectedHealthStatus := &postgres.HealthStatus{
+				expectedHealthStatus := &spostgres.HealthStatus{
 					Status:  "healthy",
 					Message: "Database connection is healthy",
 					Stats:   expectedStats,
@@ -249,8 +249,8 @@ var _ = ginkgo.Describe("Database Utils Unit Tests", func() {
 				mockManager.EXPECT().HealthCheck(gomock.Any()).Return(expectedHealthStatus, nil).Times(2)
 
 				// When
-				stats := database.GetConnectionPoolStats(mockManager)
-				database.LogConnectionPoolStats(mockManager)
+				stats := health.GetConnectionPoolStats(mockManager)
+				health.LogConnectionPoolStats(mockManager)
 
 				// Then
 				gomega.Expect(stats).To(gomega.Equal(expectedStats))

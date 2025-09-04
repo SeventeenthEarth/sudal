@@ -5,9 +5,9 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
 	"github.com/seventeenthearth/sudal/internal/mocks"
+	config "github.com/seventeenthearth/sudal/internal/service/config"
 	"go.uber.org/mock/gomock"
 )
 

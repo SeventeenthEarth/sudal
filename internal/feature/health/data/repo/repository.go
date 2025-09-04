@@ -3,7 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/database/postgres"
+	spostgres "github.com/seventeenthearth/sudal/internal/service/postgres"
 
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
 )
@@ -13,11 +13,11 @@ import (
 // HealthRepository is the implementation of the repo.HealthRepository protocol
 type HealthRepository struct {
 	// Database manager for performing health checks
-	dbManager postgres.PostgresManager
+	dbManager spostgres.PostgresManager
 }
 
 // NewHealthRepository creates a new health repository
-func NewHealthRepository(dbManager postgres.PostgresManager) *HealthRepository {
+func NewHealthRepository(dbManager spostgres.PostgresManager) *HealthRepository {
 	return &HealthRepository{
 		dbManager: dbManager,
 	}

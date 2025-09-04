@@ -8,9 +8,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/mock/gomock"
 
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
-	redisdb "github.com/seventeenthearth/sudal/internal/infrastructure/database/redis"
 	"github.com/seventeenthearth/sudal/internal/mocks"
+	sconfig "github.com/seventeenthearth/sudal/internal/service/config"
+	redisdb "github.com/seventeenthearth/sudal/internal/service/redis"
 )
 
 var _ = ginkgo.Describe("Redis Tests", func() {
@@ -34,8 +34,8 @@ var _ = ginkgo.Describe("Redis Tests", func() {
 		ginkgo.Context("when Redis configuration is invalid", func() {
 			ginkgo.It("should fail when Redis address is empty", func() {
 				// Given
-				config := &config.Config{
-					Redis: config.RedisConfig{
+				config := &sconfig.Config{
+					Redis: sconfig.RedisConfig{
 						Addr:     "",
 						Password: "",
 					},
@@ -139,8 +139,8 @@ var _ = ginkgo.Describe("Redis Tests", func() {
 		ginkgo.Context("when Redis configuration is invalid", func() {
 			ginkgo.It("should fail with empty address", func() {
 				// Given
-				config := &config.Config{
-					Redis: config.RedisConfig{
+				config := &sconfig.Config{
+					Redis: sconfig.RedisConfig{
 						Addr:     "",
 						Password: "",
 					},
@@ -159,8 +159,8 @@ var _ = ginkgo.Describe("Redis Tests", func() {
 		ginkgo.Context("when Redis configuration is valid", func() {
 			ginkgo.It("should validate Redis configuration parameters structure", func() {
 				// Given
-				config := &config.Config{
-					Redis: config.RedisConfig{
+				config := &sconfig.Config{
+					Redis: sconfig.RedisConfig{
 						Addr:            "localhost:6379",
 						Password:        "secret",
 						DB:              1,

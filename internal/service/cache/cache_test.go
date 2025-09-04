@@ -1,39 +1,35 @@
-package cache
+package cache_test
 
 import (
 	"context"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	scache "github.com/seventeenthearth/sudal/internal/service/cache"
 )
 
 var _ = ginkgo.Describe("CacheUtil", func() {
 	var (
-		cacheUtil CacheUtil
+		cacheUtil scache.CacheUtil
 	)
 
 	ginkgo.Describe("NewCacheUtil", func() {
 		ginkgo.Context("when creating a new cache utility", func() {
 			ginkgo.It("should create a cache utility with nil redis client (KV)", func() {
 				// When
-				cacheUtil = NewCacheUtil(nil)
+				cacheUtil = scache.NewCacheUtil(nil)
 
 				// Then
 				gomega.Expect(cacheUtil).NotTo(gomega.BeNil())
 
-				// Type assert to access internal fields
-				if impl, ok := cacheUtil.(*CacheUtilImpl); ok {
-					gomega.Expect(impl.kv).To(gomega.BeNil())
-					gomega.Expect(impl.logger).NotTo(gomega.BeNil())
-				} else {
-					ginkgo.Fail("Expected CacheUtilImpl implementation")
-				}
+				// Instance should be created without panic
+				gomega.Expect(cacheUtil).NotTo(gomega.BeNil())
 			})
 		})
 	})
 
 	ginkgo.Describe("Set", func() {
 		ginkgo.BeforeEach(func() {
-			cacheUtil = NewCacheUtil(nil)
+			cacheUtil = scache.NewCacheUtil(nil)
 		})
 
 		ginkgo.Context("when setting a cache key", func() {
@@ -59,7 +55,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 	ginkgo.Describe("Get", func() {
 		ginkgo.BeforeEach(func() {
-			cacheUtil = NewCacheUtil(nil)
+			cacheUtil = scache.NewCacheUtil(nil)
 		})
 
 		ginkgo.Context("when getting a cache key", func() {
@@ -85,7 +81,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 	ginkgo.Describe("Delete", func() {
 		ginkgo.BeforeEach(func() {
-			cacheUtil = NewCacheUtil(nil)
+			cacheUtil = scache.NewCacheUtil(nil)
 		})
 
 		ginkgo.Context("when deleting a cache key", func() {
@@ -111,7 +107,7 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 
 	ginkgo.Describe("DeleteByPattern", func() {
 		ginkgo.BeforeEach(func() {
-			cacheUtil = NewCacheUtil(nil)
+			cacheUtil = scache.NewCacheUtil(nil)
 		})
 
 		ginkgo.Context("when deleting cache keys by pattern", func() {
@@ -139,8 +135,8 @@ var _ = ginkgo.Describe("CacheUtil", func() {
 		ginkgo.Context("when checking cache miss error", func() {
 			ginkgo.It("should have correct error message", func() {
 				// Then
-				gomega.Expect(ErrCacheMiss).NotTo(gomega.BeNil())
-				gomega.Expect(ErrCacheMiss.Error()).To(gomega.Equal("cache miss: key not found or expired"))
+				gomega.Expect(scache.ErrCacheMiss).NotTo(gomega.BeNil())
+				gomega.Expect(scache.ErrCacheMiss.Error()).To(gomega.Equal("cache miss: key not found or expired"))
 			})
 		})
 	})

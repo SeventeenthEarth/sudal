@@ -5,7 +5,7 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/config"
+	config "github.com/seventeenthearth/sudal/internal/service/config"
 )
 
 // 이미 config_suite_test.go에 TestConfig 함수가 정의되어 있으므로 여기서는 제거합니다.

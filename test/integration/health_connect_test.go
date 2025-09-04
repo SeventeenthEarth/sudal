@@ -17,7 +17,7 @@ import (
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
 	"github.com/seventeenthearth/sudal/internal/feature/health/application"
 	"github.com/seventeenthearth/sudal/internal/feature/health/domain/entity"
-	"github.com/seventeenthearth/sudal/internal/infrastructure/log"
+	log "github.com/seventeenthearth/sudal/internal/service/logger"
 	testhelpers "github.com/seventeenthearth/sudal/test/integration/helpers"
 )
 

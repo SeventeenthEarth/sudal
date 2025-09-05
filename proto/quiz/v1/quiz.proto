@@ -89,8 +89,8 @@ message GetQuizSetResponse {
 message SubmitQuizResultRequest {
   // user identity is derived from auth context; do not accept from client
   int64 quiz_set_id = 1;
-  // Index of the selected option for each question. The order must match the questions in the QuizSet.
-  repeated int32 selected_option_indices = 2;
+  // Map of question_id to the index of the selected option for each question (aligned with Question.options)
+  map<int64, int32> answers = 2;
 }
 
 // Response after submitting quiz results.
@@ -121,7 +121,7 @@ message QuizResultSummary {
   int64 result_id = 1;
   int64 quiz_set_id = 2;
   string quiz_set_title = 3;
-  // v1 snapshot of selected option indices
-  repeated int32 selected_option_indices = 4;
+  // v1 snapshot of selected answers (question_id -> selected_option_index)
+  map<int64, int32> answers = 4;
   google.protobuf.Timestamp submitted_at = 5;
 }

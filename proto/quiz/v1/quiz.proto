@@ -43,12 +43,19 @@ message QuizSetSummary {
   google.protobuf.Timestamp created_at = 6;
 }
 
+// Option represents a single selectable choice with a stable ID.
+message Option {
+  int64 option_id = 1;
+  string text = 2;
+}
+
 // A single question within a quiz set.
 message Question {
   int64 question_id = 1;
   string text = 2;
   int32 question_order = 3; // 1-based order (DB: questions.question_order)
-  repeated string options = 4; // v1: length=2 (A/B); future: 3~4 options
+  // Stable options with unique identifiers to avoid index brittleness
+  repeated Option options = 4;
 }
 
 // Minimal tag info attached to quiz sets.
@@ -70,7 +77,7 @@ message ListQuizSetsRequest {
 // Response containing paginated quiz set summaries.
 message ListQuizSetsResponse {
   repeated QuizSetSummary quiz_sets = 1;
-  int64 total_count = 2;
+  reserved 2; // previously total_count
   // Opaque token for fetching the next page; empty if no more pages.
   string next_page_token = 3;
 }
@@ -89,8 +96,8 @@ message GetQuizSetResponse {
 message SubmitQuizResultRequest {
   // user identity is derived from auth context; do not accept from client
   int64 quiz_set_id = 1;
-  // Map of question_id to the index of the selected option for each question (aligned with Question.options)
-  map<int64, int32> answers = 2;
+  // Map of question_id to selected option_id per question (aligned with Question.options)
+  map<int64, int64> answers = 2;
 }
 
 // Response after submitting quiz results.
@@ -111,7 +118,7 @@ message GetUserQuizHistoryRequest {
 // Response containing paginated user quiz history.
 message GetUserQuizHistoryResponse {
   repeated QuizResultSummary history = 1;
-  int64 total_count = 2;
+  reserved 2; // previously total_count
   // Opaque token for fetching the next page; empty if no more pages.
   string next_page_token = 3;
 }
@@ -121,7 +128,7 @@ message QuizResultSummary {
   int64 result_id = 1;
   int64 quiz_set_id = 2;
   string quiz_set_title = 3;
-  // v1 snapshot of selected answers (question_id -> selected_option_index)
-  map<int64, int32> answers = 4;
+  // v1 snapshot of selected answers (question_id -> option_id)
+  map<int64, int64> answers = 4;
   google.protobuf.Timestamp submitted_at = 5;
 }

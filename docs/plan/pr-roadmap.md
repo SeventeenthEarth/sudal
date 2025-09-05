@@ -154,7 +154,7 @@
 | PR 번호 | 제목 | 상태 | 주요 작업 | 구현시 주의 사항 |
 | ----- | ----- | ----- | ----- | ----- |
 | PR-71 | 부하 테스트 스크립트 작성 | Planned | - k6, vegeta 등 도구 선정- 주요 시나리오별 테스트(사용자 가입, 퀴즈 제출 등)- 성능 지표 & 임계값 설정 | N/A |
-| PR-72 | CI/CD 파이프라인 구성 | Planned | - GitHub Actions(or 다른 CI)로 빌드/테스트/린트 자동화</br>- Docker 이미지 빌드 & 레지스트리 푸시</br>- (옵션) 커버리지 연동 | N/A |
+| PR-72 | CI/CD 파이프라인 구성 | Planned | - GitHub Actions(or 다른 CI)로 빌드/테스트/린트 자동화</br>- Docker 이미지 빌드 & 레지스트리 푸시</br>- (옵션) 커버리지 연동 | - 서버 기동/환경 변수 로딩, 시크릿 주입 |
 | PR-73 | GCP 배포 설정 (Cloud Run 등) | Planned | - Cloud Run 배포 스크립트- Cloud SQL, Memorystore 연결</br>- 비밀(Secrets) 관리 및 보안 설정 | N/A |
 | PR-74 | 운영 모니터링 & 알림 시스템 | Planned | - GCP Operations Suite(Logging/Monitoring/Alert) 설정</br>- 에러 리포팅, 대시보드 구성</br>- 알림(Slack 등) 규칙 | N/A |
 | PR-82 | Circuit Breaker 부하 테스트 | Planned | - 서비스 장애 상황 시뮬레이션</br>- Circuit Breaker 임계값 최적화</br>- 회로 상태 변환 모니터링 | - 실제 서비스 장애를 안전하게 시뮬레이션하는 방법</br>- 부하 테스트와 실제 운영 환경의 차이점 |
@@ -162,12 +162,6 @@
 | PR-84 | 마이크로서비스 통합 안정성 테스트 | Planned | - 서비스 간 통신 장애 시나리오</br>- Circuit Breaker와 Event Sourcing 통합 테스트</br>- 복구 프로세스 검증 | - 실제 환경과 유사한 테스트 환경 구성</br>- 분산 시스템 장애 시뮬레이션 기법 |
 | PR-85 | 확장성 패턴 모니터링 및 알림 시스템 통합 | Planned | - Circuit Breaker 상태 모니터링 대시보드</br>- 이벤트 소싱 메트릭 수집</br>- 장애 감지 및 알림 규칙 설정 | - 중요 메트릭 선별</br>- 알림 노이즈 최소화(false positive 방지) |
 
-## Related Documents
-- **Architecture**: ../adr/realtime-architecture.md
-- **Implementation**: ../requirement/implementation-overview.md
-- **Status Tracking**: ../requirement/implementation-status.md
-- **Testing**: ../requirement/testing-strategy.md
-- **Plan**: ./iteration-plan.md
 ### 8. 안정성 및 확장성 패턴
 
 | PR 번호 | 제목 | 상태 | 주요 작업 | 구현시 주의 사항 |
@@ -177,6 +171,13 @@
 | PR-88 | Event Sourcing 기본 구조 구현 | Planned | - 이벤트 스토어 스키마 설계</br>- 이벤트 저장 및 조회 기능</br>- 도메인 이벤트 정의 | - 이벤트 스키마 버전 관리 방안</br>- 이벤트 저장소 성능 고려(인덱싱, 샤딩 등) |
 | PR-89 | CQRS 패턴과 Event Sourcing 통합 | Planned | - Command와 Query 모델 분리</br>- 이벤트 기반 상태 재구성</br>- 읽기 모델 프로젝션 구현 | - 읽기/쓰기 모델 간 일관성 보장 방안</br>- 이벤트 소싱 기반 스냅샷 전략 |
 | PR-90 | Event Sourcing 통합 테스트 및 성능 최적화 | Planned | - 이벤트 재생(Replay) 시나리오 테스트</br>- 이벤트 스토어 인덱싱 최적화</br>- 대규모 이벤트 처리 성능 테스트 | - 이벤트 수가 많을 때 재생 성능</br>- 장기 운영 시 이벤트 저장소 크기 관리(아카이빙, 압축 등) |
+
+## Related Documents
+- **Architecture**: ../adr/realtime-architecture.md
+- **Implementation**: ../requirement/implementation-overview.md
+- **Status Tracking**: ../requirement/implementation-status.md
+- **Testing**: ../requirement/testing-strategy.md
+- **Plan**: ./iteration-plan.md
 
 ## 비고
 - 본 정리본은 `Status` 초기값을 `Planned`로 일괄 설정했습니다. 진행 중/완료 여부에 따라 `In Progress`/`Done` 등으로 업데이트 가능합니다.

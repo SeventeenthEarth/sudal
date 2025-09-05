@@ -107,6 +107,13 @@ type VideoSpace struct {
 - 옵션 비교: ./realtime-options-comparison.md
 - 실시간 아키텍처 결정: ./realtime-architecture.md
 
+## 동기화 규약: CAS & Idempotency
+- `spaces`는 상태 갱신 시 낙관적 락(CAS) 패턴을 사용합니다:
+  - `UPDATE ... SET state_data = $new, state_version = state_version + 1 WHERE space_id = $id AND state_version = $prev;`
+  - 실패 시 클라이언트는 최신 상태 재수신 후 재시도(UI가 없는 환경에서도 동일).
+- 이벤트/명령에는 `idempotency_key`(UUID)를 포함해 중복 수신 시 1회만 적용합니다.
+- 충돌/재시도 상황에 대한 서버 응답은 `409(ABORTED)` 또는 의미 있는 도메인 에러로 표준화합니다.
+
 ## Implementation Status
 - Design: COMPLETED
 - Database Schema: DESIGNED (not implemented)

@@ -31,6 +31,12 @@
 - Tests: E2E 프로토콜 경계 시나리오로 검증
 - References: adr/realtime-architecture.md, adr/middleware-architecture.md
 
+## Continuous Verification (E2E)
+- 모든 PR에서 `make test.e2e` 전체 E2E가 실행되며 다음을 포함합니다:
+  - REST→gRPC 경로에 대한 HTTP/JSON 요청은 404로 차단(@rest @negative)
+  - gRPC/Connect health 스모크(@grpc/@connect)
+  - 실패 시 병합 금지. requirement/testing-strategy.md의 실행 정책과 연동됩니다.
+
 ## Related Documents
 - **Architecture**: ./realtime-architecture.md
 - **Middleware**: ./middleware-architecture.md

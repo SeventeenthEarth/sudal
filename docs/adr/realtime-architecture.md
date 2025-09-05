@@ -34,6 +34,8 @@
 - 장점: 플러그블 도메인 로직, 명확한 책임 경계, 성능·확장성 지향 설계.
 - 단점/트레이드오프: 초기에는 이중 전환(Option 1→2) 비용; 추상화로 인한 소폭 오버헤드.
 - 운영: Pub/Sub(Redis), 멱등 처리, 낙관적 락, DLQ/리플레이, 관측성 표준화가 필수.
+  - 프로토콜 경계 검증은 E2E 전체(`make test.e2e`)로 상시 실행
+  - 핵심 SLI: Join→First Broadcast P95, Reconnect Recovery P95, Stream Error/Retry
 
 ## 대안 검토
 - Option 1(단순 이벤트): 구현 용이·빠른 가동이나 재사용성/유지보수 한계.

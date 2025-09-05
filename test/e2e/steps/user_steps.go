@@ -40,7 +40,7 @@ type UserCtx struct {
 	registerRequest  *userv1.RegisterUserRequest
 	registerResponse *connect.Response[userv1.RegisterUserResponse]
 	profileRequest   *userv1.GetUserProfileRequest
-	profileResponse  *connect.Response[userv1.UserProfile]
+	profileResponse  *connect.Response[userv1.GetUserProfileResponse]
 	updateRequest    *userv1.UpdateUserProfileRequest
 	updateResponse   *connect.Response[userv1.UpdateUserProfileResponse]
 	grpcError        error
@@ -67,7 +67,7 @@ type UserCtx struct {
 // ConcurrentUserResult holds the result of a concurrent user operation
 type ConcurrentUserResult struct {
 	RegisterResponse *connect.Response[userv1.RegisterUserResponse]
-	ProfileResponse  *connect.Response[userv1.UserProfile]
+	ProfileResponse  *connect.Response[userv1.GetUserProfileResponse]
 	UpdateResponse   *connect.Response[userv1.UpdateUserProfileResponse]
 	Error            error
 	OperationType    string // "register", "get_profile", "update_profile"
@@ -720,11 +720,10 @@ func (u *UserCtx) theUserProfileShouldBeRetrieved() error {
 		return fmt.Errorf("profile response should not be nil")
 	}
 
-	if u.profileResponse.Msg == nil {
+	if u.profileResponse.Msg == nil || u.profileResponse.Msg.UserProfile == nil {
 		return fmt.Errorf("profile response message should not be nil")
 	}
-
-	if u.profileResponse.Msg.UserId == "" {
+	if u.profileResponse.Msg.UserProfile.UserId == "" {
 		return fmt.Errorf("profile user ID should not be empty")
 	}
 
@@ -732,12 +731,12 @@ func (u *UserCtx) theUserProfileShouldBeRetrieved() error {
 }
 
 func (u *UserCtx) theUserProfileShouldContainDisplayName(expectedDisplayName string) error {
-	if u.profileResponse == nil || u.profileResponse.Msg == nil {
+	if u.profileResponse == nil || u.profileResponse.Msg == nil || u.profileResponse.Msg.UserProfile == nil {
 		return fmt.Errorf("profile response should not be nil")
 	}
 
-	if u.profileResponse.Msg.DisplayName != expectedDisplayName {
-		return fmt.Errorf("expected display name %s, got %s", expectedDisplayName, u.profileResponse.Msg.DisplayName)
+	if u.profileResponse.Msg.UserProfile.DisplayName != expectedDisplayName {
+		return fmt.Errorf("expected display name %s, got %s", expectedDisplayName, u.profileResponse.Msg.UserProfile.DisplayName)
 	}
 
 	return nil

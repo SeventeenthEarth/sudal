@@ -112,7 +112,7 @@ func (h *UserManager) RegisterUser(
 func (h *UserManager) GetUserProfile(
 	ctx context.Context,
 	req *connect.Request[userv1.GetUserProfileRequest],
-) (*connect.Response[userv1.UserProfile], error) {
+) (*connect.Response[userv1.GetUserProfileResponse], error) {
 	// Get authenticated user from context (injected by authentication middleware)
 	user, err := middleware.GetAuthenticatedUser(ctx)
 	if err != nil {
@@ -133,8 +133,9 @@ func (h *UserManager) GetUserProfile(
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("cannot access another user's profile"))
 	}
 
-	// Convert domain user to proto response (user is already from database via middleware)
-	response := convertUserToProto(user)
+	// Convert domain user to proto and wrap in response message
+	profile := convertUserToProto(user)
+	response := &userv1.GetUserProfileResponse{UserProfile: profile}
 
 	h.logger.Info("User profile retrieved successfully",
 		zap.String("user_id", user.ID.String()))

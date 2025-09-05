@@ -11,7 +11,7 @@ service UserService {
   // Registers a new user after Firebase authentication.
   rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse);
   // Retrieves a user's profile.
-  rpc GetUserProfile(GetUserProfileRequest) returns (UserProfile);
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
   // Updates a user's profile information.
   rpc UpdateUserProfile(UpdateUserProfileRequest) returns (UpdateUserProfileResponse);
 }
@@ -43,7 +43,10 @@ message RegisterUserResponse {
 message GetUserProfileRequest {
   string user_id = 1; // UUID
 }
-// Returns the UserProfile message.
+// Returns the user's profile.
+message GetUserProfileResponse {
+  UserProfile user_profile = 1;
+}
 
 // UpdateUserProfile
 message UpdateUserProfileRequest {

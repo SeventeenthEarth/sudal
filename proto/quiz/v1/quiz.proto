@@ -84,9 +84,10 @@ message GetQuizSetResponse {
 
 // Request to submit quiz results.
 message SubmitQuizResultRequest {
-  string user_id = 1; // UUID
+  // user identity is derived from auth context; do not accept from client
   int64 quiz_set_id = 2;
-  repeated bool answers = 3; // v1: true=A, false=B
+  // Index of the selected option per question (aligned with Question.options)
+  repeated int32 selected_option_indices = 3;
 }
 
 // Response after submitting quiz results.
@@ -98,10 +99,10 @@ message SubmitQuizResultResponse {
 
 // Request to get a user's quiz submission history.
 message GetUserQuizHistoryRequest {
-  string user_id = 1; // UUID
-  int32 page = 2;
-  int32 page_size = 3;
-  optional int64 quiz_set_id = 4; // Filter by specific quiz set
+  // Caller identity is taken from auth context; server must authorize
+  int32 page = 1;
+  int32 page_size = 2;
+  optional int64 quiz_set_id = 3; // Filter by specific quiz set
 }
 
 // Response containing paginated user quiz history.
@@ -116,6 +117,7 @@ message QuizResultSummary {
   int64 result_id = 1;
   int64 quiz_set_id = 2;
   string quiz_set_title = 3;
-  repeated bool answers = 4; // v1 snapshot
+  // v1 snapshot of selected option indices
+  repeated int32 selected_option_indices = 4;
   google.protobuf.Timestamp submitted_at = 5;
 }

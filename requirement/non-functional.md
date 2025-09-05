@@ -23,6 +23,11 @@
 - 트레이싱: 주요 경로(입장/이벤트/브로드캐스트) 분산 추적.
 - OpenAPI 운영: `/api/*`(health 계열), `/docs`(Swagger UI) 제공. 비즈니스 REST는 제공하지 않음.
 
+### Real-time SLI & Dashboards
+- Join→First Broadcast P95 (목표: < 150ms)
+- Reconnect Recovery P95 (목표 설정 및 추적)
+- Stream Error Rate / Retry Count
+
 ## OpenAPI & Developer Experience
 
 ### Code Generation Strategy

@@ -4,15 +4,31 @@ This repository is for planning, requirements, and decision documentation. The a
 
 ## Document Types & Structure
 
-- Current layout: root-level `.md` files (e.g., `새 기능.md`, `아이템 계획서.md`).
-- Recommended folders (create when useful):
-  - `plans/` — roadmaps, iteration plans.
-  - `requirements/` — functional/non-functional specs.
+- Docs live under `docs/` with these folders:
+  - `plan/` — roadmaps, iteration plans.
+  - `requirement/` — functional/non-functional specs.
   - `adr/` — Architecture Decision Records.
   - `assets/` — images/diagrams (store editable sources like `.drawio`).
-  - `tasks/` — AI-executable prompts for the developer AI (output only).
+  - `tasks/` — AI-executable prompts for the developer AI (create only on request).
+- Keep meta-guides (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) at `docs/` root.
 - Filenames: descriptive; no date prefix required.
 - Use relative links: `![diagram](assets/flow.png)` and cross-links between docs.
+
+## Codebase Pointers (for cross-references)
+
+- API contracts:
+  - `api/openapi.yaml`: Authoritative REST spec. Server code is generated into `internal/infrastructure/openapi/*` via `ogen`; Swagger served under `/docs`.
+  - `proto/*`: Authoritative gRPC/Connect contracts. Generated code lives in `gen/go` (protobuf, gRPC, Connect) and `gen/openapi` (OpenAPI v2).
+- Application wiring:
+  - `internal/infrastructure/server/*`: Unified HTTP server, route registry (REST + Connect-go), middleware chains.
+  - `internal/infrastructure/di/wire.go`: Wire provider sets and initializers for services/handlers.
+  - `internal/infrastructure/apispec/paths.go`: Protected procedure list for selective authentication.
+- Services and infra modules (cross-cutting):
+  - `internal/service/config`, `logger`, `postgres`, `sql/postgres`, `redis`, `cache`, `firebaseauth`, `authutil`, `health`.
+- Data and feature domain:
+  - `internal/feature/<name>/{domain,data,application,protocol}` keeps feature code cohesive.
+- Config & migrations:
+  - `.env.template` (local dev), `configs/config.yaml` (optional file input), `db/migrations/*`.
 
 ## Workflow
 
@@ -47,6 +63,13 @@ This repository is for planning, requirements, and decision documentation. The a
 - Check links/images by opening previews; search for duplicates or impacted docs: `rg -n <term>`.
 - Quick link scan: `rg -n "]\("`.
 - Serve for image preview if desired: `python3 -m http.server` → open `http://localhost:8000`.
+- Cross-check API sources of truth (do not reverse‑engineer handlers):
+  - REST: `api/openapi.yaml` → `internal/infrastructure/openapi/*` (ogen output)
+  - gRPC/Connect: `proto/*` → `gen/go/*` and `gen/openapi/*`
+- Reference build/test/generation commands (do not execute here):
+  - `make generate-buf`, `make generate-ogen`, `make generate-wire`, `make generate`
+  - `make test`, `make test.unit`, `make test.int`, `make test.e2e`
+- Docs subtree management: `make push-docs`, `make pull-docs`.
 
 ## Commit & PR Guidelines
 
@@ -57,3 +80,4 @@ This repository is for planning, requirements, and decision documentation. The a
 ## Security Notes
 
 - Do not include secrets or sensitive URLs; redact credentials and mark internal systems clearly.
+- Follow repository secrets policy: use `.env` locally; never commit files under `secrets/` or credential keys.

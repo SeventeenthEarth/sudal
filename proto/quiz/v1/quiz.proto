@@ -46,10 +46,9 @@ message QuizSetSummary {
 // A single question within a quiz set.
 message Question {
   int64 question_id = 1;
-  int64 quiz_set_id = 2;
-  string text = 3;
-  int32 question_order = 4; // 1-based order (DB: questions.question_order)
-  repeated string options = 5; // v1: length=2 (A/B); future: 3~4 options
+  string text = 2;
+  int32 question_order = 3; // 1-based order (DB: questions.question_order)
+  repeated string options = 4; // v1: length=2 (A/B); future: 3~4 options
 }
 
 // Minimal tag info attached to quiz sets.
@@ -60,16 +59,20 @@ message Tag {
 
 // Request to list quiz sets.
 message ListQuizSetsRequest {
-  int32 page = 1;
-  int32 page_size = 2;
-  repeated int64 tag_ids = 3; // Optional filter by tag IDs
+  // The maximum number of items to return. If not specified, a default is used.
+  int32 page_size = 1;
+  // The page token returned from a previous request, if any.
+  string page_token = 2;
+  // Optional filter by tag IDs
+  repeated int64 tag_ids = 3;
 }
 
 // Response containing paginated quiz set summaries.
 message ListQuizSetsResponse {
   repeated QuizSetSummary quiz_sets = 1;
   int64 total_count = 2;
-  int32 total_pages = 3;
+  // Opaque token for fetching the next page; empty if no more pages.
+  string next_page_token = 3;
 }
 
 // Request to fetch a specific quiz set by ID.
@@ -85,9 +88,9 @@ message GetQuizSetResponse {
 // Request to submit quiz results.
 message SubmitQuizResultRequest {
   // user identity is derived from auth context; do not accept from client
-  int64 quiz_set_id = 2;
+  int64 quiz_set_id = 1;
   // Index of the selected option per question (aligned with Question.options)
-  repeated int32 selected_option_indices = 3;
+  repeated int32 selected_option_indices = 2;
 }
 
 // Response after submitting quiz results.
@@ -100,8 +103,8 @@ message SubmitQuizResultResponse {
 // Request to get a user's quiz submission history.
 message GetUserQuizHistoryRequest {
   // Caller identity is taken from auth context; server must authorize
-  int32 page = 1;
-  int32 page_size = 2;
+  int32 page_size = 1;
+  string page_token = 2;
   optional int64 quiz_set_id = 3; // Filter by specific quiz set
 }
 
@@ -109,7 +112,8 @@ message GetUserQuizHistoryRequest {
 message GetUserQuizHistoryResponse {
   repeated QuizResultSummary history = 1;
   int64 total_count = 2;
-  int32 total_pages = 3;
+  // Opaque token for fetching the next page; empty if no more pages.
+  string next_page_token = 3;
 }
 
 // Summary of a single quiz result submission.

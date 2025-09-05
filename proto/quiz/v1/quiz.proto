@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package quiz.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/seventeenthearth/sudal/gen/go/quiz/v1;quizv1";
+
+// QuizService defines RPCs for listing quiz sets, fetching details,
+// submitting results, and retrieving a user's quiz history.
+service QuizService {
+  // List available quiz sets with optional tag filtering and pagination.
+  rpc ListQuizSets(ListQuizSetsRequest) returns (ListQuizSetsResponse);
+
+  // Get a full quiz set with questions by ID.
+  rpc GetQuizSet(GetQuizSetRequest) returns (GetQuizSetResponse);
+
+  // Submit user's answers for a quiz set.
+  rpc SubmitQuizResult(SubmitQuizResultRequest) returns (SubmitQuizResultResponse);
+
+  // Get a user's quiz submission history.
+  rpc GetUserQuizHistory(GetUserQuizHistoryRequest) returns (GetUserQuizHistoryResponse);
+}
+
+// A full quiz set with questions and tags.
+message QuizSet {
+  int64 quiz_set_id = 1;
+  string title = 2;
+  optional string description = 3;
+  repeated Tag tags = 4; // Basic tag info
+  repeated Question questions = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// A summary view of a quiz set for listings.
+message QuizSetSummary {
+  int64 quiz_set_id = 1;
+  string title = 2;
+  optional string description = 3;
+  repeated Tag tags = 4;
+  int32 question_count = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// Option represents a single selectable choice with a stable ID.
+message Option {
+  int64 option_id = 1;
+  string text = 2;
+}
+
+// A single question within a quiz set.
+message Question {
+  int64 question_id = 1;
+  string text = 2;
+  int32 question_order = 3; // 1-based order (DB: questions.question_order)
+  // Stable options with unique identifiers to avoid index brittleness
+  repeated Option options = 4;
+}
+
+// Minimal tag info attached to quiz sets.
+message Tag {
+  int64 tag_id = 1;
+  string name = 2;
+}
+
+// Request to list quiz sets.
+message ListQuizSetsRequest {
+  // The maximum number of items to return. If not specified, a default is used.
+  int32 page_size = 1;
+  // The page token returned from a previous request, if any.
+  string page_token = 2;
+  // Optional filter by tag IDs
+  repeated int64 tag_ids = 3;
+}
+
+// Response containing paginated quiz set summaries.
+message ListQuizSetsResponse {
+  repeated QuizSetSummary quiz_sets = 1;
+  reserved 2; // previously total_count
+  // Opaque token for fetching the next page; empty if no more pages.
+  string next_page_token = 3;
+}
+
+// Request to fetch a specific quiz set by ID.
+message GetQuizSetRequest {
+  int64 quiz_set_id = 1;
+}
+
+// Response for fetching a full quiz set.
+message GetQuizSetResponse {
+  QuizSet quiz_set = 1;
+}
+
+// Request to submit quiz results.
+message SubmitQuizResultRequest {
+  // user identity is derived from auth context; do not accept from client
+  int64 quiz_set_id = 1;
+  // Map of question_id to selected option_id per question (aligned with Question.options)
+  map<int64, int64> answers = 2;
+}
+
+// Response after submitting quiz results.
+message SubmitQuizResultResponse {
+  int64 result_id = 1;
+  google.protobuf.Timestamp submitted_at = 2;
+  int32 candy_earned = 3; // Placeholder; may be 0 until integrated
+}
+
+// Request to get a user's quiz submission history.
+message GetUserQuizHistoryRequest {
+  // Caller identity is taken from auth context; server must authorize
+  int32 page_size = 1;
+  string page_token = 2;
+  optional int64 quiz_set_id = 3; // Filter by specific quiz set
+}
+
+// Response containing paginated user quiz history.
+message GetUserQuizHistoryResponse {
+  repeated QuizResultSummary history = 1;
+  reserved 2; // previously total_count
+  // Opaque token for fetching the next page; empty if no more pages.
+  string next_page_token = 3;
+}
+
+// Summary of a single quiz result submission.
+message QuizResultSummary {
+  int64 result_id = 1;
+  int64 quiz_set_id = 2;
+  string quiz_set_title = 3;
+  // v1 snapshot of selected answers (question_id -> option_id)
+  map<int64, int64> answers = 4;
+  google.protobuf.Timestamp submitted_at = 5;
+}

@@ -34,7 +34,7 @@ type UserAuthCtx struct {
 	// gRPC client and responses
 	grpcClient       userv1connect.UserServiceClient
 	registerResponse *connect.Response[userv1.RegisterUserResponse]
-	profileResponse  *connect.Response[userv1.UserProfile]
+	profileResponse  *connect.Response[userv1.GetUserProfileResponse]
 	grpcError        error
 
 	// User data
@@ -338,11 +338,11 @@ func (u *UserAuthCtx) theUserProfileShouldContainMyRegistrationDetails() error {
 		return fmt.Errorf("profile response should not be nil")
 	}
 
-	if u.profileResponse.Msg == nil {
+	if u.profileResponse.Msg == nil || u.profileResponse.Msg.UserProfile == nil {
 		return fmt.Errorf("profile response message should not be nil")
 	}
 
-	profile := u.profileResponse.Msg
+	profile := u.profileResponse.Msg.UserProfile
 
 	if profile.UserId != u.userID {
 		return fmt.Errorf("expected user ID %s, got %s", u.userID, profile.UserId)

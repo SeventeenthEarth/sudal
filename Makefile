@@ -103,7 +103,7 @@ build: ## Build the application
 	@echo "✅ Build completed: $(OUTPUT_DIR)/$(PROJECT_NAME)"
 
 # Test targets
-test.prepare: generate fmt vet lint ## Prepare for running tests (format, vet, lint, generate)
+test.prepare: generate fmt vet lint buf-lint ## Prepare for running tests (format, vet, lint, generate)
 	@echo "✅ Test preparation completed"
 
 test: test.prepare test.unit test.int ## Run all tests (unit and integration)

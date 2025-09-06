@@ -29,12 +29,10 @@ var _ = ginkgo.Describe("QuizManager (protocol)", func() {
 			resp, err := svc.ListQuizSets(context.Background(), req)
 			gomega.Expect(resp).To(gomega.BeNil())
 			gomega.Expect(err).To(gomega.HaveOccurred())
-			if ce, ok := err.(*connect.Error); ok {
-				gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
-				gomega.Expect(ce.Message()).To(gomega.ContainSubstring("not implemented"))
-			} else {
-				gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
-			}
+			ce, ok := err.(*connect.Error)
+			gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
+			gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
+			gomega.Expect(ce.Message()).To(gomega.ContainSubstring("not implemented"))
 		})
 
 		ginkgo.It("GetQuizSet returns CodeUnimplemented with message", func() {
@@ -42,12 +40,10 @@ var _ = ginkgo.Describe("QuizManager (protocol)", func() {
 			resp, err := svc.GetQuizSet(context.Background(), req)
 			gomega.Expect(resp).To(gomega.BeNil())
 			gomega.Expect(err).To(gomega.HaveOccurred())
-			if ce, ok := err.(*connect.Error); ok {
-				gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
-				gomega.Expect(ce.Message()).To(gomega.ContainSubstring("not implemented"))
-			} else {
-				gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
-			}
+			ce, ok := err.(*connect.Error)
+			gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
+			gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
+			gomega.Expect(ce.Message()).To(gomega.ContainSubstring("not implemented"))
 		})
 
 		ginkgo.It("SubmitQuizResult returns CodeUnimplemented", func() {
@@ -56,11 +52,9 @@ var _ = ginkgo.Describe("QuizManager (protocol)", func() {
 			resp, err := svc.SubmitQuizResult(context.Background(), req)
 			gomega.Expect(resp).To(gomega.BeNil())
 			gomega.Expect(err).To(gomega.HaveOccurred())
-			if ce, ok := err.(*connect.Error); ok {
-				gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
-			} else {
-				gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
-			}
+			ce, ok := err.(*connect.Error)
+			gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
+			gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
 		})
 
 		ginkgo.It("GetUserQuizHistory returns CodeUnimplemented", func() {
@@ -68,11 +62,9 @@ var _ = ginkgo.Describe("QuizManager (protocol)", func() {
 			resp, err := svc.GetUserQuizHistory(context.Background(), req)
 			gomega.Expect(resp).To(gomega.BeNil())
 			gomega.Expect(err).To(gomega.HaveOccurred())
-			if ce, ok := err.(*connect.Error); ok {
-				gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
-			} else {
-				gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
-			}
+			ce, ok := err.(*connect.Error)
+			gomega.Expect(ok).To(gomega.BeTrue(), "error should be *connect.Error")
+			gomega.Expect(ce.Code()).To(gomega.Equal(connect.CodeUnimplemented))
 		})
 
 		ginkgo.It("should accept context (propagation sanity)", func() {

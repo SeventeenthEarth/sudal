@@ -105,8 +105,7 @@ func (q *QuizCtx) iCallSubmitQuizResult(idStr string) error {
 	if q.grpcClient == nil {
 		return fmt.Errorf("grpc client not connected")
 	}
-	var id int64 = 0
-	_, _ = fmt.Sscan(idStr, &id)
+	id, _ := strconv.ParseInt(idStr, 10, 64)
 	q.lastRespSubmit, q.lastErr = q.grpcClient.SubmitQuizResult(context.Background(), connect.NewRequest(&quizv1.SubmitQuizResultRequest{QuizSetId: id}))
 	return nil
 }

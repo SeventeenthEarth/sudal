@@ -91,14 +91,14 @@ run_all_tests() {
     local exclude_except=$(build_exclude_expr "${EXCEPT_TAGS[@]}")
     local exclude_skip=$(build_exclude_expr "${SKIP_TAGS[@]}")
     local tag_expr=""
-    if [ -n "$exclude_except" ] && [ -n "$exclude_skip" ]; then
-        tag_expr="$exclude_except && $exclude_skip"
-    elif [ -n "$exclude_except" ]; then
+    if [ -n "$exclude_except" ]; then
         tag_expr="$exclude_except"
-    elif [ -n "$exclude_skip" ]; then
-        tag_expr="$exclude_skip"
-    else
-        tag_expr=""
+    fi
+    if [ -n "$exclude_skip" ]; then
+        if [ -n "$tag_expr" ]; then
+            tag_expr+=" && "
+        fi
+        tag_expr+="$exclude_skip"
     fi
 
     echo -e "${YELLOW}Tag filter (ALL): ${NC}${tag_expr:-<none>}"

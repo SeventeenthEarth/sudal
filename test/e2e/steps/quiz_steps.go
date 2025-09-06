@@ -169,12 +169,17 @@ func (q *QuizCtx) iCallListQuizSetsViaConnectJSON() error {
 	req.Header.Set("Connect-Protocol-Version", "1")
 	resp, err := q.httpClient.Do(req)
 	q.lastHTTPResp = resp
-	if resp != nil {
-		body, _ := io.ReadAll(resp.Body)
-		q.lastHTTPBody = body
-		_ = resp.Body.Close()
+	if err != nil {
+		return err
 	}
-	return err
+
+	defer resp.Body.Close()
+	body, readErr := io.ReadAll(resp.Body)
+	q.lastHTTPBody = body
+	if readErr != nil {
+		return fmt.Errorf("failed to read response body: %w", readErr)
+	}
+	return nil
 }
 
 func (q *QuizCtx) iShouldReceiveHTTPStatus(status int) error {

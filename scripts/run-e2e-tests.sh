@@ -78,14 +78,18 @@ build_include_or_expr() {
     fi
 }
 
-run_all_tests() {
-    echo -e "${BLUE}Running all godog E2E tests (filtering EXCEPT and SKIP)...${NC}"
-
+setup_test_env() {
     cd "$(dirname "$0")/.."
     if [ -f ".env" ]; then
         echo -e "${YELLOW}Loading environment variables from .env file...${NC}"
         set -a; source .env; set +a
     fi
+}
+
+run_all_tests() {
+    echo -e "${BLUE}Running all godog E2E tests (filtering EXCEPT and SKIP)...${NC}"
+
+    setup_test_env
 
     local verbose_flag=$(get_verbose_flag)
     local exclude_except=$(build_exclude_expr "${EXCEPT_TAGS[@]}")
@@ -113,11 +117,7 @@ run_all_tests() {
 run_except_set() {
     echo -e "${BLUE}Running EXCEPT set godog E2E tests...${NC}"
 
-    cd "$(dirname "$0")/.."
-    if [ -f ".env" ]; then
-        echo -e "${YELLOW}Loading environment variables from .env file...${NC}"
-        set -a; source .env; set +a
-    fi
+    setup_test_env
 
     local verbose_flag=$(get_verbose_flag)
     local include_except=$(build_include_or_expr "${EXCEPT_TAGS[@]}")

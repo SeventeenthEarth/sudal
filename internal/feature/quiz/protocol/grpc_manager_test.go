@@ -69,7 +69,8 @@ var _ = ginkgo.Describe("QuizManager (protocol)", func() {
 
 		ginkgo.It("should accept context (propagation sanity)", func() {
 			// Ensure passing a context does not cause panics; functional logic is tested elsewhere.
-			ctx := context.WithValue(context.Background(), struct{}{}, "x")
+			type contextKey struct{}
+			ctx := context.WithValue(context.Background(), contextKey{}, "x")
 			_, err := svc.ListQuizSets(ctx, connect.NewRequest(&quizv1.ListQuizSetsRequest{}))
 			gomega.Expect(err).To(gomega.HaveOccurred())
 		})

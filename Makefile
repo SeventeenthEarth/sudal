@@ -161,7 +161,11 @@ test.e2e.concurrency: ## Run heavy concurrency E2E tests (@concurrency)
 	@set -a; \
 	if [ -f .env ]; then source .env; fi; \
 	set +a; \
-	./scripts/run-e2e-tests.sh --only "@concurrency"
+	if [ "$(VERBOSE)" = "1" ]; then \
+		./scripts/run-e2e-tests.sh -v --only "@concurrency"; \
+	else \
+		./scripts/run-e2e-tests.sh --only "@concurrency"; \
+	fi
 	@echo "✅ Concurrency E2E tests completed"
 
 test.e2e.only: ## Run specific godog E2E scenarios (usage: make test.e2e.only TAGS=@health SCENARIO="Basic health check" [VERBOSE=1])

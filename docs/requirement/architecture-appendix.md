@@ -6,7 +6,7 @@
 
 ### A.1 Server (connect-go)
 - Buf로 Protocol Buffers 정의 버전 관리.
-- connect-go로 gRPC/REST 동시 노출.
+- connect-go로 gRPC/gRPC‑Web 제공(REST는 OpenAPI로 health 전용).
 - 양방향 스트리밍(방 상태 업데이트): Pub/Sub 이벤트 → 다중 인스턴스 동기 → 클라이언트 방송.
 - Circuit Breaker: Sony/gobreaker/Hystrix-go, 실패 시 fallback, 개방/반개방/폐쇄 관리.
 - Event Sourcing: 상태 변경 이벤트 스트림 저장, append-only 로그, CQRS 결합.

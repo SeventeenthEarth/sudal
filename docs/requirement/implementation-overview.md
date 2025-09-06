@@ -1,7 +1,7 @@
 # Implementation Overview
 
 ## 3.1 Stack Summary
-- Server: Go + connect-go (gRPC/REST 동시 지원)
+- Server: Go + connect-go (gRPC/gRPC‑Web; REST는 OpenAPI로 health 전용)
 - DB: PostgreSQL (Cloud SQL)
 - Cache/RT: Redis (Cloud Memorystore)
 - Storage: Firebase Storage or GCS
@@ -14,10 +14,11 @@
 ## 3.2 Server
 - 언어/프레임워크: Go + connect-go, 비동기 고성능, 마이크로서비스 확장 여지.
 - DB 구성: PostgreSQL(영구), Redis(세션/실시간), Event Store(ES).
-- API 설계(프로토콜 경계): REST는 health/readiness 전용(`/api/*`, `/docs`), 비즈니스 기능은 gRPC/Connect(+ gRPC‑Web).
+- API 설계(프로토콜 경계): REST는 health/readiness 전용(`/api/*`, `/docs`), 비즈니스 기능은 gRPC(+ gRPC‑Web)만 허용.
 - OpenAPI(ogen): `/api/openapi.yaml` → 코드 생성(`/api/*`, `/docs`), 비즈니스 REST는 허용하지 않음.
 - 인증: Firebase ID Token 서버 검증(Admin SDK), Selective Auth(메서드 단위) 적용.
 - 안정성: Circuit Breaker, ES, 재시도/백오프.
+  - 참고: Connect 프로토콜(JSON/streaming)은 gRPC‑only 경로에서 Protocol Filter로 차단.
 
 ## 3.3 Client
 - Flutter + BLoC.
@@ -72,7 +73,7 @@
 
 ## 3.9 Testing Strategy(요약)
 - 단위/통합: Ginkgo+Gomega.
-- E2E: Godog v0.14 + Gherkin, 프로토콜 태그(@rest/@grpc/@connect), 도메인 태그(@health/@user).
+- E2E: Godog v0.14 + Gherkin, 프로토콜 태그(@rest/@grpc), 도메인 태그(@health/@user/@quiz), 차단 검증 태그(@protocol_filter).
 - 실행: `make test.e2e`, 시나리오 아웃라인/동시성 시나리오로 커버리지 강화.
 
 ## 3.10 Configuration Management Strategy
@@ -109,6 +110,9 @@
 | Build | `make build` | 애플리케이션 빌드 |
 | Test | `make test` | 단위+통합 테스트 실행 |
 | Test | `make test.e2e` | E2E 테스트 실행 |
+| Test | `make test.e2e.only` | 태그/시나리오로 부분 실행 |
+| Test | `make test.e2e.except` | EXCEPT 태그 세트만 실행 |
+| Test | `make test.e2e.concurrency` | 무거운 동시성 시나리오 실행 |
 | Quality | `make fmt` | 포맷팅 |
 | Quality | `make vet` | 정적 분석 |
 | Quality | `make lint` | 린트 |

@@ -14,7 +14,7 @@
 - 인증: Firebase(OIDC), 토큰 검증·만료 관리, 최소 권한.
 - 데이터: PII 최소 수집, 저장 시 암호화(가능한 경우), 로그 민감정보 마스킹.
 - 비밀관리: 환경변수/Secret Manager, 저장소 커밋 금지.
-- 프로토콜 경계: gRPC 전용 엔드포인트에 HTTP/JSON 접근 시 404(Protocol Filter)로 은닉.
+- 프로토콜 경계: gRPC 전용 엔드포인트에 HTTP/JSON 및 Connect 프로토콜 접근 시 404(Protocol Filter)로 은닉.
 - gRPC‑Web: 웹 클라이언트 호환 허용.
 
 ## 관측성/운영

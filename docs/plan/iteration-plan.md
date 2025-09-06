@@ -19,11 +19,11 @@
 
 ### 공통 수용 기준(상시 E2E)
 - 모든 PR은 CI에서 `make test.e2e` 전체 E2E가 통과해야 함
-- 로컬 개발 중 변경 범위만 빠르게 확인하려면 `make test.e2e.only` 또는 `make test.e2e.auth`(Firebase 필요)를 활용
+- 로컬 개발 중 변경 범위만 빠르게 확인하려면 `make test.e2e.only`(태그/시나리오) 또는 `make test.e2e.except`(EXCEPT 세트) 활용
 
 ## 산출물 및 수용 기준
 - Phase 1
-  - 산출물: 엔드포인트 우선(Endpoint‑First) — REST health 및 gRPC/Connect 엔드포인트 스켈레톤, Space/참여자 관리, 기본 이벤트 흐름, Redis Presence/PubSub(점진 도입).
+  - 산출물: 엔드포인트 우선(Endpoint‑First) — REST health 및 gRPC/gRPC‑Web 엔드포인트 스켈레톤(Connect는 차단), Space/참여자 관리, 기본 이벤트 흐름, Redis Presence/PubSub(점진 도입).
   - 기준: 다중 사용자 실시간 동기화(P95 < 150ms), 프로토콜 경계 준수(REST 차단), 낙관적 락(state_version)/멱등 처리로 최종 상태 일치.
 - Phase 2
   - 산출물: Core 인터페이스(예: Space, State, Event)와 앱 로직 분리, 테스트 커버리지 향상.

@@ -4,7 +4,7 @@
 - Accepted — 2025-08-29
 
 ## HTTP Chain
-1. Protocol Filter — gRPC 전용 경로 HTTP/JSON 차단(404)
+1. Protocol Filter — gRPC 전용 경로 HTTP/JSON+Connect 차단(404)
 2. Request Logger — 구조화 로깅
 3. Handler — health/readiness 전용(`/api/*`)
 
@@ -12,6 +12,10 @@
 1. Public gRPC — 인증 없음(헬스 등)
 2. Protected gRPC — 전역 인증 미들웨어 적용
 3. Selective gRPC — 메서드 단위 인증(선택적 보호)
+
+참고:
+- Selective 인증의 보호 대상은 `internal/infrastructure/apispec/paths.go`의 `ProtectedProcedures()`에서 관리됩니다.
+- Quiz: `SubmitQuizResult`, `GetUserQuizHistory`는 보호 대상이며, `ListQuizSets`, `GetQuizSet`은 Public입니다.
 
 ## Authentication Strategy
 - RegisterUser: 핸들러 내 Firebase 토큰 직접 검증(id_token)

@@ -45,12 +45,12 @@
 - 동일 이벤트 중복 수신 시 멱등 처리로 최종 상태 일치.
 - 방 최대 인원 초과 시 거부; 만석 해제 시 입장 허용.
 - 결과 비교 시 모든 참여자에게 동일 계산 결과 방송.
- - 프로토콜 경계(REST 차단): 비즈니스 gRPC 경로에 HTTP/JSON 접근 시 404 응답 보장.
+ - 프로토콜 경계(REST 차단): 비즈니스 gRPC 경로에 HTTP/JSON 및 Connect(JSON/streaming) 접근 시 404 응답 보장.
 
 ## 6. 인터페이스
 - gRPC/Connect-go 기반 서비스: User/Quiz/Room/Comparison/Candy/Tag.
 - 상세 스펙: ./grpc-spec.md
-- 프로토콜 경계: REST는 health/readiness 전용(`/api/*`, `/docs`), 비즈니스는 gRPC/Connect(+ gRPC‑Web).
+- 프로토콜 경계: REST는 health/readiness 전용(`/api/*`, `/docs`), 비즈니스는 gRPC(+ gRPC‑Web). Connect는 gRPC‑only 경로에서 차단.
 
 ## Related Documents
 - **Architecture**: ../adr/realtime-architecture.md

@@ -9,9 +9,9 @@
 - 옵션 비교(Option 1/2/3)와 로드맵, 서비스/인프라/PR 계획을 종합.
 
 ## 프로토콜 경계(HTTP vs gRPC)
-- 원칙: REST는 health/readiness 등 모니터링 전용, 비즈니스 기능은 gRPC/Connect(+ gRPC‑Web)만 사용.
+- 원칙: REST는 health/readiness 등 모니터링 전용, 비즈니스 기능은 gRPC(+ gRPC‑Web)만 사용.
 - 이유: 일관된 스키마·성능·양방향 스트리밍·보안(엔드포인트 은닉) 확보.
-- 구현: HTTP/JSON로 gRPC 경로 접근 차단을 위한 Protocol Filter 미들웨어 적용(REST health만 허용).
+- 구현: HTTP/JSON 및 Connect 프로토콜로 gRPC 경로 접근 차단을 위한 Protocol Filter 미들웨어 적용(REST health만 허용).
 
 ## 결정
 - 목표 아키텍처로 Option 2(Event + Core) 채택.

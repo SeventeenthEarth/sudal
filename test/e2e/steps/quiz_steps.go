@@ -173,7 +173,9 @@ func (q *QuizCtx) iCallListQuizSetsViaConnectJSON() error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	body, readErr := io.ReadAll(resp.Body)
 	q.lastHTTPBody = body
 	if readErr != nil {

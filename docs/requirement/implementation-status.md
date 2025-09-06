@@ -21,7 +21,7 @@
 
 ## Business Services ❌
 - [x] User Service — Register/Profile/Update COMPLETED
-- [ ] Quiz Service — gRPC spec only (see requirement/grpc-spec.md)
+- [ ] Quiz Service — Scaffolding(Connect‑go 핸들러; 미구현은 CodeUnimplemented), Selective Auth 범위 지정, E2E(@quiz) 추가
 - [ ] Room Service — PLANNED
 - [ ] Comparison Service — PLANNED
 - [ ] Candy (Virtual Currency) Service — PLANNED
@@ -36,6 +36,9 @@
 - E2E testing with Godog (Gherkin) and tag conventions
 - Redis cache utility (CRUD/TTL, ErrCacheMiss, pattern cleanup)
 - Middleware chain with Protocol Filter, Request Logger, Selective Auth
+ - QuizService 스캐폴딩(DI/Wire/ServiceRegistry 연결 포함)
+ - `apispec.ProtectedProcedures()`에 Quiz 보호 RPC 반영(SubmitQuizResult, GetUserQuizHistory)
+ - gRPC‑only 필터 경로에 Quiz 서비스 포함, Connect 차단(@protocol_filter) E2E로 검증
 
 ## Notes
 - Status reflects current implementation intentions and available designs documented in this repo.

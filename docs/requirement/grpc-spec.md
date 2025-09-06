@@ -2,6 +2,10 @@
 
 본 문서는 gRPC 사양을 분리·정리한 문서입니다. 서비스별 요청/응답 구조와 핵심 동작을 정의합니다.
 
+전송 프로토콜:
+- 비즈니스 호출은 gRPC(+ gRPC‑Web)만 허용합니다.
+- Connect 프로토콜(JSON/streaming)은 gRPC‑only 경로에서 Protocol Filter에 의해 차단됩니다.
+
 ## 1. 사용자 서비스 (UserService)
 
 ### 1.1. 사용자 등록 (RegisterUser)
@@ -40,18 +44,22 @@
 ### 2.1. 퀴즈 세트 목록 (ListQuizSets)
 - 입력: `ListQuizSetsRequest { page, page_size, tags[] }`
 - 출력: `ListQuizSetsResponse { quiz_sets[], total_count, total_pages }`
+ - 인증: Public (선택적 인증 아님)
 
 ### 2.2. 퀴즈 세트 상세 (GetQuizSet)
 - 입력: `GetQuizSetRequest { quiz_set_id }`
 - 출력: `QuizSet { quiz_set_id, title, description, tags[], questions[] }`
+ - 인증: Public (선택적 인증 아님)
 
 ### 2.3. 퀴즈 결과 제출 (SubmitQuizResult)
 - 입력: `SubmitQuizResultRequest { user_id, quiz_set_id, answers[]bool }`
 - 출력: `SubmitQuizResultResponse { result_id, timestamp, candy_earned }`
+ - 인증: Protected — Selective 인증(미들웨어에서 Unauthenticated 적용)
 
 ### 2.4. 사용자 퀴즈 이력 (GetUserQuizHistory)
 - 입력: `GetUserQuizHistoryRequest { user_id, page, page_size, quiz_set_id? }`
 - 출력: `GetUserQuizHistoryResponse { history[], total_count, total_pages }`
+ - 인증: Protected — Selective 인증(미들웨어에서 Unauthenticated 적용)
 
 ## 3. 방 서비스 (RoomService)
 

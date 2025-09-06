@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
+
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/cucumber/godog"
-	"strings"
 
 	quizv1 "github.com/seventeenthearth/sudal/gen/go/quiz/v1"
 	quizv1connect "github.com/seventeenthearth/sudal/gen/go/quiz/v1/quizv1connect"
@@ -94,8 +96,7 @@ func (q *QuizCtx) iCallGetQuizSetByID(idStr string) error {
 		return fmt.Errorf("grpc client not connected")
 	}
 	// parse ID best-effort (empty -> 0)
-	var id int64 = 0
-	_, _ = fmt.Sscan(idStr, &id)
+	id, _ := strconv.ParseInt(idStr, 10, 64)
 	q.lastRespGet, q.lastErr = q.grpcClient.GetQuizSet(context.Background(), connect.NewRequest(&quizv1.GetQuizSetRequest{QuizSetId: id}))
 	return nil
 }

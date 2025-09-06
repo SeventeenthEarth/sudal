@@ -144,5 +144,6 @@ func GetGRPCOnlyPaths() []string {
 	return []string{
 		apispec.HealthServiceBase, // health.v1.HealthService/Check
 		apispec.UserServiceBase,   // user.v1.UserService/* (all methods)
+		apispec.QuizServiceBase,   // quiz.v1.QuizService/* (all methods)
 	}
 }

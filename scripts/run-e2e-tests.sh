@@ -16,6 +16,12 @@ NC='\033[0m' # No Color
 SERVER_URL="http://localhost:8080"
 TIMEOUT=30
 
+# Tag sets managed here
+# Rarely-run set (excluded from default run, included in .except run)
+EXCEPT_TAGS=("@firebase_rate_limit")
+# Temporarily skipped set (empty by default)
+SKIP_TAGS=()
+
 echo -e "${BLUE}=== Godog E2E Test Runner ===${NC}"
 
 # Function to get verbose flag for go test
@@ -42,42 +48,90 @@ check_server() {
 }
 
 # Function to run all godog tests
-run_all_tests() {
-    echo -e "${BLUE}Running all godog E2E tests...${NC}"
+build_exclude_expr() {
+    # Usage: build_exclude_expr "${ARRAY[@]}"
+    local expr=""
+    local t
+    for t in "$@"; do
+        if [ -n "$t" ]; then
+            if [ -n "$expr" ]; then expr+=" && "; fi
+            expr+="~${t}"
+        fi
+    done
+    echo "$expr"
+}
 
-    # Change to project root directory (scripts is one level down from root)
+build_include_or_expr() {
+    # Usage: build_include_or_expr "${ARRAY[@]}"
+    local expr=""
+    local t
+    for t in "$@"; do
+        if [ -n "$t" ]; then
+            if [ -n "$expr" ]; then expr+=" || "; fi
+            expr+="${t}"
+        fi
+    done
+    if [ -n "$expr" ]; then
+        echo "(${expr})"
+    else
+        echo ""
+    fi
+}
+
+setup_test_env() {
     cd "$(dirname "$0")/.."
-
-    # Load environment variables from .env file if it exists
     if [ -f ".env" ]; then
         echo -e "${YELLOW}Loading environment variables from .env file...${NC}"
-        set -a  # automatically export all variables
-        source .env
-        set +a  # stop automatically exporting
+        set -a; source .env; set +a
     fi
+}
+
+run_all_tests() {
+    echo -e "${BLUE}Running all godog E2E tests (filtering EXCEPT and SKIP)...${NC}"
+
+    setup_test_env
 
     local verbose_flag=$(get_verbose_flag)
-
-    echo -e "${YELLOW}🔄 Running Health tests...${NC}"
-    if go test $verbose_flag -count=1 ./test/e2e -godog.tags="@health"; then
-        echo -e "${GREEN}✓ Health tests passed${NC}"
-    else
-        echo -e "${RED}✗ Health tests failed${NC}"
-        return 1
+    local exclude_except=$(build_exclude_expr "${EXCEPT_TAGS[@]}")
+    local exclude_skip=$(build_exclude_expr "${SKIP_TAGS[@]}")
+    local tag_expr=""
+    if [ -n "$exclude_except" ]; then
+        tag_expr="$exclude_except"
+    fi
+    if [ -n "$exclude_skip" ]; then
+        if [ -n "$tag_expr" ]; then
+            tag_expr+=" && "
+        fi
+        tag_expr+="$exclude_skip"
     fi
 
-    echo -e "${YELLOW}🔄 Running User tests (excluding concurrent tests to avoid Firebase rate limiting)...${NC}"
-    if go test $verbose_flag -count=1 ./test/e2e -godog.tags="@user && ~@skip_firebase_rate_limit"; then
-        echo -e "${GREEN}✓ User tests passed${NC}"
+    echo -e "${YELLOW}Tag filter (ALL): ${NC}${tag_expr:-<none>}"
+
+    if [ -n "$tag_expr" ]; then
+        go test $verbose_flag -count=1 ./test/e2e -godog.tags="$tag_expr"
     else
-        echo -e "${RED}✗ User tests failed${NC}"
-        return 1
+        go test $verbose_flag -count=1 ./test/e2e
     fi
+}
 
+run_except_set() {
+    echo -e "${BLUE}Running EXCEPT set godog E2E tests...${NC}"
 
+    setup_test_env
 
-    echo -e "${GREEN}✓ All godog E2E tests passed${NC}"
-    return 0
+    local verbose_flag=$(get_verbose_flag)
+    local include_except=$(build_include_or_expr "${EXCEPT_TAGS[@]}")
+    local exclude_skip=$(build_exclude_expr "${SKIP_TAGS[@]}")
+    if [ -z "$include_except" ]; then
+        echo -e "${YELLOW}No EXCEPT tags configured. Nothing to run.${NC}"
+        return 0
+    fi
+    local tag_expr="$include_except"
+    if [ -n "$exclude_skip" ]; then
+        tag_expr="$tag_expr && $exclude_skip"
+    fi
+    echo -e "${YELLOW}Tag filter (EXCEPT): ${NC}${tag_expr}"
+    go test $verbose_flag -count=1 ./test/e2e -godog.tags="$tag_expr"
 }
 
 # Function to run specific scenarios
@@ -139,6 +193,9 @@ show_usage() {
     echo "  $0 --only @rest              # Run only REST-tagged scenarios"
     echo "  $0 --only @grpc              # Run only gRPC-tagged scenarios"
     echo "  $0 --only @user              # Run only user-tagged scenarios"
+    echo "  $0 --only @user_auth         # Run only user auth-tagged scenarios"
+    echo "  $0 --only @quiz              # Run only quiz-tagged scenarios"
+    echo "  $0 --run-except-set          # Run only scenarios in EXCEPT_TAGS set"
     echo "  $0 --only @health \"Basic health check\"  # Run specific scenario"
     echo ""
 }
@@ -146,6 +203,7 @@ show_usage() {
 # Parse command line arguments
 SKIP_CHECK=false
 ONLY_MODE=false
+EXCEPT_MODE=false
 VERBOSE=false
 TAGS=""
 SCENARIO=""
@@ -181,6 +239,10 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             ;;
+        --run-except-set)
+            EXCEPT_MODE=true
+            shift
+            ;;
         -*)
             echo -e "${RED}Unknown option: $1${NC}"
             show_usage
@@ -208,6 +270,8 @@ main() {
     # Run tests based on mode
     if [ "$ONLY_MODE" = true ]; then
         run_specific_scenarios "$TAGS" "$SCENARIO"
+    elif [ "$EXCEPT_MODE" = true ]; then
+        run_except_set
     else
         run_all_tests
     fi

@@ -19,7 +19,7 @@ MOCKGEN := $(shell command -v mockgen 2> /dev/null)
 GINKGO_MOD_VERSION := $(shell awk '/github.com\/onsi\/ginkgo\/v2[[:space:]]/{print $$2; exit}' go.mod)
 GINKGO_RUN := go run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_MOD_VERSION)
 
-.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh push-docs pull-docs test.e2e.cleanup-users
+.PHONY: help init install-tools build test test.prepare test.unit test.int test.e2e test.e2e.only test.e2e.except test.e2e.concurrency fmt vet lint generate clean clean-all clean-proto clean-mocks clean-ginkgo clean-wire clean-ogen clean-tmp clean-build clean-coverage clean-go-cache clean-go-modules run generate-buf generate-wire generate-mocks generate-ogen generate-ginkgo buf-generate buf-lint buf-breaking buf-setup wire-gen ogen-generate ginkgo-bootstrap migrate-up migrate-down migrate-status migrate-version migrate-force migrate-create migrate-reset migrate-drop migrate-fresh push-docs pull-docs test.e2e.cleanup-users
 
 .DEFAULT_GOAL := help
 
@@ -28,15 +28,16 @@ help: ## Show this help message
 	@echo "========================================"
 	@echo ""
 	@echo "📋 Quick Start:"
-	@echo "  make init          # Initialize development environment"
-	@echo "  make install-tools # Install development tools"
-	@echo "  make generate      # Generate all code"
-	@echo "  make test          # Run all tests"
-	@echo "  make test.e2e      # Run all godog E2E tests"
-	@echo "  make test.e2e.auth # Run Firebase authentication E2E tests"
-	@echo "  make test.e2e.only # Run specific godog E2E scenarios"
-	@echo "  VERBOSE=1 make test.e2e  # Run with verbose output"
-	@echo "  make run           # Run the application"
+	@echo "  make init                 # Initialize development environment"
+	@echo "  make install-tools        # Install development tools"
+	@echo "  make generate             # Generate all code"
+	@echo "  make test                 # Run all tests"
+	@echo "  make test.e2e             # Run all godog E2E tests (includes Firebase auth)"
+	@echo "  make test.e2e.except      # Run EXCEPT-tagged E2E tests only (managed in script)"
+	@echo "  make test.e2e.concurrency # Run heavy concurrency E2E tests (@concurrency)"
+	@echo "  make test.e2e.only        # Run specific godog E2E scenarios"
+	@echo "  VERBOSE=1 make test.e2e   # Run with verbose output"
+	@echo "  make run                  # Run the application"
 	@echo ""
 	@echo "📋 Available targets:"
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_.:-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -143,6 +144,30 @@ test.e2e: ## Run all godog E2E tests (usage: make test.e2e [VERBOSE=1])
 	fi
 	@echo "✅ All godog E2E tests completed"
 
+test.e2e.except: ## Run EXCEPT-tagged E2E tests only (managed in scripts/run-e2e-tests.sh)
+	@echo "🧪 Running EXCEPT-tagged godog E2E tests..."
+	@if [ "$(VERBOSE)" = "1" ]; then \
+		./scripts/run-e2e-tests.sh -v --run-except-set; \
+	else \
+		./scripts/run-e2e-tests.sh --run-except-set; \
+	fi
+	@echo "✅ EXCEPT-tagged E2E tests completed"
+
+test.e2e.concurrency: ## Run heavy concurrency E2E tests (@concurrency)
+	@echo "⚡ Running heavy concurrency godog E2E tests (@concurrency)..."
+	@echo "📋 Prerequisites:"
+	@echo "  - Server must be running on localhost:8080"
+	@echo "  - Some scenarios require Firebase credentials (.env)"
+	@set -a; \
+	if [ -f .env ]; then source .env; fi; \
+	set +a; \
+	if [ "$(VERBOSE)" = "1" ]; then \
+		./scripts/run-e2e-tests.sh -v --only "@concurrency"; \
+	else \
+		./scripts/run-e2e-tests.sh --only "@concurrency"; \
+	fi
+	@echo "✅ Concurrency E2E tests completed"
+
 test.e2e.only: ## Run specific godog E2E scenarios (usage: make test.e2e.only TAGS=@health SCENARIO="Basic health check" [VERBOSE=1])
 	@echo "🧪 Running specific godog E2E scenarios..."
 	@if [ "$(VERBOSE)" = "1" ]; then \
@@ -152,23 +177,6 @@ test.e2e.only: ## Run specific godog E2E scenarios (usage: make test.e2e.only TA
 	fi
 	@echo "✅ Specific godog E2E scenarios completed"
 
-test.e2e.auth: ## Run Firebase authentication E2E tests (requires FIREBASE_WEB_API_KEY)
-	@echo "🔥 Running Firebase authentication E2E tests..."
-	@echo "📋 Prerequisites:"
-	@echo "  - Server must be running on localhost:8080"
-	@echo "  - FIREBASE_WEB_API_KEY must be set in .env"
-	@echo "  - Firebase Admin SDK credentials must be available"
-	@echo ""
-	@if [ -z "$(shell grep '^FIREBASE_WEB_API_KEY=.*[^[:space:]]' .env 2>/dev/null)" ]; then \
-		echo "❌ FIREBASE_WEB_API_KEY not configured. Run: ./scripts/setup-firebase-e2e.sh"; \
-		exit 1; \
-	fi
-	@echo "🔑 Loading environment variables from .env..." 
-	@set -a; \
-	 source .env; \
-	 set +a; \
-	 cd test/e2e && go test -v -godog.format=pretty -godog.tags="@user_auth" .
-	@echo "✅ Firebase authentication E2E tests completed"
 
 test.e2e.cleanup-users: ## Cleanup all test users in Firebase using Go program
 	@echo "🧹 Cleaning up Firebase E2E test users using Go program..."

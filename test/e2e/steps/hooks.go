@@ -30,6 +30,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	healthCtx := NewHealthCtx()
 	userCtx := NewUserCtx()
 	userAuthCtx := NewUserAuthCtx()
+	quizCtx := NewQuizCtx()
 
 	// Create shared HTTP response holder
 	sharedResponse := &SharedHTTPResponse{}
@@ -49,7 +50,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 				isUserTest = true
 			}
 			// Skip delay for scenarios that don't create Firebase users
-			if tag.Name == "@skip_firebase_rate_limit" || tag.Name == "@negative" {
+			if tag.Name == "@firebase_rate_limit" || tag.Name == "@negative" {
 				needsFirebaseDelay = false
 				break
 			}
@@ -85,6 +86,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		*healthCtx = *NewHealthCtx()
 		*userCtx = *NewUserCtx()
 		*userAuthCtx = *NewUserAuthCtx()
+		*quizCtx = *NewQuizCtx()
 
 		// Reset shared response
 		*sharedResponse = SharedHTTPResponse{}
@@ -92,6 +94,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		// Set shared response in both contexts
 		healthCtx.sharedResponse = sharedResponse
 		userCtx.sharedResponse = sharedResponse
+		// quizCtx does not currently use sharedResponse
 
 		return ctx, nil
 	})
@@ -101,6 +104,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 		healthCtx.Cleanup()
 		userCtx.Cleanup()
 		userAuthCtx.Cleanup()
+		quizCtx.Cleanup()
 
 		// Log scenario completion
 		if err != nil {
@@ -116,6 +120,7 @@ func InitializeScenario(sc *godog.ScenarioContext) {
 	healthCtx.Register(sc)
 	userCtx.Register(sc)
 	userAuthCtx.Register(sc)
+	quizCtx.Register(sc)
 }
 
 // GetHealthProtocol returns the current health protocol being tested

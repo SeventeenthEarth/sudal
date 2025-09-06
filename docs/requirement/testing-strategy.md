@@ -19,7 +19,7 @@
 - Server availability: `make run` 후 실행 권장.
 
 ## Execution
-- CI/CD: `make test.e2e` — 모든 E2E 시나리오 실행(외부 제약 회피용 `@skip_firebase_rate_limit`는 기본 제외)
+- CI/CD: `make test.e2e` — 모든 E2E 시나리오 실행(외부 제약 회피용 `@firebase_rate_limit`는 기본 제외)
 - 로컬(부분 실행):
   - `make test.e2e.auth` — Firebase 인증 관련(@user_auth)
   - 세분화: `make test.e2e.only TAGS=@health` 또는 `SCENARIO="..."`

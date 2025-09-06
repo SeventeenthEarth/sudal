@@ -179,7 +179,8 @@ var _ = ginkgo.Describe("ProtocolFilterMiddleware", func() {
 
 			gomega.Expect(paths).To(gomega.ContainElement("/health.v1.HealthService/"))
 			gomega.Expect(paths).To(gomega.ContainElement("/user.v1.UserService/"))
-			gomega.Expect(len(paths)).To(gomega.Equal(2))
+			gomega.Expect(paths).To(gomega.ContainElement("/quiz.v1.QuizService/"))
+			gomega.Expect(len(paths)).To(gomega.Equal(3))
 		})
 	})
 

@@ -10,6 +10,7 @@ import (
 
 	repo2 "github.com/seventeenthearth/sudal/internal/feature/health/data/repo"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
+	quizConnect "github.com/seventeenthearth/sudal/internal/feature/quiz/protocol"
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
 
 	firebaseadm "firebase.google.com/go/v4"
@@ -88,6 +89,12 @@ var UserSet = wire.NewSet(
 	ProvideUserService,
 	ProvideTokenVerifier,
 	userConnect.NewUserHandler,
+)
+
+// QuizConnectSet is a Wire provider set for Connect-go quiz service (gRPC only)
+var QuizConnectSet = wire.NewSet(
+	ProvideLogger,
+	quizConnect.NewQuizManager,
 )
 
 // FirebaseSet is a Wire provider set for Firebase-related dependencies
@@ -271,6 +278,12 @@ func InitializeCacheUtil() (scache.CacheUtil, error) {
 // InitializeUserConnectHandler initializes and returns a Connect-go user handler (gRPC only)
 func InitializeUserConnectHandler() (*userConnect.UserManager, error) {
 	wire.Build(UserSet)
+	return nil, nil // Wire will fill this in
+}
+
+// InitializeQuizConnectHandler initializes and returns a Connect-go quiz handler (gRPC only)
+func InitializeQuizConnectHandler() (*quizConnect.QuizManager, error) {
+	wire.Build(QuizConnectSet)
 	return nil, nil // Wire will fill this in
 }
 

@@ -51,7 +51,7 @@ Feature: gRPC User Service Protocol and Operations Testing
     When I get the user profile with non-existent ID
     Then the user profile retrieval should fail with PermissionDenied error
 
-  @concurrency @skip_firebase_rate_limit
+  @concurrency @firebase_rate_limit
   Scenario Outline: Concurrent user registrations
     When I make <num_requests> concurrent user registrations
     Then all concurrent user registrations should succeed

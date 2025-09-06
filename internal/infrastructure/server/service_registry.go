@@ -5,8 +5,10 @@ import (
 	"net/http"
 
 	"github.com/seventeenthearth/sudal/gen/go/health/v1/healthv1connect"
+	"github.com/seventeenthearth/sudal/gen/go/quiz/v1/quizv1connect"
 	"github.com/seventeenthearth/sudal/gen/go/user/v1/userv1connect"
 	healthConnect "github.com/seventeenthearth/sudal/internal/feature/health/protocol"
+	quizConnect "github.com/seventeenthearth/sudal/internal/feature/quiz/protocol"
 	userConnect "github.com/seventeenthearth/sudal/internal/feature/user/protocol"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/apispec"
 	"github.com/seventeenthearth/sudal/internal/infrastructure/di"
@@ -17,6 +19,7 @@ import (
 type ServiceRegistry struct {
 	// gRPC service handlers
 	HealthHandler *healthConnect.HealthManager
+	QuizHandler   *quizConnect.QuizManager
 	UserHandler   *userConnect.UserManager
 
 	// REST service handlers
@@ -38,6 +41,12 @@ func NewServiceRegistry() (*ServiceRegistry, error) {
 		return nil, fmt.Errorf("failed to initialize user connect handler: %w", err)
 	}
 
+	// Initialize Connect-go quiz service handler (gRPC only)
+	quizHandler, err := di.InitializeQuizConnectHandler()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize quiz connect handler: %w", err)
+	}
+
 	// Initialize OpenAPI handler for REST endpoints
 	openAPIHandler, err := di.InitializeOpenAPIHandler()
 	if err != nil {
@@ -49,6 +58,7 @@ func NewServiceRegistry() (*ServiceRegistry, error) {
 
 	return &ServiceRegistry{
 		HealthHandler:  healthHandler,
+		QuizHandler:    quizHandler,
 		UserHandler:    userHandler,
 		OpenAPIHandler: openAPIHandler,
 		SwaggerHandler: swaggerHandler,
@@ -96,6 +106,9 @@ func (rr *RouteRegistrar) RegisterGRPCRoutes() {
 	// Register Health Service (public, gRPC-only)
 	rr.registerHealthService()
 
+	// Register Quiz Service (selective authentication, gRPC-only)
+	rr.registerQuizService()
+
 	// Register User Service (selective authentication, gRPC-only)
 	rr.registerUserService()
 }
@@ -124,6 +137,19 @@ func (rr *RouteRegistrar) registerUserService() {
 	// Apply gRPC-only HTTP middleware chain
 	userHandler := rr.chains.GRPCOnlyHTTP.Apply(userHTTPHandler)
 	rr.mux.Handle(userPath, userHandler)
+}
+
+// registerQuizService registers the quiz service with selective authentication
+func (rr *RouteRegistrar) registerQuizService() {
+	// Create quiz service handler with selective authentication
+	quizPath, quizHTTPHandler := quizv1connect.NewQuizServiceHandler(
+		rr.registry.QuizHandler,
+		rr.chains.SelectiveGRPC.ToConnectOptions()...,
+	)
+
+	// Apply gRPC-only HTTP middleware chain
+	quizHandler := rr.chains.GRPCOnlyHTTP.Apply(quizHTTPHandler)
+	rr.mux.Handle(quizPath, quizHandler)
 }
 
 // ServiceConfiguration holds the configuration for service chains
